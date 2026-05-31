@@ -15,6 +15,7 @@ import {
   Globe
 } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 interface Civilization {
   id: number;
@@ -37,6 +38,7 @@ interface GameState {
 
 export default function GameDashboard() {
   const { user, isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
   const [gameState] = useState<GameState>({
     currentRound: 1,
     maxRounds: 500,
@@ -147,16 +149,16 @@ export default function GameDashboard() {
               <span className="hidden sm:inline">Übersicht</span>
               <span className="sm:hidden">Über</span>
             </TabsTrigger>
-            <TabsTrigger value="cities" className="text-xs sm:text-sm">
-              <Building2 className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Städte</span>
-              <span className="sm:hidden">St.</span>
-            </TabsTrigger>
-            <TabsTrigger value="units" className="text-xs sm:text-sm">
-              <Swords className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Einheiten</span>
-              <span className="sm:hidden">Ein.</span>
-            </TabsTrigger>
+          <TabsTrigger value="cities" className="text-xs sm:text-sm" onClick={() => navigate("/cities")}>
+            <Building2 className="w-4 h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Städte</span>
+            <span className="sm:hidden">St.</span>
+          </TabsTrigger>
+          <TabsTrigger value="units" className="text-xs sm:text-sm" onClick={() => navigate("/units")}>
+            <Swords className="w-4 h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Einheiten</span>
+            <span className="sm:hidden">Ein.</span>
+          </TabsTrigger>
             <TabsTrigger value="tech" className="text-xs sm:text-sm">
               <BookOpen className="w-4 h-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Tech</span>

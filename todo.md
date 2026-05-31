@@ -42,20 +42,20 @@
 - [ ] Benachrichtigungen (neue Technologie, Angriff, etc.)
 
 ## Frontend - Einheitenverwaltung
-- [ ] Einheiten-Liste mit Stats (HP, Angriff, Verteidigung, Bewegung)
-- [ ] Einheiten-Detailansicht
-- [ ] Aktionsmöglichkeiten (Bewegen, Angreifen, Warten, Auflösen)
-- [ ] Zustandsanzeige (verletzt, müde, etc.)
+- [x] Einheiten-Liste mit Stats (HP, Angriff, Verteidigung, Bewegung)
+- [x] Einheiten-Detailansicht
+- [x] Aktionsmöglichkeiten (Bewegen, Angreifen, Warten, Auflösen)
+- [x] Zustandsanzeige (verletzt, müde, etc.)
 - [ ] Einheiten-Filterung (nach Typ, Status, Position)
 
 ## Frontend - Städte- und Gebäudeverwaltung
-- [ ] Städte-Liste mit Übersicht
-- [ ] Stadtdetail-Ansicht
-- [ ] Bevölkerungsanzeige und -verwaltung
-- [ ] Gebäudeliste mit Effekten
-- [ ] Produktionswarteschlange (Gebäude, Einheiten)
-- [ ] Gebäude-Bauen-Dialog
-- [ ] Produktions-Fortschrittsbalken
+- [x] Städte-Liste mit Übersicht
+- [x] Stadtdetail-Ansicht
+- [x] Bevölkerungsanzeige und -verwaltung
+- [x] Gebäudeliste mit Effekten
+- [x] Produktionswarteschlange (Gebäude, Einheiten)
+- [ ] Gebäude-Bauen-Dialog (erweitert)
+- [x] Produktions-Fortschrittsbalken
 
 ## Frontend - Technologiebaum
 - [ ] Interaktiver Technologiebaum (Grafik)
