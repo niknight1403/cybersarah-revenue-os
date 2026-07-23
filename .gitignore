@@ -41,3 +41,4 @@ android/app/src/main/assets/public/
 
 # Temporary files
 /tmp/
+*.apk

@@ -21,31 +21,87 @@
   --neon-pink: #f472b6;
   --neon-green: #34d399;
   --neon-amber: #fbbf24;
-  --glass-bg: rgba(15, 10, 26, 0.7);
-  --glass-border: rgba(168, 85, 247, 0.2);
+  --glass-bg: rgba(15, 10, 26, 0.85);
+  --glass-border: rgba(168, 85, 247, 0.25);
 }
+
+* { -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Mobile-optimierte Touch-Flächen */
+button, a, [role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Glass-Card für Mobile */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+}
+
+/* Neon-Effekte */
 .neon-glow { box-shadow: 0 0 20px rgba(168,85,247,0.3), 0 0 40px rgba(168,85,247,0.1); }
 .neon-glow-cyan { box-shadow: 0 0 20px rgba(6,182,212,0.3), 0 0 40px rgba(6,182,212,0.1); }
 .neon-glow-pink { box-shadow: 0 0 20px rgba(244,114,182,0.3), 0 0 40px rgba(244,114,182,0.1); }
-.glass-card { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: 16px; }
 .neon-text { text-shadow: 0 0 10px rgba(168,85,247,0.5), 0 0 20px rgba(168,85,247,0.3); }
 .neon-text-cyan { text-shadow: 0 0 10px rgba(6,182,212,0.5), 0 0 20px rgba(6,182,212,0.3); }
 
+/* Animated Gradient Border */
 .gradient-border { position: relative; background: var(--card); border-radius: 16px; }
 .gradient-border::before { content: ''; position: absolute; inset: -2px; border-radius: 18px; background: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan), var(--neon-pink)); z-index: -1; opacity: 0.5; transition: opacity 0.3s ease; }
-.gradient-border:hover::before { opacity: 0.8; }
+.gradient-border:hover::before, .gradient-border:active::before { opacity: 0.8; }
 
 @keyframes neon-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(168,85,247,0.3); } 50% { box-shadow: 0 0 40px rgba(168,85,247,0.6), 0 0 60px rgba(168,85,247,0.3); } }
 .animate-neon-pulse { animation: neon-pulse 2s ease-in-out infinite; }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--background); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+@keyframes slide-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.animate-slide-up { animation: slide-up 0.4s ease-out; }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.animate-fade-in { animation: fade-in 0.3s ease-out; }
+
+/* Mobile Bottom-Nav safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-nav { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Mobile-optimierte Karten */
+.mobile-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.mobile-card:active { transform: scale(0.98); }
+
+/* Status-Badges */
+.badge-live { background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); }
+.badge-warn { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+.badge-error { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+/* Mobile Typography */
+@media (max-width: 768px) {
+  .text-hero { font-size: 1.5rem; line-height: 2rem; }
+  .text-section { font-size: 1rem; line-height: 1.5rem; }
+  .text-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+}
