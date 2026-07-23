@@ -1,17 +1,51 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0f;
-  --foreground: #e0e0e0;
+  --background: #050510;
+  --foreground: #e8e4f5;
   --primary: #a855f7;
   --primary-foreground: #ffffff;
   --secondary: #06b6d4;
-  --muted: #1f1f2e;
-  --border: #2a1a4e;
+  --secondary-foreground: #ffffff;
+  --accent: #f472b6;
+  --accent-foreground: #ffffff;
+  --muted: #1a1625;
+  --muted-foreground: #9a92b8;
+  --card: #0f0a1a;
+  --card-foreground: #e8e4f5;
+  --border: #2a1f4a;
+  --input: #1a1625;
+  --ring: #a855f7;
+  --neon-purple: #a855f7;
+  --neon-cyan: #06b6d4;
+  --neon-pink: #f472b6;
+  --neon-green: #34d399;
+  --neon-amber: #fbbf24;
+  --glass-bg: rgba(15, 10, 26, 0.7);
+  --glass-border: rgba(168, 85, 247, 0.2);
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
+
+.neon-glow { box-shadow: 0 0 20px rgba(168,85,247,0.3), 0 0 40px rgba(168,85,247,0.1); }
+.neon-glow-cyan { box-shadow: 0 0 20px rgba(6,182,212,0.3), 0 0 40px rgba(6,182,212,0.1); }
+.neon-glow-pink { box-shadow: 0 0 20px rgba(244,114,182,0.3), 0 0 40px rgba(244,114,182,0.1); }
+.glass-card { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: 16px; }
+.neon-text { text-shadow: 0 0 10px rgba(168,85,247,0.5), 0 0 20px rgba(168,85,247,0.3); }
+.neon-text-cyan { text-shadow: 0 0 10px rgba(6,182,212,0.5), 0 0 20px rgba(6,182,212,0.3); }
+
+.gradient-border { position: relative; background: var(--card); border-radius: 16px; }
+.gradient-border::before { content: ''; position: absolute; inset: -2px; border-radius: 18px; background: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan), var(--neon-pink)); z-index: -1; opacity: 0.5; transition: opacity 0.3s ease; }
+.gradient-border:hover::before { opacity: 0.8; }
+
+@keyframes neon-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(168,85,247,0.3); } 50% { box-shadow: 0 0 40px rgba(168,85,247,0.6), 0 0 60px rgba(168,85,247,0.3); } }
+.animate-neon-pulse { animation: neon-pulse 2s ease-in-out infinite; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--background); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
