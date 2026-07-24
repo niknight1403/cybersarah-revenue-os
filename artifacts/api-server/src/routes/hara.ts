@@ -18,9 +18,14 @@ function parseJsonArray<T>(roh: string | null): T[] {
 
 // GET /hara/overview
 router.get("/hara/overview", async (req, res) => {
-    if (!db) { res.json([]); return; }
-    if (!db) { res.json([]); return; }
-    if (!db) { res.json([]); return; }
+  if (!db) {
+    res.json({
+      proposals: [],
+      performance: [],
+      statistik: { gesamtVorschlaege: 0, offen: 0, inUmsetzung: 0, abgeschlossen: 0, verworfen: 0, erfolgsquote: null },
+    });
+    return;
+  }
   try {
     const [proposals, performance] = await Promise.all([
       db.select().from(haraProposalsTable).orderBy(desc(haraProposalsTable.createdAt)).limit(50),
@@ -77,6 +82,10 @@ router.get("/hara/overview", async (req, res) => {
 
 // POST /hara/scan — Phase 1 manuell anstoßen
 router.post("/hara/scan", async (req, res) => {
+  if (!db) {
+    res.status(503).json({ success: false, message: "Keine Datenbank konfiguriert — HARA-Scan nicht möglich. Bitte DATABASE_URL setzen." });
+    return;
+  }
   try {
     const ergebnis = await starteHaraScan();
     res.json(ergebnis);
@@ -88,7 +97,10 @@ router.post("/hara/scan", async (req, res) => {
 
 // POST /hara/proposals/:id/bestaetigen — CONFIRM-Signal (Phase 2 → 3)
 router.post("/hara/proposals/:id/bestaetigen", async (req, res) => {
-    if (!db) { res.json([]); return; }
+  if (!db) {
+    res.status(503).json({ error: "Keine Datenbank konfiguriert — HARA-Bestätigung nicht möglich" });
+    return;
+  }
   try {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) return res.status(400).json({ error: "Ungültige ID" });
@@ -114,7 +126,10 @@ router.post("/hara/proposals/:id/bestaetigen", async (req, res) => {
 
 // POST /hara/proposals/:id/verwerfen — Lern-Signal für Phase 4
 router.post("/hara/proposals/:id/verwerfen", async (req, res) => {
-    if (!db) { res.json([]); return; }
+  if (!db) {
+    res.status(503).json({ error: "Keine Datenbank konfiguriert — HARA-Verwerfung nicht möglich" });
+    return;
+  }
   try {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) return res.status(400).json({ error: "Ungültige ID" });
@@ -149,6 +164,10 @@ router.post("/hara/proposals/:id/verwerfen", async (req, res) => {
 
 // POST /hara/proposals/:id/schritte/:index/erledigt — manuellen Schritt abhaken
 router.post("/hara/proposals/:id/schritte/:index/erledigt", async (req, res) => {
+  if (!db) {
+    res.status(503).json({ error: "Keine Datenbank konfiguriert — Aktion nicht möglich" });
+    return;
+  }
   try {
     const id = Number(req.params.id);
     const index = Number(req.params.index);

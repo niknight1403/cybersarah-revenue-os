@@ -142,7 +142,8 @@ router.post(
  * Zeigt an, ob alle notwendigen Umgebungsvariablen gesetzt sind.
  */
 router.get("/stripe/webhook/test", (_req, res) => {
-  const webhookSecret = getWebhookSecret();
+  let webhookSecret: string = "";
+  try { webhookSecret = getWebhookSecret(); } catch { /* not configured */ }
   const secretKey = process.env.STRIPE_SECRET_KEY;
 
   const status = {
