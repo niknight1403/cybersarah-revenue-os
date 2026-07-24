@@ -1,7 +1,7 @@
 /**
  * Google Gemini Client
  * - Echte API-Anbindung mit REST-Aufrufen
- * - Automatischer Fallback auf OpenAI wenn Gemini-Key fehlt
+ * - Automatischer Fallback auf OpenAI wenn Gemini-Key fehlt/ungültig
  * - Key-Rotation über API Manager Agent
  */
 import { logger } from "./logger";
@@ -15,12 +15,29 @@ const GEMINI_KEYS: string[] = [];
 if (GEMINI_KEY) GEMINI_KEYS.push(GEMINI_KEY);
 if (GEMINI_BACKUP_KEY && GEMINI_BACKUP_KEY !== GEMINI_KEY) GEMINI_KEYS.push(GEMINI_BACKUP_KEY);
 
+// ─── Key-Validierung: Google API Keys beginnen mit "AIzaSy" ─────────────────
+const GUELTIGE_KEYS = GEMINI_KEYS.filter(k => {
+  if (!k.startsWith("AIzaSy")) {
+    logger.warn(
+      { keyPrefix: k.substring(0, 12) + "..." },
+      "⚠️ Gemini Key-Format ungültig — erwartet 'AIzaSy...' Prefix. Key wird ignoriert."
+    );
+    return false;
+  }
+  return true;
+});
+
 let aktiverKeyIndex = 0;
 
-export const geminiVerfuegbar = GEMINI_KEYS.length > 0;
+export const geminiVerfuegbar = GUELTIGE_KEYS.length > 0;
 
-if (GEMINI_KEYS.length > 0) {
-  logger.info({ model: GEMINI_MODEL, keysAnzahl: GEMINI_KEYS.length }, "✅ Gemini-Client aktiv");
+if (GUELTIGE_KEYS.length > 0) {
+  logger.info({ model: GEMINI_MODEL, keysAnzahl: GUELTIGE_KEYS.length }, "✅ Gemini-Client aktiv");
+} else if (GEMINI_KEYS.length > 0) {
+  logger.warn(
+    "⚠️ GEMINI_API_KEY hat ungültiges Format — Gemini deaktiviert, Fallback zu OpenAI. " +
+    "Google API Keys beginnen mit 'AIzaSy...'. Bitte neuen Key unter https://aistudio.google.com/apikey erstellen."
+  );
 } else {
   logger.warn("⚠️ Kein GEMINI_API_KEY — Gemini deaktiviert, Fallback zu OpenAI");
 }
@@ -32,13 +49,13 @@ export interface GeminiAntwort {
 }
 
 function holeAktiverKey(): string | undefined {
-  return GEMINI_KEYS[aktiverKeyIndex];
+  return GUELTIGE_KEYS[aktiverKeyIndex];
 }
 
 function rotiereGeminiKey(): string | undefined {
-  if (GEMINI_KEYS.length <= 1) return undefined;
-  aktiverKeyIndex = (aktiverKeyIndex + 1) % GEMINI_KEYS.length;
-  const neuerKey = GEMINI_KEYS[aktiverKeyIndex]!;
+  if (GUELTIGE_KEYS.length <= 1) return undefined;
+  aktiverKeyIndex = (aktiverKeyIndex + 1) % GUELTIGE_KEYS.length;
+  const neuerKey = GUELTIGE_KEYS[aktiverKeyIndex]!;
   logger.info({ keyPrefix: neuerKey.substring(0, 12) }, "🔄 Gemini Key-Rotation — neuer Key aktiv");
   return neuerKey;
 }
@@ -47,7 +64,7 @@ export async function geminiGeneriere(
   prompt: string,
   systemPrompt?: string
 ): Promise<GeminiAntwort> {
-  if (GEMINI_KEYS.length === 0) {
+  if (GUELTIGE_KEYS.length === 0) {
     // Fallback zu OpenAI
     const { openai, openaiVerfuegbar } = await import("./openaiClient");
     if (!openaiVerfuegbar) throw new Error("Weder Gemini noch OpenAI verfügbar");
@@ -71,7 +88,7 @@ export async function geminiGeneriere(
   // Echte Gemini-API-Anbindung mit Retry/Rotation
   let letzterFehler: Error | null = null;
 
-  for (let versuch = 0; versuch < GEMINI_KEYS.length; versuch++) {
+  for (let versuch = 0; versuch < GUELTIGE_KEYS.length; versuch++) {
     const apiKey = holeAktiverKey();
     if (!apiKey) break;
 
@@ -158,7 +175,7 @@ export async function geminiGeneriere(
 }
 
 export async function pruefeGeminiVerbindung(): Promise<boolean> {
-  if (GEMINI_KEYS.length === 0) return false;
+  if (GUELTIGE_KEYS.length === 0) return false;
   try {
     await geminiGeneriere("Antworte mit: OK");
     return true;
@@ -177,7 +194,7 @@ export function holeGeminiStatus(): {
 } {
   return {
     verfuegbar: geminiVerfuegbar,
-    keysAnzahl: GEMINI_KEYS.length,
+    keysAnzahl: GUELTIGE_KEYS.length,
     modell: GEMINI_MODEL,
     aktiverKeyIndex,
   };
