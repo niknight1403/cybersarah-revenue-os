@@ -59,21 +59,18 @@ async function checkDatabase(): Promise<KeyReport> {
   const url = process.env.DATABASE_URL;
   const base = { service: "PostgreSQL", checkedAt: new Date().toISOString() };
   if (!url) return { ...base, status: "missing", detail: "DATABASE_URL fehlt in .env" };
-  // Verbindungstest ohne Zusatz-Dependency: TCP-Handshake auf Host:Port
+  // Echter DB-Verbindungstest via pg Pool (funktioniert mit NeonDB/Supabase)
   try {
-    const u = new URL(url);
-    const net = await import("node:net");
-    await new Promise<void>((res, rej) => {
-      const s = net.createConnection(
-        { host: u.hostname, port: Number(u.port || 5432), timeout: 4000 },
-        () => { s.end(); res(); },
-      );
-      s.on("error", rej);
-      s.on("timeout", () => rej(new Error("Timeout")));
-    });
-    return { ...base, status: "live", detail: "Datenbank erreichbar" };
+    const { Pool } = await import("pg");
+    const pool = new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 8000, ssl: url.includes("sslmode=require") ? { rejectUnauthorized: false } : false });
+    const result = await pool.query("SELECT 1 AS ok");
+    await pool.end();
+    if (result.rows?.[0]?.ok === 1) {
+      return { ...base, status: "live", detail: "Datenbank verbunden und abfragbar" };
+    }
+    return { ...base, status: "invalid", detail: "Verbindung ok, aber SELECT fehlgeschlagen" };
   } catch (e) {
-    return { ...base, status: "invalid", detail: `Nicht erreichbar: ${(e as Error).message}` };
+    return { ...base, status: "invalid", detail: `Verbindungsfehler: ${(e as Error).message?.slice(0, 80)}` };
   }
 }
 
