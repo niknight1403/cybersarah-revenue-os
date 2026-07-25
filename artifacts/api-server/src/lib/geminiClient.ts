@@ -8,21 +8,25 @@ import { logger } from "./logger";
 
 const GEMINI_KEY = process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_GEMINI_KEY"];
 const GEMINI_BACKUP_KEY = process.env["GEMINI_BACKUP_KEY"];
-const GEMINI_MODEL = process.env["GEMINI_MODEL"] ?? "gemini-1.5-flash";
+const GEMINI_MODEL = process.env["GEMINI_MODEL"] ?? "gemini-2.0-flash";
 
 // Alle verfügbaren Keys
 const GEMINI_KEYS: string[] = [];
 if (GEMINI_KEY) GEMINI_KEYS.push(GEMINI_KEY);
 if (GEMINI_BACKUP_KEY && GEMINI_BACKUP_KEY !== GEMINI_KEY) GEMINI_KEYS.push(GEMINI_BACKUP_KEY);
 
-// ─── Key-Validierung: Google API Keys beginnen mit "AIzaSy" ─────────────────
+// ─── Key-Validierung: Akzeptiere gängige Google API Key Formate ──────────────
+// Gültig: "AIzaSy..." (klassisch) oder "AQ..." (neues Google AI Studio Format)
 const GUELTIGE_KEYS = GEMINI_KEYS.filter(k => {
-  if (!k.startsWith("AIzaSy")) {
+  if (k.length < 10) {
+    logger.warn({ keyPrefix: k.substring(0, 8) }, "⚠️ Gemini Key zu kurz — wird ignoriert");
+    return false;
+  }
+  if (!k.startsWith("AIzaSy") && !k.startsWith("AQ.")) {
     logger.warn(
       { keyPrefix: k.substring(0, 12) + "..." },
-      "⚠️ Gemini Key-Format ungültig — erwartet 'AIzaSy...' Prefix. Key wird ignoriert."
+      "⚠️ Gemini Key-Format unüblich — wird trotzdem getestet"
     );
-    return false;
   }
   return true;
 });
@@ -33,13 +37,8 @@ export const geminiVerfuegbar = GUELTIGE_KEYS.length > 0;
 
 if (GUELTIGE_KEYS.length > 0) {
   logger.info({ model: GEMINI_MODEL, keysAnzahl: GUELTIGE_KEYS.length }, "✅ Gemini-Client aktiv");
-} else if (GEMINI_KEYS.length > 0) {
-  logger.warn(
-    "⚠️ GEMINI_API_KEY hat ungültiges Format — Gemini deaktiviert, Fallback zu OpenAI. " +
-    "Google API Keys beginnen mit 'AIzaSy...'. Bitte neuen Key unter https://aistudio.google.com/apikey erstellen."
-  );
 } else {
-  logger.warn("⚠️ Kein GEMINI_API_KEY — Gemini deaktiviert, Fallback zu OpenAI");
+  logger.warn("⚠️ Kein gültiger GEMINI_API_KEY — Gemini deaktiviert, Fallback zu OpenAI");
 }
 
 export interface GeminiAntwort {
