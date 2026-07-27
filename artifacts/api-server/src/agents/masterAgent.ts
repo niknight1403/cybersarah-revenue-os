@@ -7,13 +7,6 @@
  *  - SocialAgent 2x täglich (Content erzeugen/posten)
  *
  * Stellt einen Zustands-Snapshot bereit, den der neue Dashboard-Tab anzeigt.
- * Einbindung im Express-Server (Beispiel):
- *
- *   import { masterAgent } from "./agents/masterAgent";
- *   masterAgent.start();
- *   app.get("/api/master-agent", (_req, res) => res.json(masterAgent.getState()));
- *   app.post("/api/master-agent/run/:agent", async (req, res) =>
- *     res.json(await masterAgent.runNow(req.params.agent as any)));
  */
 
 import { runKeyAgent, type KeyReport } from "./keyAgent";
@@ -49,9 +42,13 @@ function log(agent: string, level: LogEntry["level"], msg: string) {
   state.log = state.log.slice(0, 200);
 }
 
+async function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([p, new Promise<T>((r) => setTimeout(() => r(fallback), ms))]);
+}
+
 async function keysTick() {
   try {
-    state.keys = await runKeyAgent();
+    state.keys = await withTimeout(runKeyAgent(), 15_000, state.keys);
     const bad = state.keys.filter(k => k.status === "invalid");
     const missing = state.keys.filter(k => k.status === "missing");
     if (bad.length) log("KeyAgent", "error", `Ungültig: ${bad.map(b => b.service).join(", ")}`);
@@ -63,14 +60,17 @@ async function keysTick() {
 async function financeTick() {
   if (stripeMode() === "missing") { log("FinanceAgent", "warn", "Wartet auf Stripe-Key."); return; }
   try {
-    // Sicherstellen, dass etwas Verkaufbares existiert (idempotent)
     const name = process.env.PRODUCT_NAME ?? "CyberSarah Service";
     const cents = Number(process.env.PRODUCT_PRICE_CENTS ?? 4900);
-    const link = await ensurePaymentLink(name, cents);
+    const link = await withTimeout(ensurePaymentLink(name, cents), 10_000, { url: state.paymentLink ?? "", created: false });
     state.paymentLink = link.url;
     if (link.created) log("FinanceAgent", "info", `Payment-Link angelegt: ${link.url}`);
 
-    state.revenue = await runFinanceAgent();
+    state.revenue = await withTimeout(runFinanceAgent(), 15_000, state.revenue ?? {
+      mode: "live" as const, last24hCents: 0, last7dCents: 0, currency: "eur",
+      chargeCount7d: 0, failed7d: 0, note: "Timeout — wird beim nächsten Tick erneut versucht",
+      generatedAt: new Date().toISOString(),
+    });
     const r = state.revenue;
     log(
       "FinanceAgent",
@@ -84,7 +84,7 @@ async function socialTick() {
   try {
     const topics = (process.env.SOCIAL_TOPICS ?? "Automatisierung im Alltag,Produkt-Update")
       .split(",").map(t => t.trim()).filter(Boolean);
-    const posts = await runSocialAgent(topics.slice(0, 2));
+    const posts = await withTimeout(runSocialAgent(topics.slice(0, 2)), 20_000, []);
     state.socialQueue = getSocialQueue();
     for (const p of posts) log("SocialAgent", p.status === "failed" ? "error" : "info", `${p.platform}: ${p.detail}`);
   } catch (e) { log("SocialAgent", "error", (e as Error).message); }

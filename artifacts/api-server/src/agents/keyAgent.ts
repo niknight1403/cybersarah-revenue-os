@@ -17,18 +17,31 @@ export interface KeyReport {
   checkedAt: string;
 }
 
+const TIMEOUT_MS = 8000;
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
 async function checkOpenAI(): Promise<KeyReport> {
   const key = process.env.OPENAI_API_KEY;
   const base = { service: "OpenAI", checkedAt: new Date().toISOString() };
   if (!key) return { ...base, status: "missing", detail: "OPENAI_API_KEY fehlt in .env" };
   try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
     const r = await fetch("https://api.openai.com/v1/models", {
       headers: { Authorization: `Bearer ${key}` },
+      signal: ctrl.signal,
     });
+    clearTimeout(timer);
     if (r.ok) return { ...base, status: "live", detail: "Key gültig, Modelle abrufbar" };
     return { ...base, status: "invalid", detail: `HTTP ${r.status} – Key ungültig oder gesperrt` };
   } catch (e) {
-    return { ...base, status: "invalid", detail: `Netzwerkfehler: ${(e as Error).message}` };
+    return { ...base, status: "invalid", detail: `Netzwerkfehler: ${(e as Error).message?.slice(0, 60)}` };
   }
 }
 
@@ -37,9 +50,13 @@ async function checkStripe(): Promise<KeyReport> {
   const base = { service: "Stripe", checkedAt: new Date().toISOString() };
   if (!key) return { ...base, status: "missing", detail: "STRIPE_SECRET_KEY fehlt in .env" };
   try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
     const r = await fetch("https://api.stripe.com/v1/balance", {
       headers: { Authorization: `Bearer ${key}` },
+      signal: ctrl.signal,
     });
+    clearTimeout(timer);
     if (!r.ok) return { ...base, status: "invalid", detail: `HTTP ${r.status} – Key ungültig` };
     const mode: KeyStatus = key.startsWith("sk_live_") ? "live" : "test";
     return {
@@ -51,7 +68,7 @@ async function checkStripe(): Promise<KeyReport> {
           : "TEST-Key – es fließt KEIN echtes Geld. Für echten Umsatz sk_live_… eintragen.",
     };
   } catch (e) {
-    return { ...base, status: "invalid", detail: `Netzwerkfehler: ${(e as Error).message}` };
+    return { ...base, status: "invalid", detail: `Netzwerkfehler: ${(e as Error).message?.slice(0, 60)}` };
   }
 }
 
@@ -59,7 +76,6 @@ async function checkDatabase(): Promise<KeyReport> {
   const url = process.env.DATABASE_URL;
   const base = { service: "PostgreSQL", checkedAt: new Date().toISOString() };
   if (!url) return { ...base, status: "missing", detail: "DATABASE_URL fehlt in .env" };
-  // Echter DB-Verbindungstest via pg Pool (funktioniert mit NeonDB/Supabase)
   try {
     const { Pool } = await import("pg");
     const pool = new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 8000, ssl: url.includes("sslmode=require") ? { rejectUnauthorized: false } : false });
@@ -87,11 +103,15 @@ function checkSocialToken(name: string, envVar: string): KeyReport {
 }
 
 export async function runKeyAgent(): Promise<KeyReport[]> {
-  const [openai, stripe, db] = await Promise.all([checkOpenAI(), checkStripe(), checkDatabase()]);
+  const [openai, stripe, db] = await Promise.allSettled([
+    checkOpenAI(),
+    checkStripe(),
+    checkDatabase(),
+  ]);
   return [
-    openai,
-    stripe,
-    db,
+    openai.status === "fulfilled" ? openai.value : { service: "OpenAI", status: "invalid" as KeyStatus, detail: (openai.reason as Error)?.message?.slice(0, 60) ?? "Fehler", checkedAt: new Date().toISOString() },
+    stripe.status === "fulfilled" ? stripe.value : { service: "Stripe", status: "invalid" as KeyStatus, detail: (stripe.reason as Error)?.message?.slice(0, 60) ?? "Fehler", checkedAt: new Date().toISOString() },
+    db.status === "fulfilled" ? db.value : { service: "PostgreSQL", status: "invalid" as KeyStatus, detail: (db.reason as Error)?.message?.slice(0, 60) ?? "Fehler", checkedAt: new Date().toISOString() },
     checkSocialToken("TikTok", "TIKTOK_ACCESS_TOKEN"),
     checkSocialToken("Instagram", "IG_ACCESS_TOKEN"),
   ];

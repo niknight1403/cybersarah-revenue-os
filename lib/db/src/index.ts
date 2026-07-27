@@ -12,12 +12,24 @@ if (DATABASE_URL && (DATABASE_URL.startsWith("postgres") || DATABASE_URL.startsW
       connectionString: DATABASE_URL,
       max: 10,
       idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
       ssl: needsSSL ? { rejectUnauthorized: false } : false,
     });
+
+    // Test-Verbindung mit Timeout
+    const client = await Promise.race([
+      pool.connect(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("DB-Verbindungs-Timeout (10s)")), 10000)
+      ),
+    ]);
+    client.release();
+
     db = drizzle(pool, { schema });
     console.log("🐘 PostgreSQL verbunden" + (needsSSL ? " (SSL)" : ""));
   } catch (err) {
-    console.warn("⚠️ PostgreSQL Fehler:", (err as Error).message?.slice(0, 80));
+    console.warn("⚠️ PostgreSQL Fehler:", (err as Error).message?.slice(0, 120));
+    console.warn("⚠️ Server läuft weiter ohne DB — HARA und Datenbank-Features sind deaktiviert.");
   }
 } else {
   console.warn("⚠️ Keine DATABASE_URL — DB deaktiviert. Für volle Funktionalität: DATABASE_URL in .env setzen.");
