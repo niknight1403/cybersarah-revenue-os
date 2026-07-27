@@ -7,10 +7,11 @@
 # ═══════════════════════════════════════════════════════════════════════════
 set -e
 
-G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; NC='\033[0m'
+G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; R='\033[0;31m'; NC='\033[0m'
 ok()  { echo -e "${G}✅ $1${NC}"; }
 warn(){ echo -e "${Y}⚠️  $1${NC}"; }
 info(){ echo -e "${C}ℹ️  $1${NC}"; }
+err() { echo -e "${R}❌ $1${NC}"; }
 
 echo -e "${G}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${G}║  🚀 CyberSarah Revenue OS — Vollständiges Deployment      ║${NC}"
@@ -20,13 +21,13 @@ echo ""
 WORKDIR="/opt/cybersarah"
 
 # ─── 1. System-Updates ────────────────────────────────────────
-info "1/8 System-Updates..."
+info "1/9 System-Updates..."
 sudo apt-get update -qq && sudo apt-get upgrade -y -qq
 sudo apt-get install -y -qq curl git build-essential nginx
 ok "System-Updates installiert"
 
-# ─── 2. Node.js ───────────────────────────────────────────────
-info "2/8 Node.js..."
+# ─── 2. Node.js 20+ ──────────────────────────────────────────
+info "2/9 Node.js..."
 if ! command -v node &>/dev/null || [ "$(node --version | cut -d. -f1 | tr -d v)" -lt 20 ]; then
     curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y -qq nodejs
@@ -34,12 +35,12 @@ fi
 ok "Node.js $(node --version)"
 
 # ─── 3. pnpm ──────────────────────────────────────────────────
-info "3/8 pnpm..."
+info "3/9 pnpm..."
 command -v pnpm &>/dev/null || sudo npm install -g pnpm
 ok "pnpm $(pnpm --version)"
 
 # ─── 4. Repository ────────────────────────────────────────────
-info "4/8 Repository..."
+info "4/9 Repository..."
 if [ -d "$WORKDIR/.git" ]; then
     cd "$WORKDIR" && git pull origin main
 else
@@ -51,12 +52,12 @@ cd "$WORKDIR"
 ok "Code bereit: $(pwd)"
 
 # ─── 5. Dependencies ──────────────────────────────────────────
-info "5/8 Dependencies..."
+info "5/9 Dependencies..."
 pnpm install
 ok "Dependencies installiert"
 
-# ─── 6. .env ──────────────────────────────────────────────────
-info "6/8 .env prüfen..."
+# ─── 6. .env synchronisieren ──────────────────────────────────
+info "6/9 .env prüfen..."
 if [ ! -f "$WORKDIR/.env" ]; then
     cp "$WORKDIR/.env.example" "$WORKDIR/.env"
     warn ".env aus Template erstellt — JETZT ECHTE KEYS EINTRAGEN!"
@@ -64,11 +65,19 @@ if [ ! -f "$WORKDIR/.env" ]; then
     warn "    Dann Skript erneut ausführen!"
     exit 1
 fi
-cp "$WORKDIR/.env" "$WORKDIR/artifacts/api-server/.env" 2>/dev/null
-ok ".env bereit"
+# .env in api-server kopieren
+cp "$WORKDIR/.env" "$WORKDIR/artifacts/api-server/.env"
+ok ".env bereit → api-server/.env synchronisiert"
 
-# ─── 7. Nginx ─────────────────────────────────────────────────
-info "7/8 Nginx..."
+# ─── 7. Dashboard bauen (KRITISCH — fehlte vorher!) ───────────
+info "7/9 Dashboard bauen..."
+cd "$WORKDIR/artifacts/dashboard"
+pnpm install 2>/dev/null || true
+pnpm run build
+ok "Dashboard gebaut: $(ls -la dist/ 2>/dev/null | wc -l) Dateien"
+
+# ─── 8. Nginx ─────────────────────────────────────────────────
+info "8/9 Nginx..."
 sudo tee /etc/nginx/sites-available/cybersarah > /dev/null << 'NGINX'
 server {
     listen 80;
@@ -100,8 +109,8 @@ sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ok "Nginx Port 80 → localhost:3000"
 
-# ─── 8. PM2 Server ────────────────────────────────────────────
-info "8/8 Server starten..."
+# ─── 9. PM2 Server starten ────────────────────────────────────
+info "9/9 Server starten..."
 command -v pm2 &>/dev/null || sudo npm install -g pm2
 cd "$WORKDIR/artifacts/api-server"
 pm2 delete cybersarah 2>/dev/null || true
@@ -124,3 +133,4 @@ echo -e "  📋 pm2 logs cybersarah"
 echo -e ""
 echo -e "  ⚠️  STRIPE_WEBHOOK_SECRET eintragen:"
 echo -e "     nano $WORKDIR/.env"
+echo -e "  ⚠️  Danach neu deployen oder: pm2 restart cybersarah"
