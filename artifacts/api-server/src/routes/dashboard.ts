@@ -8,16 +8,17 @@ const router = Router();
 router.get("/dashboard/kpis", async (req, res) => {
   if (!db) {
     return res.json({
-      heute: 0, woche: 0, monat: 0, gesamt: 0, ausgaben: 0,
-      agenten: 16, aktiveAgenten: 15, contentGeneriert: 0,
-      seoArtikel: 0, socialMediaPosts: 0,
+      umsatzHeute: 0, umsatzWoche: 0, umsatzMonat: 0,
+      aktiveCampaigns: 0, contentPieces: 0,
+      conversionRate: null, roi: null,
+      systemStatus: "OFFLINE — DB nicht verbunden",
+      aktiviertAgenten: 0,
     });
   }
   const heute = new Date(); heute.setHours(0, 0, 0, 0);
   const vorWoche = new Date(); vorWoche.setDate(vorWoche.getDate() - 7);
   const vorMonat = new Date(); vorMonat.setDate(vorMonat.getDate() - 30);
 
-  // Echte Einnahmen nach Zeitraum
   const [[heuteRes], [wocheRes], [monatRes], [gesamtEinnahmenRes], [ausgabenRes]] = await Promise.all([
     db.select({ s: sql<string>`COALESCE(SUM(betrag),0)` })
       .from(transactionsTable)
@@ -40,7 +41,6 @@ router.get("/dashboard/kpis", async (req, res) => {
     db.select({ n: sql<number>`COUNT(*)` }).from(campaignsTable).where(eq(campaignsTable.status, "aktiv")),
     db.select({ n: sql<number>`COUNT(*)` }).from(contentTable),
     db.select({ n: sql<number>`COUNT(*)` }).from(agentsTable).where(eq(agentsTable.status, "aktiv")),
-    // Echte Konversionsrate aus Kampagnendaten
     db.select({
       gesamtKlicks: sql<number>`COALESCE(SUM(klicks), 0)`,
       gesamtKonversionen: sql<number>`COALESCE(SUM(konversionen), 0)`,
@@ -49,12 +49,10 @@ router.get("/dashboard/kpis", async (req, res) => {
 
   const einnahmen = parseFloat(gesamtEinnahmenRes?.s ?? "0");
   const ausgaben = parseFloat(ausgabenRes?.s ?? "0");
-  // ROI nur berechnen wenn echte Ausgaben existieren
   const roi = ausgaben > 0
     ? Math.round(((einnahmen - ausgaben) / ausgaben) * 10000) / 100
     : null;
 
-  // Echte Konversionsrate: Konversionen / Klicks (nur wenn Klicks > 0)
   const klicks = kampagnenStats[0]?.gesamtKlicks ?? 0;
   const konversionen = kampagnenStats[0]?.gesamtKonversionen ?? 0;
   const conversionRate = klicks > 0

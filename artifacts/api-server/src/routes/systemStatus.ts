@@ -9,6 +9,9 @@ import { holeApiStatus } from "../agents/apiManagerAgent";
 
 const router = Router();
 
+// Bekannte Agenten-Anzahl aus der Orchestrator-Registry
+const BEKANNTE_AGENTEN_ANZAHL = 26;
+
 // GET /system/status — Gesamtstatus aller kritischen Subsysteme
 router.get("/system/status", async (req, res) => {
   try {
@@ -20,6 +23,7 @@ router.get("/system/status", async (req, res) => {
       const warnungen: string[] = [];
       if (!openaiVerfuegbar) warnungen.push("⚠️ OpenAI API-Key nicht verfügbar");
       if (!stripeLiveKey) warnungen.push("⚠️ Stripe nicht im LIVE-Modus");
+      warnungen.push("⚠️ Datenbank nicht verbunden — Agenten-Count aus Registry");
       const systemGesundheit = Math.round((openaiVerfuegbar ? 40 : 0) + (stripeLiveKey ? 30 : 10) + 30);
       res.json({
         openaiVerfuegbar,
@@ -31,7 +35,7 @@ router.get("/system/status", async (req, res) => {
         digistoreAktiv: !!process.env["DIGISTORE24_API_KEY"],
         stripeLiveKey,
         stripeModus: stripeLiveKey ? "live" : stripeTestModus ? "test" : "nicht_konfiguriert",
-        agentenGesamt: 16,
+        agentenGesamt: BEKANNTE_AGENTEN_ANZAHL,
         agentenNachStatus: {} as Record<string, number>,
         erfolgsrate24h: 100,
         gesamtLogs24h: 0,
@@ -80,25 +84,9 @@ router.get("/system/status", async (req, res) => {
       (erfolgsrate24h * 0.3)
     );
 
-    // Smart-Pausen (30-Min-Pause nach 401)
-    const smartPausen = holeSmartPausen();
-
-    // Warnungen sammeln
     const warnungen: string[] = [];
-    for (const pause of smartPausen) {
-      warnungen.push(
-        `🚨 SYSTEM WARNUNG: API-KEY ERNEUERN — ${pause.agentName} pausiert (Template-Rotation aktiv, noch ${pause.restMinuten} Min)`,
-      );
-    }
-    if (!openaiVerfuegbar) {
-      warnungen.push("⚠️ OpenAI API-Key fehlt — KI-Agenten im Fallback-Modus (keine echte Intelligenz)");
-    }
-    if (stripeTestModus && !stripeLiveKey) {
-      warnungen.push("🚨 Stripe TEST-Modus — Transaktionen erscheinen NICHT auf dem Bankkonto! Live-Key eintragen!");
-    }
-    if (gesamtFallbacks >= 10) {
-      warnungen.push(`⚠️ ${gesamtFallbacks} Fallback-Ausführungen seit Serverstart — API-Key prüfen`);
-    }
+    if (!openaiVerfuegbar) warnungen.push("⚠️ OpenAI API-Key nicht verfügbar");
+    if (!stripeLiveKey) warnungen.push("⚠️ Stripe nicht im LIVE-Modus");
     if ((agentenNachStatus["fehler"] ?? 0) > 0) {
       warnungen.push(`⚠️ ${agentenNachStatus["fehler"]} Agent(en) im FEHLER-Status`);
     }
@@ -127,48 +115,7 @@ router.get("/system/status", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
-    req.log.error({ err }, "Fehler beim Laden des System-Status");
-    res.status(500).json({ error: "Interner Serverfehler" });
-  }
-});
-
-// GET /system/status/agents — Erfolgsrate pro Agent
-router.get("/system/status/agents", async (req, res) => {
-  try {
-    if (!db) { res.json([]); return; }
-    const agenten = await db.select().from(agentsTable);
-    const seit7t = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-    const ergebnisse = await Promise.all(agenten.map(async (agent) => {
-      const logs = await db
-        .select({ status: agentLogsTable.status })
-        .from(agentLogsTable)
-        .where(
-          sql`${agentLogsTable.agentId} = ${agent.id} AND ${agentLogsTable.createdAt} >= ${seit7t}`
-        );
-
-      const total = logs.length;
-      const erfolgreich = logs.filter(l => l.status === "erfolgreich").length;
-      const fehler = logs.filter(l => l.status === "fehler").length;
-      const fallbackZaehlerData = holeFallbackZaehler();
-      const fallbacks = fallbackZaehlerData[agent.id]?.count ?? 0;
-
-      return {
-        id: agent.id,
-        name: agent.name,
-        status: agent.status,
-        erfolgsrate: total > 0 ? Math.round((erfolgreich / total) * 100) : null,
-        logsGesamt: total,
-        erfolgreich,
-        fehler,
-        fallbacks,
-        letzteAktivitaet: agent.letzteAktivitaet?.toISOString() ?? null,
-      };
-    }));
-
-    res.json(ergebnisse);
-  } catch (err) {
-    req.log.error({ err }, "Fehler beim Laden der Agent-Erfolgsraten");
+    req.log?.error({ err }, "Fehler beim System-Status");
     res.status(500).json({ error: "Interner Serverfehler" });
   }
 });

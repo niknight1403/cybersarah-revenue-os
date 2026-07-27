@@ -298,7 +298,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
             <div className="text-lg md:text-2xl font-bold text-foreground" data-testid="kpi-aktive-agenten">
-              {kpis.aktiviertAgenten} / {systemStatus?.agentenGesamt ?? 13}
+              {kpis.aktiviertAgenten} / {systemStatus?.agentenGesamt ?? 26}
             </div>
             <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">
               {kpis.systemStatus}
