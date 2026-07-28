@@ -40,6 +40,8 @@ export class RevenueAnalystAgent extends AgentBase {
         return this.erstelleStripeLinks();
       case "ki_chancen_analysieren":
         return this.analysiereKiChancen();
+      case "auto_produkte_erstellen":
+        return this.erstelleAutonomeProdukte();
       default:
         return this.scanneChancen();
     }
@@ -222,4 +224,72 @@ Antworte als JSON: {"chancen": [{"titel": "...", "beschreibung": "...", "kanal":
       return { success: false, message: "KI-Analyse fehlgeschlagen", metadaten: {} };
     }
   }
+
+  // ─── Autonome Produkt-Erstellung: Top-Chancen sofort in Stripe-Produkte umwandeln ──
+  private async erstelleAutonomeProdukte(): Promise<AufgabeErgebnis> {
+    // Alle "eigenes_produkt" Chancen ohne Payment-Link
+    const produkte = await db
+      .select()
+      .from(revenueOpportunitiesTable)
+      .where(eq(revenueOpportunitiesTable.kanal, "eigenes_produkt"))
+      .orderBy(desc(revenueOpportunitiesTable.geschaetzterMonatsumsatz))
+      .limit(3);
+
+    let erstellt = 0;
+
+    for (const produkt of produkte) {
+      if (produkt.stripePaymentLink) continue;
+
+      try {
+        const stripe = getStripeClient();
+        // Preis = 10% des geschätzten Monatsumsatzes, mindestens €19
+        const preis = Math.max(Math.round(Number(produkt.geschaetzterMonatsumsatz ?? 97) * 0.1 * 100), 1900);
+
+        const stripeProdukt = await stripe.products.create({
+          name: produkt.titel,
+          description: produkt.beschreibung ?? `KI-generiertes Produkt für ${produkt.marke}`,
+          metadata: { marke: produkt.marke ?? "CyberSarah", kanal: produkt.kanal, quelle: "revenue_analyst_auto" },
+        });
+
+        const stripePreis = await stripe.prices.create({
+          product: stripeProdukt.id,
+          unit_amount: preis,
+          currency: "eur",
+          metadata: { quelle: "revenue_analyst_auto" },
+        });
+
+        const paymentLink = await stripe.paymentLinks.create({
+          line_items: [{ price: stripePreis.id, quantity: 1 }],
+          after_completion: { type: "redirect", redirect: { url: "https://cybersarah.de/danke" } },
+          metadata: { quelle: "revenue_analyst_auto" },
+        });
+
+        await db.update(revenueOpportunitiesTable)
+          .set({ stripePaymentLink: paymentLink.url, status: "aktiv", updatedAt: new Date() })
+          .where(eq(revenueOpportunitiesTable.id, produkt.id));
+
+        erstellt++;
+        logger.info({ produkt: produkt.titel, link: paymentLink.url }, "Revenue-Analyst: Auto-Produkt erstellt");
+      } catch (err) {
+        logger.warn({ err, produkt: produkt.titel }, "Revenue-Analyst: Auto-Produkt-Erstellung fehlgeschlagen");
+      }
+    }
+
+    if (this.agentId) {
+      await db.insert(agentLogsTable).values({
+        agentId: this.agentId,
+        agentName: "Revenue Analyst Agent",
+        aktion: "Autonome Produkt-Erstellung",
+        status: "erfolgreich",
+        nachricht: `${erstellt} Stripe-Produkte automatisch erstellt und verkaufsbereit`,
+      });
+    }
+
+    return {
+      success: true,
+      message: `${erstellt} neue Stripe-Produkte autonom erstellt — sofort verkaufbar via Payment-Links`,
+      metadaten: { erstellteProdukte: erstellt },
+    };
+  }
+
 }

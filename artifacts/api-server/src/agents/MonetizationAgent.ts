@@ -167,6 +167,7 @@ export class MonetizationAgent extends AgentBase {
   }
 
   private async optimierePreise(marke?: string): Promise<AufgabeErgebnis> {
+    // Psychologische Preisstrategien anwenden
     const empfehlungen = [
       { strategie: "Psychological Pricing", beispiel: "€197 statt €200 — erhöht Konversionen um ~15%" },
       { strategie: "Anchoring", beispiel: "Teuerste Option zuerst zeigen, mittlere Wahl attraktiver machen" },
@@ -174,10 +175,45 @@ export class MonetizationAgent extends AgentBase {
       { strategie: "Urgency", beispiel: "Timer + 'Nur noch 3 Plätze' → 30% mehr sofortige Konversionen" },
     ];
 
+    // Aktive Kampagnen nach Marke analysieren
+    const zielMarken = marke ? [marke] : ["CyberSarah", "GeldPilot AI", "UnternehmerGPT"];
+    let optimiert = 0;
+
+    for (const m of zielMarken) {
+      const kampagnen = await db
+        .select()
+        .from(campaignsTable)
+        .where(and(eq(campaignsTable.marke, m), eq(campaignsTable.status, "aktiv")))
+        .limit(5);
+
+      for (const kampagne of kampagnen) {
+        const konversionsrate = (kampagne.klicks ?? 0) > 0
+          ? ((kampagne.konversionen ?? 0) / kampagne.klicks!) * 100
+          : 0;
+
+        // Bei niedriger Konversion: Headline-Optimierung vorschlagen
+        if (konversionsrate < 2 && (kampagne.klicks ?? 0) > 100) {
+          empfehlungen.push({
+            strategie: `Low-Conversion-Alarm: ${kampagne.name}`,
+            beispiel: `Konversionsrate ${konversionsrate.toFixed(1)}% — Headline/CTA A/B-testen`,
+          });
+        }
+
+        // Bei hohen Klicks aber null Konversionen: Tracking-Problem
+        if ((kampagne.klicks ?? 0) > 500 && (kampagne.konversionen ?? 0) === 0) {
+          empfehlungen.push({
+            strategie: `KRITISCH: ${kampagne.name}`,
+            beispiel: `${kampagne.klicks} Klicks, 0 Konversionen — Tracking-Pixel prüfen`,
+          });
+          optimiert++;
+        }
+      }
+    }
+
     return {
       success: true,
-      message: `Preis-Optimierung: ${empfehlungen.length} Strategien identifiziert für ${marke ?? "alle Marken"}`,
-      metadaten: { marke: marke ?? "alle", empfehlungen },
+      message: `Preis-Optimierung: ${empfehlungen.length} Strategien | ${optimiert} kritische Alerts für ${marke ?? "alle Marken"}`,
+      metadaten: { marke: marke ?? "alle", empfehlungen, optimiert },
     };
   }
 }

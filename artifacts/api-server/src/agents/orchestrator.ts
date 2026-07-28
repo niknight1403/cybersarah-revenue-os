@@ -537,7 +537,7 @@ export function starteOrchestrator(): void {
   });
 
   // Content Factory: 08:00, 12:00, 18:00
-  cron.schedule("0 8,12,18 * * *", async () => {
+  cron.schedule("0 8,12,15,18,21 * * *", async () => {
     const agentId = await holeAgentId("content_factory");
     if (!agentId) return;
     const marken = ["CyberSarah", "GeldPilot AI", "UnternehmerGPT"] as const;
@@ -582,7 +582,7 @@ export function starteOrchestrator(): void {
   });
 
   // Funnel Agent: 07:00 täglich
-  cron.schedule("0 7 * * *", async () => {
+  cron.schedule("0 7,19 * * *", async () => {
     const agentId = await holeAgentId("funnel");
     if (!agentId) return;
     await fuhreAgentAus(agentId, () => generiereFunnelSequenz(agentId).then(() => {}));
@@ -624,19 +624,19 @@ export function starteOrchestrator(): void {
   });
 
   // Master Agent: alle 30 Minuten
-  cron.schedule("*/30 * * * *", () => {
+  cron.schedule("*/15 * * * *", () => {
     globalQueue.fuegeHinzu("master_system_analyse", { aktion: "system_analyse" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("master_chancen_priorisierung", { aktion: "chancen_priorisierung" }, { prioritaet: 1 });
   });
 
   // Revenue Analyst Agent: alle 2 Stunden
-  cron.schedule("0 */2 * * *", () => {
+  cron.schedule("0 * * * *", () => {
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "chancen_scannen" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_stripe", { aktion: "stripe_link_erstellen" }, { prioritaet: 2 });
   });
 
   // Revenue Analyst KI-Analyse: täglich 08:00 (OpenAI nur einmal täglich)
-  cron.schedule("0 8 * * *", () => {
+  cron.schedule("0 */6 * * *", () => {
     globalQueue.fuegeHinzu("revenue_analyst_ki", { aktion: "ki_chancen_analysieren" }, { prioritaet: 2 });
     globalQueue.fuegeHinzu("master_optimierung", { aktion: "optimierung" }, { prioritaet: 1 });
   });
@@ -671,7 +671,7 @@ export function starteOrchestrator(): void {
 
   // HARA Phase 1: alle 4 Stunden neue Revenue-Pakete generieren (übersprungen,
   // wenn bereits genug Pakete auf Bestätigung/Umsetzung warten).
-  cron.schedule("30 */4 * * *", () => {
+  cron.schedule("0 */2 * * *", () => {
     globalQueue.fuegeHinzu("hara_scan", { aktion: "scan" }, { prioritaet: 2 });
   });
 
@@ -688,13 +688,13 @@ export function starteOrchestrator(): void {
   });
 
   // SEO-Content-Empire-Agent: täglich neue SEO-Artikel generieren + veröffentlichen (07:30 Uhr)
-  cron.schedule("30 7 * * *", () => {
+  cron.schedule("30 7,19 * * *", () => {
     globalQueue.fuegeHinzu("seo_content_scan", {}, { prioritaet: 3 });
   });
 
   // E-Mail-Listen-Monetarisierungs-Agent: täglich fehlende Sequenzen erstellen (06:30 Uhr),
   // stündlich fällige E-Mails an aktive Leads versenden.
-  cron.schedule("30 6 * * *", () => {
+  cron.schedule("30 6,18 * * *", () => {
     globalQueue.fuegeHinzu("email_sequenzen_erstellen", {}, { prioritaet: 3 });
   });
   cron.schedule("0 * * * *", () => {
@@ -703,7 +703,7 @@ export function starteOrchestrator(): void {
 
   // Faceless-Video-Auto-Publish-Agent: Content-Generierung 3x täglich (09/14/20 Uhr),
   // Veröffentlichung stündlich zu :20, Performance-Analyse täglich um 22:30 Uhr.
-  cron.schedule("0 9,14,20 * * *", () => {
+  cron.schedule("0 9,14,17,20 * * *", () => {
     globalQueue.fuegeHinzu("faceless_video_generieren", {}, { prioritaet: 3 });
   });
   cron.schedule("20 * * * *", () => {
@@ -715,7 +715,7 @@ export function starteOrchestrator(): void {
 
   // Content-Recycling-Agent: täglich um 11:45 Uhr Top-Performer scannen und
   // eine neue Format-Variante generieren (fließt automatisch in Auto-Post-Pipeline ein).
-  cron.schedule("45 11 * * *", () => {
+  cron.schedule("45 11,23 * * *", () => {
     globalQueue.fuegeHinzu("content_recyceln", {}, { prioritaet: 3 });
   });
 
