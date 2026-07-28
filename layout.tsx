@@ -46,9 +46,9 @@ const mobileNavSecondary = [
 ];
 
 const gruppenLabel: Record<string, string> = {
-  umsatz: "💰 Umsatz",
-  content: "📱 Content",
-  system: "⚙️ System",
+  umsatz: "Umsatz",
+  content: "Content",
+  system: "System",
 };
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -59,23 +59,27 @@ export function Layout({ children }: { children: ReactNode }) {
   const gruppen = ["umsatz", "content", "system"] as const;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--background)' }}>
 
       {/* ── Desktop Sidebar ──────────────────────────────────────────────── */}
-      <aside className="hidden md:flex w-56 lg:w-64 flex-shrink-0 border-r border-border bg-card/80 backdrop-blur-xl flex-col">
-        <div className="h-14 flex items-center px-4 border-b border-border">
-          <div className="flex items-center gap-2 text-primary font-bold text-base tracking-tight neon-text">
-            <Activity className="h-5 w-5 text-primary animate-pulse" />
-            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
-              CyberSarah OS
-            </span>
+      <aside className="hidden md:flex w-56 lg:w-64 flex-shrink-0 flex-col" style={{ background: 'rgba(255,255,255,0.02)', borderRight: '1px solid var(--border)', backdropFilter: 'blur(20px)' }}>
+        {/* Logo */}
+        <div className="h-14 flex items-center px-4" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)' }}>
+              <Activity className="h-4 w-4 text-white" />
+            </div>
+            <span className="gradient-text font-bold text-sm tracking-tight">CyberSarah OS</span>
           </div>
         </div>
-        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-1">
           {gruppen.map((gruppe) => (
             <div key={gruppe}>
               <button
-                className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold text-muted-foreground tracking-widest uppercase cursor-pointer hover:text-foreground transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold tracking-widest uppercase cursor-pointer transition-colors"
+                style={{ color: 'var(--foreground-muted)' }}
                 onClick={() => setAktiveGruppe(aktiveGruppe === gruppe ? null : gruppe)}
               >
                 {gruppenLabel[gruppe]}
@@ -89,20 +93,24 @@ export function Layout({ children }: { children: ReactNode }) {
                     <Link key={item.name} href={item.href}>
                       <div className={cn(
                         "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer",
-                        isActive 
-                          ? "bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-primary neon-glow border border-primary/30" 
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:border hover:border-border/50"
-                      )}>
-                        <item.icon className={cn("h-4 w-4 shrink-0", isActive && "drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]")} />
+                        isActive
+                          ? "text-white"
+                          : "hover:text-white"
+                      )} style={isActive ? {
+                        background: 'rgba(6,182,212,0.1)',
+                        border: '1px solid rgba(6,182,212,0.15)',
+                        color: '#06b6d4'
+                      } : {
+                        color: 'var(--foreground-muted)'
+                      }}>
+                        <item.icon className="h-4 w-4 shrink-0" />
                         {item.name}
                         {item.badge && (
-                          <span className={cn(
-                            "ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded-full",
-                            item.badge === "€€€" ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400 border border-green-500/30" :
-                            item.badge === "AUTO" ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-400 border border-cyan-500/30" :
-                            item.badge === "KI" ? "bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-400 border border-purple-500/30" :
-                            "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 border border-amber-500/30"
-                          )}>
+                          <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded-full" style={{
+                            background: 'rgba(139,92,246,0.1)',
+                            color: '#8b5cf6',
+                            border: '1px solid rgba(139,92,246,0.2)'
+                          }}>
                             {item.badge}
                           </span>
                         )}
@@ -113,16 +121,18 @@ export function Layout({ children }: { children: ReactNode }) {
             </div>
           ))}
         </nav>
-        <div className="p-3 border-t border-border">
+
+        {/* Footer */}
+        <div className="p-3" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs shrink-0 neon-glow">
+            <div className="h-9 w-9 rounded-xl flex items-center justify-center text-white font-bold text-xs shrink-0" style={{ background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)' }}>
               CS
             </div>
             <div className="text-xs min-w-0">
-              <p className="font-medium text-foreground truncate">CyberSarah OS</p>
-              <p className="text-muted-foreground truncate flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                Autonomer Betrieb
+              <p className="font-medium truncate" style={{ color: 'var(--foreground)' }}>CyberSarah OS</p>
+              <p className="truncate flex items-center gap-1.5" style={{ color: 'var(--foreground-muted)' }}>
+                <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block" />
+                Autonom
               </p>
             </div>
           </div>
@@ -132,23 +142,23 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* ── Mobile Sidebar Overlay ───────────────────────────────────────── */}
       {sidebarOffen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSidebarOffen(false)} />
-          <div className="relative w-72 bg-card/95 backdrop-blur-xl border-r border-border flex flex-col h-full overflow-y-auto">
-            <div className="h-14 flex items-center justify-between px-4 border-b border-border">
-              <div className="flex items-center gap-2 text-primary font-bold text-sm neon-text">
-                <Activity className="h-4 w-4 text-primary animate-pulse" />
-                <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
-                  CyberSarah OS
-                </span>
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={() => setSidebarOffen(false)} />
+          <div className="relative w-72 flex flex-col h-full overflow-y-auto" style={{ background: 'rgba(15,15,25,0.98)', backdropFilter: 'blur(20px)', borderRight: '1px solid var(--border)' }}>
+            <div className="h-14 flex items-center justify-between px-4" style={{ borderBottom: '1px solid var(--border)' }}>
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)' }}>
+                  <Activity className="h-3.5 w-3.5 text-white" />
+                </div>
+                <span className="gradient-text font-bold text-sm">CyberSarah OS</span>
               </div>
               <button onClick={() => setSidebarOffen(false)}>
-                <X className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
+                <X className="h-5 w-5" style={{ color: 'var(--foreground-muted)' }} />
               </button>
             </div>
-            <nav className="flex-1 py-2 px-2 space-y-0.5">
+            <nav className="flex-1 py-3 px-2.5 space-y-1">
               {gruppen.map((gruppe) => (
                 <div key={gruppe} className="mb-2">
-                  <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground tracking-widest uppercase">
+                  <p className="px-3 py-1.5 text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--foreground-muted)' }}>
                     {gruppenLabel[gruppe]}
                   </p>
                   {navigation.filter(n => n.gruppe === gruppe).map((item) => {
@@ -156,15 +166,22 @@ export function Layout({ children }: { children: ReactNode }) {
                     return (
                       <Link key={item.name} href={item.href} onClick={() => setSidebarOffen(false)}>
                         <div className={cn(
-                          "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer",
-                          isActive 
-                            ? "bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-primary neon-glow border border-primary/30" 
-                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                        )}>
-                          <item.icon className={cn("h-5 w-5 shrink-0", isActive && "drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]")} />
+                          "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer"
+                        )} style={isActive ? {
+                          background: 'rgba(6,182,212,0.1)',
+                          border: '1px solid rgba(6,182,212,0.15)',
+                          color: '#06b6d4'
+                        } : {
+                          color: 'var(--foreground-muted)'
+                        }}>
+                          <item.icon className="h-5 w-5 shrink-0" />
                           {item.name}
                           {item.badge && (
-                            <span className="ml-auto text-[9px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                            <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded-full" style={{
+                              background: 'rgba(139,92,246,0.1)',
+                              color: '#8b5cf6',
+                              border: '1px solid rgba(139,92,246,0.2)'
+                            }}>
                               {item.badge}
                             </span>
                           )}
@@ -182,27 +199,27 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* ── Main Content ─────────────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col overflow-hidden relative min-w-0">
         {/* Header */}
-        <header className="h-12 md:h-14 flex items-center justify-between px-4 md:px-6 border-b border-border bg-card/50 backdrop-blur-xl z-10 shrink-0">
+        <header className="h-12 md:h-14 flex items-center justify-between px-4 md:px-6 z-10 shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'rgba(10,10,15,0.8)', backdropFilter: 'blur(20px)' }}>
           <div className="flex items-center gap-3">
             <button className="md:hidden" onClick={() => setSidebarOffen(true)}>
-              <Menu className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
+              <Menu className="h-5 w-5" style={{ color: 'var(--foreground-muted)' }} />
             </button>
-            <div className="flex items-center gap-2 text-primary font-bold text-sm md:hidden neon-text">
-              <Activity className="h-4 w-4 text-primary animate-pulse" />
-              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
-                CyberSarah OS
-              </span>
+            <div className="flex items-center gap-2 font-bold text-sm md:hidden">
+              <div className="h-6 w-6 rounded-md flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)' }}>
+                <Activity className="h-3 w-3 text-white" />
+              </div>
+              <span className="gradient-text">CyberSarah OS</span>
             </div>
-            <h1 className="hidden md:block text-sm font-medium text-muted-foreground">
+            <h1 className="hidden md:block text-sm font-medium" style={{ color: 'var(--foreground-muted)' }}>
               {navigation.find((n) => n.href === location)?.name || "Übersicht"}
             </h1>
           </div>
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
             </span>
-            <span className="text-[10px] md:text-xs font-mono text-green-400">LIVE</span>
+            <span className="text-[10px] md:text-xs font-mono" style={{ color: '#22c55e' }}>LIVE</span>
           </div>
         </header>
 
@@ -215,18 +232,15 @@ export function Layout({ children }: { children: ReactNode }) {
       </main>
 
       {/* ── Mobile Bottom Navigation (2 Reihen) ─────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-xl">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 mobile-nav" style={{ borderTop: '1px solid var(--border)', background: 'rgba(10,10,15,0.95)', backdropFilter: 'blur(20px)' }}>
         {/* Reihe 1 */}
-        <div className="flex items-stretch h-14 border-b border-border/50">
+        <div className="flex items-stretch h-14" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
           {mobileNavPrimary.map((item) => {
             const isActive = location === item.href;
             return (
               <Link key={item.name} href={item.href} className="flex-1">
-                <div className={cn(
-                  "flex flex-col items-center justify-center h-full gap-1 transition-all",
-                  isActive ? "text-primary" : "text-muted-foreground"
-                )}>
-                  <item.icon className={cn("h-5 w-5", isActive && "drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]")} />
+                <div className="flex flex-col items-center justify-center h-full gap-1 transition-all" style={{ color: isActive ? '#06b6d4' : 'var(--foreground-muted)' }}>
+                  <item.icon className="h-5 w-5" />
                   <span className="text-[9px] font-medium leading-none">{item.name}</span>
                 </div>
               </Link>
@@ -242,7 +256,8 @@ export function Layout({ children }: { children: ReactNode }) {
               <div key={item.name} className="flex-1">
                 {isMenu ? (
                   <button
-                    className="flex flex-col items-center justify-center w-full h-full gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                    className="flex flex-col items-center justify-center w-full h-full gap-1 transition-colors"
+                    style={{ color: 'var(--foreground-muted)' }}
                     onClick={() => setSidebarOffen(true)}
                   >
                     <Menu className="h-5 w-5" />
@@ -250,11 +265,8 @@ export function Layout({ children }: { children: ReactNode }) {
                   </button>
                 ) : (
                   <Link href={item.href} className="flex-1">
-                    <div className={cn(
-                      "flex flex-col items-center justify-center h-full gap-1 transition-all",
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    )}>
-                      <item.icon className={cn("h-5 w-5", isActive && "drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]")} />
+                    <div className="flex flex-col items-center justify-center h-full gap-1 transition-all" style={{ color: isActive ? '#06b6d4' : 'var(--foreground-muted)' }}>
+                      <item.icon className="h-5 w-5" />
                       <span className="text-[9px] font-medium leading-none">{item.name}</span>
                     </div>
                   </Link>

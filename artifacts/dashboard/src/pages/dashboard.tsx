@@ -279,7 +279,7 @@ export default function Dashboard() {
 
       {/* KPI Grid — 2 cols on mobile, 4 on desktop */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="bg-card border-border">
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">Umsatz Heute</CardTitle>
             <DollarSign className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -291,7 +291,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">Agenten</CardTitle>
             <Activity className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -306,7 +306,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">Kampagnen</CardTitle>
             <Megaphone className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -318,7 +318,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">Gesamt-ROI</CardTitle>
             <Target className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -333,7 +333,7 @@ export default function Dashboard() {
 
       {/* Revenue + Agenten-Status */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card className="bg-card border-border">
+        <Card className="glass-card">
           <CardHeader className="p-4 pb-2 md:p-6 md:pb-2">
             <CardTitle className="text-sm md:text-base flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-primary" />Wochenumsatz
@@ -346,7 +346,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        <Card className="glass-card">
           <CardHeader className="p-4 pb-2 md:p-6 md:pb-2">
             <CardTitle className="text-sm md:text-base flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />Monatsumsatz
@@ -359,7 +359,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        <Card className="glass-card">
           <CardHeader className="p-4 pb-2 md:p-6 md:pb-2">
             <CardTitle className="text-sm md:text-base flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />Content-Pieces
