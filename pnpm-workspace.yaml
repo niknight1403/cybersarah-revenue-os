@@ -2,6 +2,7 @@ packages:
   - "artifacts/*"
   - "lib/*"
   - "scripts"
+  - "apps/*"
 
 onlyBuiltDependencies:
   - esbuild
