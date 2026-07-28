@@ -30,7 +30,7 @@ router.get("/system/status", async (req, res) => {
         openaiModus: openaiVerfuegbar ? "live" : "fallback",
         stripeVerfuegbar: !!process.env.STRIPE_SECRET_KEY,
         stripeTestModus,
-        apiKeyStatus: holeApiStatus(),
+        apiKeyStatus,
         geminiAktiv: !!(process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_GEMINI_KEY"]),
         digistoreAktiv: !!process.env["DIGISTORE24_API_KEY"],
         stripeLiveKey,
@@ -50,6 +50,9 @@ router.get("/system/status", async (req, res) => {
       });
       return;
     }
+
+    const smartPausen = holeSmartPausen();
+    const apiKeyStatus = holeApiStatus();
 
     const agenten = await db.select().from(agentsTable);
 
@@ -96,7 +99,7 @@ router.get("/system/status", async (req, res) => {
       openaiModus: openaiVerfuegbar ? "live" : "fallback",
       stripeVerfuegbar: !!process.env.STRIPE_SECRET_KEY,
       stripeTestModus,
-      apiKeyStatus: holeApiStatus(),
+      apiKeyStatus,
       geminiAktiv: !!(process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_GEMINI_KEY"]),
       digistoreAktiv: !!process.env["DIGISTORE24_API_KEY"],
       stripeLiveKey,
@@ -114,9 +117,10 @@ router.get("/system/status", async (req, res) => {
       warnungen,
       timestamp: new Date().toISOString(),
     });
-  } catch (err) {
+  } catch (err: any) {
+    console.error("❌ SYSTEM STATUS FEHLER:", err?.message, err?.code, err?.stack?.split("\n").slice(0,3).join(" | "));
     req.log?.error({ err }, "Fehler beim System-Status");
-    res.status(500).json({ error: "Interner Serverfehler" });
+    res.status(500).json({ error: "Interner Serverfehler", detail: err?.message?.slice(0, 200) });
   }
 });
 

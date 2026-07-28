@@ -131,17 +131,19 @@ const dashboardPath = path.resolve(__dirname, "../../dashboard");
 
 app.use(express.static(dashboardPath, { index: "index.html" }));
 
-// ─── DB-Fehler-Handling ─────────────────────────────────────────────────────
+// ─── DB-Fehler-Handling (loggt Fehler sichtbar statt sie zu verschlucken) ───
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  if (err?.message?.includes("null") || err?.message?.includes("select") ||
-      err?.code === "23502" || err?.code === "42P01" ||
-      err?.message?.includes("Cannot read properties of null")) {
-    console.warn("⚠️ DB-Fehler (ignoriert):", err.message?.slice(0, 80));
+  // DB-Fehler explizit loggen (statt still zu ignorieren)
+  if (err?.code === "23502" || err?.code === "42P01" ||
+      err?.message?.includes("null") || err?.message?.includes("select") ||
+      err?.message?.includes("Cannot read properties of null") ||
+      err?.message?.includes("relation") || err?.message?.includes("column")) {
+    logger.warn({ err: err.message?.slice(0, 200), code: err.code, path: req.path }, "DB-Fehler auf Route");
     if (req.method === "GET") {
-      return res.json([]);
+      return res.json({ error: "Datenbank-Fehler", detail: err.message?.slice(0, 120), path: req.path });
     }
-    return res.json({ success: true, mock: true });
+    return res.status(500).json({ error: "Datenbank-Fehler", detail: err.message?.slice(0, 120) });
   }
   next(err);
 });

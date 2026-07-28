@@ -159,6 +159,25 @@ async function startServer() {
     }
   })();
 
+  // ── DB-Schema automatisch synchronisieren (drizzle-kit push) ──────────────
+  if (hasDb) {
+    try {
+      logger.info("🐘 Prüfe DB-Schema...");
+      const { execSync } = await import("child_process");
+      const path = await import("path");
+      const dbDir = path.resolve(import.meta.dirname ?? ".", "../../lib/db");
+      execSync("npx drizzle-kit push --config ./drizzle.config.ts", {
+        cwd: dbDir,
+        env: { ...process.env, DATABASE_URL: process.env["DATABASE_URL"] },
+        timeout: 30000,
+        stdio: "pipe",
+      });
+      logger.info("✅ DB-Schema synchronisiert");
+    } catch (e: any) {
+      logger.warn("DB-Schema-Push übersprungen: " + (e?.stderr?.toString()?.slice(0, 120) ?? e?.message ?? ""));
+    }
+  }
+
   // ── Agenten + Orchestrator (nur mit DB) ────────────────────────────────────
   if (hasDb) {
     try {
