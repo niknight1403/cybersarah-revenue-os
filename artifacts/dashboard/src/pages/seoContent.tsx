@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Sparkles, Pause, Play, ExternalLink, Eye, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+import { apiFetch } from "@/lib/api-fetch";
+
 interface SeoArtikel {
   id: number;
   keyword: string;
@@ -40,7 +42,7 @@ export default function SeoContent() {
   const { data, isLoading } = useQuery<SeoUebersicht>({
     queryKey: ["seo-uebersicht"],
     queryFn: async () => {
-      const res = await fetch("/api/seo/uebersicht");
+      const res = await apiFetch("/api/seo/uebersicht");
       if (!res.ok) throw new Error("Fehler beim Laden");
       return res.json() as Promise<SeoUebersicht>;
     },
@@ -49,7 +51,7 @@ export default function SeoContent() {
 
   const scanMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/seo/scan", { method: "POST" });
+      const res = await apiFetch("/api/seo/scan", { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       return res.json() as Promise<ScanErgebnis>;
     },
@@ -68,7 +70,7 @@ export default function SeoContent() {
 
   const pausierenMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/seo/${id}/pausieren`, { method: "POST" });
+      const res = await apiFetch(`/api/seo/${id}/pausieren`, { method: "POST" });
       if (!res.ok) throw new Error("Fehler");
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["seo-uebersicht"] }),
@@ -76,7 +78,7 @@ export default function SeoContent() {
 
   const reaktivierenMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/seo/${id}/reaktivieren`, { method: "POST" });
+      const res = await apiFetch(`/api/seo/${id}/reaktivieren`, { method: "POST" });
       if (!res.ok) throw new Error("Fehler");
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["seo-uebersicht"] }),

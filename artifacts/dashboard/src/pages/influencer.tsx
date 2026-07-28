@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/api-fetch";
 import {
   Zap, CheckCircle2, XCircle, Clock, RefreshCw,
   TrendingUp, Play, Globe, Send
@@ -42,7 +43,7 @@ export default function Influencer() {
   const { data: plattData, isLoading: plattLoading } = useQuery({
     queryKey: ["influencer-plattformen"],
     queryFn: async () => {
-      const r = await fetch(`${BASE}/influencer/plattformen`);
+      const r = await apiFetch(`${BASE}/influencer/plattformen`);
       return r.json() as Promise<{ plattformen: Plattform[] }>;
     },
     refetchInterval: 15_000,
@@ -51,7 +52,7 @@ export default function Influencer() {
   const { data: stats } = useQuery({
     queryKey: ["influencer-stats"],
     queryFn: async () => {
-      const r = await fetch(`${BASE}/influencer/stats`);
+      const r = await apiFetch(`${BASE}/influencer/stats`);
       return r.json() as Promise<Stats>;
     },
     refetchInterval: 10_000,
@@ -60,7 +61,7 @@ export default function Influencer() {
   const { data: postingData, isLoading: postingLoading } = useQuery({
     queryKey: ["influencer-postings"],
     queryFn: async () => {
-      const r = await fetch(`${BASE}/influencer/postings?limit=30`);
+      const r = await apiFetch(`${BASE}/influencer/postings?limit=30`);
       return r.json() as Promise<{ postings: Posting[] }>;
     },
     refetchInterval: 10_000,
@@ -68,7 +69,7 @@ export default function Influencer() {
 
   const savePlattformMutation = useMutation({
     mutationFn: async ({ name, webhookUrl, aktiv }: { name: string; webhookUrl?: string; aktiv?: boolean }) => {
-      const r = await fetch(`${BASE}/influencer/plattformen/${name}`, {
+      const r = await apiFetch(`${BASE}/influencer/plattformen/${name}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ webhookUrl, aktiv }),
@@ -80,7 +81,7 @@ export default function Influencer() {
 
   const autoPostMutation = useMutation({
     mutationFn: async () => {
-      const r = await fetch(`${BASE}/influencer/auto-post`, { method: "POST" });
+      const r = await apiFetch(`${BASE}/influencer/auto-post`, { method: "POST" });
       return r.json() as Promise<{ gepostet: number; fehler: number; plattformen: string[]; contentId: number | null }>;
     },
     onSuccess: (d) => {

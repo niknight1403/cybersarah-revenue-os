@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Clapperboard, Sparkles, Send, ChartBar, Eye, MousePointerClick } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+import { apiFetch } from "@/lib/api-fetch";
+
 interface FacelessVideo {
   id: number;
   marke: string;
@@ -49,7 +51,7 @@ export default function FacelessVideo() {
   const { data, isLoading } = useQuery<VideoUebersicht>({
     queryKey: ["faceless-video-uebersicht"],
     queryFn: async () => {
-      const res = await fetch("/api/faceless-video/uebersicht");
+      const res = await apiFetch("/api/faceless-video/uebersicht");
       if (!res.ok) throw new Error("Fehler beim Laden");
       return res.json() as Promise<VideoUebersicht>;
     },
@@ -58,7 +60,7 @@ export default function FacelessVideo() {
 
   const generierenMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/faceless-video/generieren", { method: "POST" });
+      const res = await apiFetch("/api/faceless-video/generieren", { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       return res.json() as Promise<{ video: FacelessVideo | null }>;
     },
@@ -74,7 +76,7 @@ export default function FacelessVideo() {
 
   const veroeffentlichenMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/faceless-video/veroeffentlichen", { method: "POST" });
+      const res = await apiFetch("/api/faceless-video/veroeffentlichen", { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       return res.json() as Promise<{ veroeffentlicht: number; uebersprungen: number; details: string[] }>;
     },
@@ -87,7 +89,7 @@ export default function FacelessVideo() {
 
   const analysierenMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/faceless-video/analysieren", { method: "POST" });
+      const res = await apiFetch("/api/faceless-video/analysieren", { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       return res.json() as Promise<{ analysiert: number; pausiert: number; details: string[] }>;
     },

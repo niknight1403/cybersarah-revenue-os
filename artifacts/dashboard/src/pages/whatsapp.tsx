@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/api-fetch";
 import {
   MessageCircle, Send, Users, Zap, ExternalLink, RefreshCw,
   CheckCircle2, AlertCircle, Bot,
@@ -37,7 +38,7 @@ export default function WhatsApp() {
   const { data: status, isLoading } = useQuery<WAStatus>({
     queryKey: ["wa-status"],
     queryFn: async () => {
-      const r = await fetch(`${BASE}/whatsapp/status`, { headers: authH() });
+      const r = await apiFetch(`${BASE}/whatsapp/status`, { headers: authH() });
       return r.json();
     },
     refetchInterval: 30_000,
@@ -46,14 +47,14 @@ export default function WhatsApp() {
   const { data: empfaengerData } = useQuery<EmpfaengerResponse>({
     queryKey: ["wa-empfaenger"],
     queryFn: async () => {
-      const r = await fetch(`${BASE}/whatsapp/empfaenger`, { headers: authH() });
+      const r = await apiFetch(`${BASE}/whatsapp/empfaenger`, { headers: authH() });
       return r.json();
     },
   });
 
   const { mutate: sendeTipp, isPending: sendet } = useMutation({
     mutationFn: async () => {
-      const r = await fetch(`${BASE}/whatsapp/tipp-senden`, {
+      const r = await apiFetch(`${BASE}/whatsapp/tipp-senden`, {
         method: "POST", headers: authH(),
       });
       return r.json();
@@ -63,7 +64,7 @@ export default function WhatsApp() {
 
   const { mutate: fuegeHinzu, isPending: hinzufuegen } = useMutation({
     mutationFn: async () => {
-      const r = await fetch(`${BASE}/whatsapp/empfaenger`, {
+      const r = await apiFetch(`${BASE}/whatsapp/empfaenger`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authH() },
         body: JSON.stringify({ telefon: neueTelefon }),
@@ -79,7 +80,7 @@ export default function WhatsApp() {
   const ladeVorschau = async () => {
     setLaedt(true);
     try {
-      const r = await fetch(`${BASE}/whatsapp/tipp-vorschau`, { headers: authH() });
+      const r = await apiFetch(`${BASE}/whatsapp/tipp-vorschau`, { headers: authH() });
       const d = await r.json() as { tipp: string };
       setTippVorschau(d.tipp);
     } finally {

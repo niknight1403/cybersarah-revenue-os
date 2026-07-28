@@ -218,6 +218,14 @@ function registriereQueueHandler(): void {
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "marketing_kampagnen_erstellen" } });
   });
 
+  
+  // ── Monetization: Auto-Optimize-All ──
+  globalQueue.registriereHandler("monetization_auto_optimize", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof MonetizationAgent);
+    if (!agent) throw new Error("MonetizationAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "auto_optimize_all" } });
+  });
+
   // ── Monetization: Upsell-Strategie ──
   globalQueue.registriereHandler("monetization_upsell", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof MonetizationAgent);
@@ -485,8 +493,7 @@ async function mainLoop(): Promise<void> {
     // Alle 15 Min: Sales + Monetization + Marketing-Kampagnen
     if (mainLoopZyklus % 15 === 0) {
       globalQueue.fuegeHinzu("sales_optimierung", {}, { prioritaet: 3 });
-      globalQueue.fuegeHinzu("monetization_funnel", { aktion: "funnel_optimieren" }, { prioritaet: 3 });
-      globalQueue.fuegeHinzu("monetization_affiliate", { aktion: "affiliate_analyse" }, { prioritaet: 3 });
+      globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "auto_optimize_all" }, { prioritaet: 2 });
       globalQueue.fuegeHinzu("marketing_kampagnen_erstellen", { aktion: "marketing_kampagnen_erstellen" }, { prioritaet: 2 });
     }
     // Alle 30 Min: Upsell + Preisoptimierung (Revenue-Aktionen)
@@ -498,9 +505,9 @@ async function mainLoop(): Promise<void> {
     if (mainLoopZyklus % 20 === 0) {
       globalQueue.fuegeHinzu("community_management", {}, { prioritaet: 3 });
     }
-    // Alle 10 Min: Revenue Analyst Scan (ohne OpenAI — kein API-Call)
-    if (mainLoopZyklus % 10 === 0) {
-      globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "chancen_scannen" }, { prioritaet: 1 });
+    // Alle 5 Min: Revenue Analyst Auto-Optimize (scan + stripe + performance)
+    if (mainLoopZyklus % 5 === 0) {
+      globalQueue.fuegeHinzu("revenue_analyst_auto", { aktion: "auto_optimize_all" }, { prioritaet: 1 });
     }
     // Alle 20 Min: Master Optimierung
     if (mainLoopZyklus % 20 === 0) {

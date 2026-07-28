@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Mail, Sparkles, Send, UserMinus, MousePointerClick, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+import { apiFetch } from "@/lib/api-fetch";
+
 interface Lead {
   id: number;
   email: string;
@@ -49,7 +51,7 @@ export default function EmailListen() {
   const { data, isLoading } = useQuery<ListenUebersicht>({
     queryKey: ["leads-uebersicht"],
     queryFn: async () => {
-      const res = await fetch("/api/leads/uebersicht");
+      const res = await apiFetch("/api/leads/uebersicht");
       if (!res.ok) throw new Error("Fehler beim Laden");
       return res.json() as Promise<ListenUebersicht>;
     },
@@ -58,7 +60,7 @@ export default function EmailListen() {
 
   const sequenzenMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/leads/sequenzen-erstellen", { method: "POST" });
+      const res = await apiFetch("/api/leads/sequenzen-erstellen", { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       return res.json() as Promise<{ erstellt: number; details: string[] }>;
     },
@@ -71,7 +73,7 @@ export default function EmailListen() {
 
   const versendenMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/leads/versenden", { method: "POST" });
+      const res = await apiFetch("/api/leads/versenden", { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       return res.json() as Promise<{ versendet: number; details: string[] }>;
     },
@@ -84,7 +86,7 @@ export default function EmailListen() {
 
   const abmeldenMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/leads/${id}/abmelden`, { method: "POST" });
+      const res = await apiFetch(`/api/leads/${id}/abmelden`, { method: "POST" });
       if (!res.ok) throw new Error("Fehler");
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["leads-uebersicht"] }),

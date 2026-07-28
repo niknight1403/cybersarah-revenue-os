@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Recycle, Sparkles, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+import { apiFetch } from "@/lib/api-fetch";
+
 interface RecyclingEintrag {
   id: number;
   quelleTyp: string;
@@ -37,7 +39,7 @@ export default function ContentRecycling() {
   const { data, isLoading } = useQuery<RecyclingUebersicht>({
     queryKey: ["content-recycling-uebersicht"],
     queryFn: async () => {
-      const res = await fetch("/api/content-recycling/uebersicht");
+      const res = await apiFetch("/api/content-recycling/uebersicht");
       if (!res.ok) throw new Error("Fehler beim Laden");
       return res.json() as Promise<RecyclingUebersicht>;
     },
@@ -46,7 +48,7 @@ export default function ContentRecycling() {
 
   const scanMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/content-recycling/scan", { method: "POST" });
+      const res = await apiFetch("/api/content-recycling/scan", { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       return res.json() as Promise<{ recycelt: number; details: string[] }>;
     },

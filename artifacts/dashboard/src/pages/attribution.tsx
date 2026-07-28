@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Target, TrendingUp, HelpCircle, FileText, Mail, Search as SearchIcon } from "lucide-react";
 
+import { apiFetch } from "@/lib/api-fetch";
+
 interface AttributionEintrag {
   typ: string;
   id: number;
@@ -34,7 +36,7 @@ export default function Attribution() {
   const { data, isLoading } = useQuery<AttributionUebersicht>({
     queryKey: ["attribution-uebersicht"],
     queryFn: async () => {
-      const res = await fetch("/api/attribution/uebersicht");
+      const res = await apiFetch("/api/attribution/uebersicht");
       if (!res.ok) throw new Error("Fehler beim Laden");
       return res.json() as Promise<AttributionUebersicht>;
     },

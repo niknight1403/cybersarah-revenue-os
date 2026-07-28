@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-const API = (p: string) => fetch(p).then(r => r.json());
-const POST = (p: string, b: unknown) => fetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then(r => r.json());
+import { apiFetch } from "@/lib/api-fetch";
+
+const API = (p: string) => apiFetch(p);
+const POST = (p: string, b: unknown) => apiFetch(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) });
 
 const C = {
   bg: "bg-[#05040f]", card: "bg-[#0d0b1a]", border: "border-[#2a1f4a]",
@@ -74,7 +76,7 @@ export default function InfluencerHub() {
               <div className="flex gap-2 mb-3 flex-wrap">
                 {["analytisch","humorvoll","provokativ","inspirierend"].map(t => (
                   <span key={t} className={`text-xs px-2 py-1 rounded-full cursor-pointer ${persona?.tonality === t ? "bg-[#a855f7] text-white" : "bg-[#1a1030] text-[#9d8ec4]"}`}
-                    onClick={() => { setTonalität(t); fetch("/api/influencer/persona", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({tonality: t}) }); }}>
+                    onClick={() => { setTonalität(t); apiFetch("/api/influencer/persona", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({tonality: t}) }); }}>
                     {t}
                   </span>
                 ))}
@@ -240,7 +242,7 @@ export default function InfluencerHub() {
               ))}
 
               <button
-                onClick={() => fetch("/api/influencer/revenue", {
+                onClick={() => apiFetch("/api/influencer/revenue", {
                   method: "POST", headers: {"Content-Type":"application/json"},
                   body: JSON.stringify({ typ: "affiliate", beschreibung: "Affiliate-Link zu KI-Tool", status: "aktiv" })
                 }).then(() => qc.invalidateQueries({ queryKey: ["influencer"] }))}

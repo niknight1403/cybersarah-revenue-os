@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/api-fetch";
 import {
   Mail, Users, TrendingUp, Send, RefreshCw,
   ExternalLink, CheckCircle2, Clock, Eye,
@@ -41,7 +42,7 @@ export default function Newsletter() {
   const { data, isLoading } = useQuery<NewsletterStatus>({
     queryKey: ["newsletter-status"],
     queryFn: async () => {
-      const r = await fetch(`${BASE}/newsletter/status`, { headers: authH() });
+      const r = await apiFetch(`${BASE}/newsletter/status`, { headers: authH() });
       return r.json();
     },
     refetchInterval: 60_000,
@@ -49,7 +50,7 @@ export default function Newsletter() {
 
   const { mutate: publizieren, isPending: publiziert } = useMutation({
     mutationFn: async () => {
-      const r = await fetch(`${BASE}/newsletter/veroeffentlichen`, {
+      const r = await apiFetch(`${BASE}/newsletter/veroeffentlichen`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authH() },
         body: JSON.stringify({ marke }),
@@ -61,7 +62,7 @@ export default function Newsletter() {
 
   const { mutate: abonnentHinzu, isPending: hinzufuegen } = useMutation({
     mutationFn: async () => {
-      const r = await fetch(`${BASE}/newsletter/abonnent`, {
+      const r = await apiFetch(`${BASE}/newsletter/abonnent`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authH() },
         body: JSON.stringify({ email: neueEmail, marke }),
@@ -73,7 +74,7 @@ export default function Newsletter() {
 
   const { mutate: syncLeads, isPending: syncing } = useMutation({
     mutationFn: async () => {
-      const r = await fetch(`${BASE}/newsletter/leads-synchronisieren`, {
+      const r = await apiFetch(`${BASE}/newsletter/leads-synchronisieren`, {
         method: "POST", headers: authH(),
       });
       return r.json();

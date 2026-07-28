@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/api-fetch";
 import {
   Zap, CheckCircle, ExternalLink, Copy, AlertTriangle,
   ShoppingCart, Users, Rocket, ClipboardList, ChevronDown, ChevronUp
@@ -313,7 +314,7 @@ export default function SofortStart() {
   const { data: produkte, isLoading: produkteLoading } = useQuery<Produkt[]>({
     queryKey: ["sofort-produkte"],
     queryFn: async () => {
-      const res = await fetch("/api/sofort-start/produkte");
+      const res = await apiFetch("/api/sofort-start/produkte");
       if (!res.ok) throw new Error("Fehler");
       return res.json() as Promise<Produkt[]>;
     },
@@ -323,7 +324,7 @@ export default function SofortStart() {
   const { data: setupSchritte } = useQuery<SetupSchritt[]>({
     queryKey: ["setup-schritte"],
     queryFn: async () => {
-      const res = await fetch("/api/sofort-start/setup-status");
+      const res = await apiFetch("/api/sofort-start/setup-status");
       if (!res.ok) throw new Error("Fehler");
       return res.json() as Promise<SetupSchritt[]>;
     },
@@ -333,7 +334,7 @@ export default function SofortStart() {
   const { data: affiliateTemplates } = useQuery<AffiliateTemplate[]>({
     queryKey: ["affiliate-templates"],
     queryFn: async () => {
-      const res = await fetch("/api/sofort-start/affiliate-templates");
+      const res = await apiFetch("/api/sofort-start/affiliate-templates");
       if (!res.ok) throw new Error("Fehler");
       return res.json() as Promise<AffiliateTemplate[]>;
     },
@@ -341,7 +342,7 @@ export default function SofortStart() {
 
   const erstelleMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/sofort-start/erstelle-produkte", { method: "POST" });
+      const res = await apiFetch("/api/sofort-start/erstelle-produkte", { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       return res.json() as Promise<ErstelleErgebnis>;
     },
@@ -362,7 +363,7 @@ export default function SofortStart() {
 
   const erledigtMutation = useMutation({
     mutationFn: async (schluessel: string) => {
-      const res = await fetch(`/api/sofort-start/setup-schritt-erledigt/${schluessel}`, { method: "POST", headers: { "Content-Type": "application/json" } });
+      const res = await apiFetch(`/api/sofort-start/setup-schritt-erledigt/${schluessel}`, { method: "POST", headers: { "Content-Type": "application/json" } });
       if (!res.ok) throw new Error("Fehler");
     },
     onSuccess: () => {

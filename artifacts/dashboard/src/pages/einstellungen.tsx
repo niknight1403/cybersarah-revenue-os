@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/api-fetch";
 import {
   CheckCircle2, XCircle, AlertCircle, ExternalLink,
   Zap, Link, Webhook, Settings, Copy, Check, RefreshCw,
@@ -42,15 +43,15 @@ interface SetupStatus {
 const BASE = "/api";
 
 async function fetchSetup(): Promise<SetupStatus> {
-  const r = await fetch(`${BASE}/einstellungen/setup`).catch(() => ({ ok: false, json: async () => ({}) } as Response));
+  const r = await apiFetch(`${BASE}/einstellungen/setup`).catch(() => ({ ok: false, json: async () => ({}) } as Response));
   return r.json() as Promise<SetupStatus>;
 }
 async function fetchAffiliateLinks(): Promise<{ affiliateLinks: AffiliateLink[] }> {
-  const r = await fetch(`${BASE}/einstellungen/affiliate-links`).catch(() => ({ ok: false, json: async () => ({ affiliateLinks: [] }) } as Response));
+  const r = await apiFetch(`${BASE}/einstellungen/affiliate-links`).catch(() => ({ ok: false, json: async () => ({ affiliateLinks: [] }) } as Response));
   return r.json() as Promise<{ affiliateLinks: AffiliateLink[] }>;
 }
 async function fetchWebhook(): Promise<{ webhookUrl: string | null; aktiv: boolean }> {
-  const r = await fetch(`${BASE}/einstellungen/webhook`).catch(() => ({ ok: false, json: async () => ({ webhookUrl: null, aktiv: false }) } as Response));
+  const r = await apiFetch(`${BASE}/einstellungen/webhook`).catch(() => ({ ok: false, json: async () => ({ webhookUrl: null, aktiv: false }) } as Response));
   return r.json() as Promise<{ webhookUrl: string | null; aktiv: boolean }>;
 }
 
@@ -140,7 +141,7 @@ export default function Einstellungen() {
 
   const saveOpenaiKeyMutation = useMutation({
     mutationFn: async (key: string) => {
-      const r = await fetch(`${BASE}/einstellungen/openai-key`, {
+      const r = await apiFetch(`${BASE}/einstellungen/openai-key`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key }),
@@ -163,7 +164,7 @@ export default function Einstellungen() {
   const { data: openaiKeyData } = useQuery({
     queryKey: ["openai-key"],
     queryFn: async () => {
-      const r = await fetch(`${BASE}/einstellungen/openai-key`);
+      const r = await apiFetch(`${BASE}/einstellungen/openai-key`);
       return r.json() as Promise<{ gesetzt: boolean; keyVorschau: string | null; getestet: boolean }>;
     },
     refetchInterval: 10_000,
@@ -171,7 +172,7 @@ export default function Einstellungen() {
 
   const saveAffiliateMutation = useMutation({
     mutationFn: async (links: AffiliateLink[]) => {
-      const r = await fetch(`${BASE}/einstellungen/affiliate-links`, {
+      const r = await apiFetch(`${BASE}/einstellungen/affiliate-links`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ affiliateLinks: links }),
@@ -183,7 +184,7 @@ export default function Einstellungen() {
 
   const saveWebhookMutation = useMutation({
     mutationFn: async (url: string) => {
-      const r = await fetch(`${BASE}/einstellungen/webhook`, {
+      const r = await apiFetch(`${BASE}/einstellungen/webhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ webhookUrl: url, aktiv: true }),
@@ -200,7 +201,7 @@ export default function Einstellungen() {
 
   const testWebhookMutation = useMutation({
     mutationFn: async () => {
-      const r = await fetch(`${BASE}/einstellungen/webhook/testen`, { method: "POST" });
+      const r = await apiFetch(`${BASE}/einstellungen/webhook/testen`, { method: "POST" });
       return r.json() as Promise<{ erfolgreich: boolean; statusCode?: number; fehler?: string }>;
     },
     onSuccess: (d) => {
@@ -213,7 +214,7 @@ export default function Einstellungen() {
 
   const markSchritt = useMutation({
     mutationFn: async ({ schluessel, meta }: { schluessel: string; meta?: string }) => {
-      const r = await fetch(`${BASE}/einstellungen/setup/${schluessel}/erledigt`, {
+      const r = await apiFetch(`${BASE}/einstellungen/setup/${schluessel}/erledigt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ metadaten: meta }),

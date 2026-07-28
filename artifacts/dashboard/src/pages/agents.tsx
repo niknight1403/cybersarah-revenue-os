@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
+import { apiFetch } from "@/lib/api-fetch";
+
 const statusColorMap: Record<string, string> = {
   aktiv: "bg-green-500/10 text-green-500 border-green-500/20",
   wartend: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
@@ -34,7 +36,7 @@ function useAgentStats() {
   return useQuery<AgentStats[]>({
     queryKey: ["agent-stats"],
     queryFn: async () => {
-      const res = await fetch("/api/system/status/agents");
+      const res = await apiFetch("/api/system/status/agents");
       if (!res.ok) throw new Error("Stats nicht verfügbar");
       return res.json() as Promise<AgentStats[]>;
     },
@@ -86,7 +88,7 @@ export default function Agents() {
   const handleReset = async (id: number, agentName: string) => {
     setResettingId(id);
     try {
-      const res = await fetch(`/api/agents/${id}/reset`, { method: "POST" });
+      const res = await apiFetch(`/api/agents/${id}/reset`, { method: "POST" });
       const data = await res.json() as { success: boolean; message: string };
       if (data.success) {
         toast({ title: "✅ Agent zurückgesetzt", description: data.message });

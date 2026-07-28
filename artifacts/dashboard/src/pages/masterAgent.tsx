@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/api-fetch";
+
 /**
  * Master-Agent-Tab (Neon Cyber Design).
  */
@@ -25,7 +27,7 @@ export default function MasterAgentTab() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/master-agent");
+      const r = await apiFetch("/api/master-agent");
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setS(await r.json()); setErr(null);
     } catch (e) { setErr((e as Error).message); }
@@ -36,7 +38,7 @@ export default function MasterAgentTab() {
   const runNow = async (agent: string) => {
     setBusy(agent);
     try {
-      const r = await fetch(`/api/master-agent/run/${agent}`, { method: "POST" });
+      const r = await apiFetch(`/api/master-agent/run/${agent}`, { method: "POST" });
       if (r.ok) setS(await r.json());
     } finally { setBusy(null); }
   };

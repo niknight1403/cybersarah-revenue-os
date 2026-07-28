@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/api-fetch";
 import {
   TrendingUp, Zap, CheckCircle, XCircle, ExternalLink, Play,
   Pause, Shield, BarChart3, Clock, DollarSign, AlertTriangle,
@@ -284,7 +285,7 @@ export default function Expansion() {
   const { data: chancen, isLoading: chancenLoading } = useQuery<ExpansionChance[]>({
     queryKey: ["expansion-chancen"],
     queryFn: async () => {
-      const res = await fetch("/api/expansion/chancen");
+      const res = await apiFetch("/api/expansion/chancen");
       if (!res.ok) throw new Error("Chancen nicht verfügbar");
       return res.json() as Promise<ExpansionChance[]>;
     },
@@ -294,7 +295,7 @@ export default function Expansion() {
   const { data: expansionStatus } = useQuery<ExpansionStatus>({
     queryKey: ["expansion-status"],
     queryFn: async () => {
-      const res = await fetch("/api/expansion/status");
+      const res = await apiFetch("/api/expansion/status");
       if (!res.ok) throw new Error("Status nicht verfügbar");
       return res.json() as Promise<ExpansionStatus>;
     },
@@ -304,7 +305,7 @@ export default function Expansion() {
   const { data: projektion } = useQuery<Projektion>({
     queryKey: ["expansion-projektion"],
     queryFn: async () => {
-      const res = await fetch("/api/expansion/projektion");
+      const res = await apiFetch("/api/expansion/projektion");
       if (!res.ok) throw new Error("Projektion nicht verfügbar");
       return res.json() as Promise<Projektion>;
     },
@@ -312,7 +313,7 @@ export default function Expansion() {
 
   const scanMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/expansion/scan", { method: "POST" });
+      const res = await apiFetch("/api/expansion/scan", { method: "POST" });
       if (!res.ok) throw new Error("Scan fehlgeschlagen");
       return res.json() as Promise<{ entdeckt: number; gespeichert: number }>;
     },
@@ -326,7 +327,7 @@ export default function Expansion() {
 
   const aktivierenMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/expansion/chancen/${id}/aktivieren`, { method: "POST" });
+      const res = await apiFetch(`/api/expansion/chancen/${id}/aktivieren`, { method: "POST" });
       if (!res.ok) throw new Error("Aktivierung fehlgeschlagen");
     },
     onSuccess: () => {
@@ -338,7 +339,7 @@ export default function Expansion() {
 
   const pausierenMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/expansion/chancen/${id}/pausieren`, { method: "POST" });
+      const res = await apiFetch(`/api/expansion/chancen/${id}/pausieren`, { method: "POST" });
       if (!res.ok) throw new Error("Pausierung fehlgeschlagen");
     },
     onSuccess: () => {

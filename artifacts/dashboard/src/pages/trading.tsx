@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/api-fetch";
 import {
   TrendingUp, TrendingDown, Minus, Play, Square, Zap,
   Brain, RefreshCw, BarChart3, Shield, AlertTriangle, Activity,
@@ -138,7 +139,7 @@ export default function Trading() {
   const { data, isLoading } = useQuery<TradingDaten>({
     queryKey: ["trading"],
     queryFn: async () => {
-      const res = await fetch("/api/trading/daten");
+      const res = await apiFetch("/api/trading/daten");
       if (!res.ok) throw new Error("Fehler");
       return res.json() as Promise<TradingDaten>;
     },
@@ -147,7 +148,7 @@ export default function Trading() {
 
   const startMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/trading/starten", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ interval: 5 }) });
+      const res = await apiFetch("/api/trading/starten", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ interval: 5 }) });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
@@ -159,7 +160,7 @@ export default function Trading() {
 
   const stopMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/trading/stoppen", { method: "POST" });
+      const res = await apiFetch("/api/trading/stoppen", { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
@@ -171,7 +172,7 @@ export default function Trading() {
 
   const zyklusMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/trading/zyklus", { method: "POST" });
+      const res = await apiFetch("/api/trading/zyklus", { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       return res.json() as Promise<{ analysen: Array<{ signal: string }>; trades: number }>;
     },

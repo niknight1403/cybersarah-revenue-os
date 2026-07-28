@@ -8,6 +8,8 @@ import { Activity, AlertTriangle, DollarSign, Megaphone, Target, Zap, TrendingUp
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
+import { apiFetch } from "@/lib/api-fetch";
+
 interface SystemStatus {
   openaiVerfuegbar: boolean;
   openaiModus: string;
@@ -28,7 +30,7 @@ function useSystemStatus() {
   return useQuery<SystemStatus>({
     queryKey: ["system-status"],
     queryFn: async () => {
-      const res = await fetch("/api/system/status");
+      const res = await apiFetch("/api/system/status");
       if (!res.ok) throw new Error("Status nicht verfügbar");
       return res.json() as Promise<SystemStatus>;
     },
