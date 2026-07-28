@@ -1,9 +1,8 @@
 import { AgentBase, type Aufgabe, type AufgabeErgebnis } from "./AgentBase";
 import { db } from "@workspace/db";
-import { campaignsTable, transactionsTable, revenueOpportunitiesTable, contentTable, agentLogsTable } from "@workspace/db";
+import { campaignsTable, transactionsTable, agentLogsTable } from "@workspace/db";
 import { eq, desc, sql, gte, and } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { openai, openaiVerfuegbar } from "../lib/openaiClient";
 
 export type MonetizierungAktion =
   | "funnel_optimieren"
@@ -28,7 +27,7 @@ export class MonetizationAgent extends AgentBase {
   }
 
   protected beschreibungText(): string {
-    return "Optimiert Funnels autonom, entwickelt Upsell-Strategien, analysiert Affiliate-Netzwerke und optimiert Preisgestaltung mit echten DB-Aktionen.";
+    return "Optimiert Funnels, entwickelt Upsell-Strategien, analysiert Affiliate-Netzwerke und optimiert Preisgestaltung.";
   }
 
   async ausfuehren(aufgabe: Aufgabe): Promise<AufgabeErgebnis> {
@@ -48,10 +47,6 @@ export class MonetizationAgent extends AgentBase {
     }
   }
 
-  /**
-   * FUNNEL OPTIMIEREN: Erstellt automatisch optimierte Landingpage-Content-Varianten
-   * für Kampagnen mit niedriger Konversionsrate.
-   */
   private async optimiereFunnel(marke?: string): Promise<AufgabeErgebnis> {
     const zielMarke = marke ?? "CyberSarah";
 
@@ -59,125 +54,40 @@ export class MonetizationAgent extends AgentBase {
       .select()
       .from(campaignsTable)
       .where(and(eq(campaignsTable.marke, zielMarke), eq(campaignsTable.status, "aktiv")))
-      .limit(10);
+      .limit(5);
 
     const gesamtKlicks = kampagnen.reduce((s, k) => s + (k.klicks ?? 0), 0);
     const gesamtKonversionen = kampagnen.reduce((s, k) => s + (k.konversionen ?? 0), 0);
     const konversionsRate = gesamtKlicks > 0 ? (gesamtKonversionen / gesamtKlicks) * 100 : 0;
 
-    let optimierungen = 0;
+    const empfehlungen: string[] = [];
 
-    // Für Kampagnen mit 0 Konversionen: optimierte Landingpage-Texte generieren
-    for (const kampagne of kampagnen) {
-      if ((kampagne.konversionen ?? 0) === 0 && (kampagne.klicks ?? 0) > 0) {
-        if (!openaiVerfuegbar) continue;
-
-        try {
-          const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-              {
-                role: "system",
-                content: `Du bist ein Conversion-Optimierer für ${zielMarke}. Erstelle einen optimierten Verkaufstext, der konvertiert.`,
-              },
-              {
-                role: "user",
-                content: `Optimiere den Verkaufstext für Kampagne "${kampagne.name}".
-Aktuelle Konversionsrate: 0% (${kampagne.klicks} Klicks, 0 Verkäufe).
-Typ: ${kampagne.typ}
-Netzwerk: ${kampagne.netzwerk ?? "keins"}
-
-Erstelle einen überzeugenden Landingpage-Text mit:
-- Emotionaler Headline
-- 3 konkrete Vorteile
-- Social Proof / Testimonial-Hinweis
-- Dringlichkeit (Timer/Plätze)
-- Klaren CTA mit Link-Hinweis
-
-Antworte NUR mit dem fertigen Text.`,
-              },
-            ],
-            temperature: 0.8,
-            max_tokens: 400,
-          });
-
-          const optimierterText = completion.choices[0]?.message?.content?.trim();
-          if (optimierterText && optimierterText.length > 50) {
-            // Als Content einfügen, damit er über die Pipeline verteilt wird
-            await db.insert(contentTable).values({
-              marke: zielMarke,
-              typ: "blogartikel",
-              plattform: "Website",
-              titel: `🎯 Optimiert: ${kampagne.name}`,
-              inhalt: optimierterText,
-              status: "generiert",
-              metadaten: JSON.stringify({
-                kampagnenId: kampagne.id,
-                typ: "funnel_optimierung",
-                alteKonversionsrate: konversionsRate,
-              }),
-            });
-            optimierungen++;
-          }
-        } catch (err) {
-          logger.warn({ err, kampagne: kampagne.name }, "Funnel-Optimierung fehlgeschlagen");
-        }
-      }
+    if (konversionsRate < 2) {
+      empfehlungen.push("Headline auf Landingpage A/B-testen — Ziel: >2% Konversionsrate");
+      empfehlungen.push("Social Proof (Testimonials) über dem Fold platzieren");
+    }
+    if (konversionsRate >= 2 && konversionsRate < 5) {
+      empfehlungen.push("Exit-Intent Popup mit 10% Rabatt aktivieren");
+      empfehlungen.push("Checkout-Prozess auf 1-Klick optimieren");
+    }
+    if (gesamtKlicks > 1000 && gesamtKonversionen === 0) {
+      empfehlungen.push("KRITISCH: Tracking-Pixel überprüfen — Konversionen werden nicht erfasst");
     }
 
-    // NEU: Falls keine Kampagnen existieren, automatisch Kampagnen aus aktiven Chancen erstellen
-    if (kampagnen.length === 0) {
-      const aktiveChancen = await db
-        .select()
-        .from(revenueOpportunitiesTable)
-        .where(eq(revenueOpportunitiesTable.status, "aktiv"))
-        .limit(5);
-
-      for (const chance of aktiveChancen) {
-        const vorhanden = await db
-          .select({ id: campaignsTable.id })
-          .from(campaignsTable)
-          .where(eq(campaignsTable.name, `Auto: ${chance.titel}`))
-          .limit(1);
-
-        if (vorhanden.length === 0) {
-          await db.insert(campaignsTable).values({
-            name: `Auto: ${chance.titel}`,
-            marke: chance.marke ?? zielMarke,
-            typ: chance.kanal === "affiliate" ? "affiliate" : "eigenes_produkt",
-            netzwerk: chance.kanal,
-            status: "aktiv",
-            affiliateLink: chance.affiliateUrl ?? chance.stripePaymentLink ?? null,
-            startDatum: new Date(),
-          });
-          optimierungen++;
-        }
-      }
-    }
-
-    if (this.agentId) {
-      await db.insert(agentLogsTable).values({
-        agentId: this.agentId,
-        agentName: "Monetization Agent",
-        aktion: "Funnel-Optimierung",
-        status: "erfolgreich",
-        nachricht: `${optimierungen} Funnel-Optimierungen für ${zielMarke} | Konversionsrate: ${konversionsRate.toFixed(2)}%`,
-      });
-    }
-
-    logger.info({ optimierungen, konversionsRate, zielMarke }, "🎯 Funnel autonom optimiert");
+    const funnel_schritte = [
+      { schritt: "Awareness", kanal: "TikTok/Instagram", ziel: "10.000 Views/Tag" },
+      { schritt: "Interest", kanal: "YouTube/Blog", ziel: "500 Klicks/Tag" },
+      { schritt: "Decision", kanal: "Landingpage", ziel: "5% Konversionsrate" },
+      { schritt: "Action", kanal: "Checkout", ziel: "€50 CAC" },
+    ];
 
     return {
       success: true,
-      message: `Funnel-Optimierung ${zielMarke}: ${optimierungen} Aktionen | ${konversionsRate.toFixed(2)}% Konversionsrate`,
-      metadaten: { konversionsRate, optimierungen, kampagnenAnzahl: kampagnen.length },
+      message: `Funnel-Analyse ${zielMarke}: ${konversionsRate.toFixed(2)}% Konversionsrate | ${empfehlungen.length} Optimierungen`,
+      metadaten: { konversionsRate, empfehlungen, funnel_schritte, kampagnenAnzahl: kampagnen.length },
     };
   }
 
-  /**
-   * UPSELL-STRATEGIE: Erstellt automatisch Upsell-Produkte und Bundle-Angebote
-   * in der revenueOpportunitiesTable.
-   */
   private async entwickleUpsellStrategie(marke?: string): Promise<AufgabeErgebnis> {
     const zielMarke = marke ?? "GeldPilot AI";
 
@@ -190,59 +100,32 @@ Antworte NUR mit dem fertigen Text.`,
 
     const avgBestellwert = parseFloat(umsatzRes?.avg ?? "0");
 
-    // NEU: Autonome Upsell-Produkte erstellen
-    const upsellProdukte = [
-      { name: `${zielMarke} Starter Bundle`, preis: 97, beschreibung: "Erste Schritte zu passivem Einkommen mit KI", kanal: "eigenes_produkt" },
-      { name: `${zielMarke} Pro System`, preis: 297, beschreibung: "Vollautomatisches Income-System mit KI-Tools", kanal: "eigenes_produkt" },
-      { name: `${zielMarke} VIP Access`, preis: 997, beschreibung: "Exklusiver Zugang zur KI-Community + 1:1 Coaching", kanal: "coaching" },
-    ];
+    const strategien = {
+      "CyberSarah": [
+        { name: "KI-Tools Bundle", preis: 197, beschreibung: "Alle KI-Automation-Tools im Paket" },
+        { name: "1:1 Coaching (60 Min)", preis: 297, beschreibung: "Persönliche KI-Strategie-Session" },
+        { name: "VIP Mastermind", preis: 997, beschreibung: "Exklusiver Zugang zur KI-Community" },
+      ],
+      "GeldPilot AI": [
+        { name: "Starter Bundle", preis: 97, beschreibung: "Erste Schritte zu passivem Einkommen" },
+        { name: "Pro System", preis: 297, beschreibung: "Vollautomatisches Income-System" },
+        { name: "Done-For-You", preis: 997, beschreibung: "Komplett aufgesetztes Einkommens-System" },
+      ],
+      "UnternehmerGPT": [
+        { name: "Automation Audit", preis: 497, beschreibung: "Analyse des Automatisierungspotenzials" },
+        { name: "Jahres-Lizenz", preis: 1997, beschreibung: "Vollzugriff auf alle Business-Tools" },
+      ],
+    };
 
-    let neuErstellt = 0;
-
-    for (const produkt of upsellProdukte) {
-      const vorhanden = await db
-        .select({ id: revenueOpportunitiesTable.id })
-        .from(revenueOpportunitiesTable)
-        .where(eq(revenueOpportunitiesTable.titel, produkt.name))
-        .limit(1);
-
-      if (vorhanden.length === 0) {
-        await db.insert(revenueOpportunitiesTable).values({
-          titel: produkt.name,
-          beschreibung: produkt.beschreibung,
-          kanal: produkt.kanal,
-          marke: zielMarke,
-          status: "entdeckt",
-          geschaetzterMonatsumsatz: produkt.preis.toString(),
-          gefundenVon: "monetization_upsell",
-          prioritaet: produkt.preis >= 500 ? 1 : 2,
-        });
-        neuErstellt++;
-      }
-    }
-
-    if (this.agentId) {
-      await db.insert(agentLogsTable).values({
-        agentId: this.agentId,
-        agentName: "Monetization Agent",
-        aktion: "Upsell-Strategie",
-        status: "erfolgreich",
-        nachricht: `${neuErstellt} neue Upsell-Produkte für ${zielMarke} erstellt | Ø Bestellwert: €${avgBestellwert.toFixed(2)}`,
-      });
-    }
-
-    logger.info({ neuErstellt, avgBestellwert, zielMarke }, "💰 Upsell-Strategie autonom umgesetzt");
+    const markenStrategien = strategien[zielMarke as keyof typeof strategien] ?? strategien["CyberSarah"];
 
     return {
       success: true,
-      message: `Upsell ${zielMarke}: ${neuErstellt} neue Produkte | Ø Bestellwert: €${avgBestellwert.toFixed(2)}`,
-      metadaten: { marke: zielMarke, avgBestellwert, neuErstellt },
+      message: `Upsell-Strategie ${zielMarke}: ${markenStrategien.length} Produkte | Ø Bestellwert: €${avgBestellwert.toFixed(2)}`,
+      metadaten: { marke: zielMarke, avgBestellwert, upsellProdukte: markenStrategien },
     };
   }
 
-  /**
-   * AFFILIATE ANALYSE: Analysiert und erstellt fehlende Affiliate-Kampagnen
-   */
   private async analysiereAffiliate(): Promise<AufgabeErgebnis> {
     const affiliateKampagnen = await db
       .select()
@@ -283,77 +166,54 @@ Antworte NUR mit dem fertigen Text.`,
     };
   }
 
-  /**
-   * PREISOPTIMIERUNG: Passt autonom Preise basierend auf Conversion-Daten an
-   * und erstellt A/B-Test-Varianten.
-   */
   private async optimierePreise(marke?: string): Promise<AufgabeErgebnis> {
-    const zielMarke = marke ?? "alle";
+    // Psychologische Preisstrategien anwenden
+    const empfehlungen = [
+      { strategie: "Psychological Pricing", beispiel: "€197 statt €200 — erhöht Konversionen um ~15%" },
+      { strategie: "Anchoring", beispiel: "Teuerste Option zuerst zeigen, mittlere Wahl attraktiver machen" },
+      { strategie: "Bundle-Discount", beispiel: "3-Monats-Bundle mit 20% Rabatt → höherer LTV" },
+      { strategie: "Urgency", beispiel: "Timer + 'Nur noch 3 Plätze' → 30% mehr sofortige Konversionen" },
+    ];
 
-    // Produkte mit Daten analysieren
-    const produkte = await db
-      .select()
-      .from(revenueOpportunitiesTable)
-      .where(eq(revenueOpportunitiesTable.status, "aktiv"))
-      .limit(10);
+    // Aktive Kampagnen nach Marke analysieren
+    const zielMarken = marke ? [marke] : ["CyberSarah", "GeldPilot AI", "UnternehmerGPT"];
+    let optimiert = 0;
 
-    let optimierungen = 0;
+    for (const m of zielMarken) {
+      const kampagnen = await db
+        .select()
+        .from(campaignsTable)
+        .where(and(eq(campaignsTable.marke, m), eq(campaignsTable.status, "aktiv")))
+        .limit(5);
 
-    for (const produkt of produkte) {
-      const tatsaechlich = parseFloat(produkt.tatsaechlicherUmsatz ?? "0");
-      const geschaetzt = parseFloat(produkt.geschaetzterMonatsumsatz ?? "0");
+      for (const kampagne of kampagnen) {
+        const konversionsrate = (kampagne.klicks ?? 0) > 0
+          ? ((kampagne.konversionen ?? 0) / kampagne.klicks!) * 100
+          : 0;
 
-      // Wenn kein Umsatz: Preis senken um Konversion zu steigern
-      if (tatsaechlich === 0 && geschaetzt > 50) {
-        const neuerPreis = Math.round(geschaetzt * 0.7); // 30% Rabatt
-        await db.update(revenueOpportunitiesTable)
-          .set({
-            geschaetzterMonatsumsatz: neuerPreis.toString(),
-            metadaten: JSON.stringify({
-              preisAenderung: `${geschaetzt}€ → ${neuerPreis}€ (30% Rabatt für mehr Konversionen)`,
-              grund: "Kein Umsatz — Preis optimiert",
-              zeitpunkt: new Date().toISOString(),
-            }),
-            updatedAt: new Date(),
-          })
-          .where(eq(revenueOpportunitiesTable.id, produkt.id));
-        optimierungen++;
-      }
+        // Bei niedriger Konversion: Headline-Optimierung vorschlagen
+        if (konversionsrate < 2 && (kampagne.klicks ?? 0) > 100) {
+          empfehlungen.push({
+            strategie: `Low-Conversion-Alarm: ${kampagne.name}`,
+            beispiel: `Konversionsrate ${konversionsrate.toFixed(1)}% — Headline/CTA A/B-testen`,
+          });
+        }
 
-      // Wenn Umsatz > geschätzt: Preis erhöhen (Premium-Positionierung)
-      if (tatsaechlich > geschaetzt * 1.5 && geschaetzt > 0) {
-        const neuerPreis = Math.round(geschaetzt * 1.3); // 30% Erhöhung
-        await db.update(revenueOpportunitiesTable)
-          .set({
-            geschaetzterMonatsumsatz: neuerPreis.toString(),
-            metadaten: JSON.stringify({
-              preisAenderung: `${geschaetzt}€ → ${neuerPreis}€ (30% Erhöhung — Premium-Positionierung)`,
-              grund: "Umsatz über Erwartung",
-              zeitpunkt: new Date().toISOString(),
-            }),
-            updatedAt: new Date(),
-          })
-          .where(eq(revenueOpportunitiesTable.id, produkt.id));
-        optimierungen++;
+        // Bei hohen Klicks aber null Konversionen: Tracking-Problem
+        if ((kampagne.klicks ?? 0) > 500 && (kampagne.konversionen ?? 0) === 0) {
+          empfehlungen.push({
+            strategie: `KRITISCH: ${kampagne.name}`,
+            beispiel: `${kampagne.klicks} Klicks, 0 Konversionen — Tracking-Pixel prüfen`,
+          });
+          optimiert++;
+        }
       }
     }
-
-    if (this.agentId) {
-      await db.insert(agentLogsTable).values({
-        agentId: this.agentId,
-        agentName: "Monetization Agent",
-        aktion: "Preisoptimierung",
-        status: "erfolgreich",
-        nachricht: `${optimierungen} Preis-Optimierungen für ${produkte.length} Produkte`,
-      });
-    }
-
-    logger.info({ optimierungen, produktAnzahl: produkte.length }, "💲 Preise autonom optimiert");
 
     return {
       success: true,
-      message: `Preis-Optimierung: ${optimierungen} Aktionen für ${produkte.length} Produkte`,
-      metadaten: { marke: zielMarke, optimierungen, produktAnzahl: produkte.length },
+      message: `Preis-Optimierung: ${empfehlungen.length} Strategien | ${optimiert} kritische Alerts für ${marke ?? "alle Marken"}`,
+      metadaten: { marke: marke ?? "alle", empfehlungen, optimiert },
     };
   }
 }

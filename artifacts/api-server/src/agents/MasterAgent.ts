@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { agentsTable, agentLogsTable, revenueOpportunitiesTable, expansionChancenTable } from "@workspace/db";
+import { agentsTable, agentLogsTable, revenueOpportunitiesTable, expansionChancenTable, transactionsTable } from "@workspace/db";
 import { eq, desc, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { AgentBase, type Aufgabe, type AufgabeErgebnis } from "./AgentBase";
@@ -72,6 +72,26 @@ export class MasterAgent extends AgentBase {
 
     if (queueStatus.wartend > 20) {
       empfehlungen.push(`Job-Queue überlastet (${queueStatus.wartend} Jobs) — Prioritäten neu setzen`);
+    }
+
+    // ─── Revenue-First: Sofort Revenue-Kritische Jobs triggern ────────────────
+    if (Number(stats?.offen ?? 0) > 0) {
+      globalQueue.fuegeHinzu("hara_scan", { aktion: "scan" }, { prioritaet: 1 });
+      globalQueue.fuegeHinzu("revenue_analyst_stripe", { aktion: "stripe_link_erstellen" }, { prioritaet: 1 });
+      empfehlungen.push("Revenue-First: HARA-Scan + Stripe-Link-Erstellung triggert");
+    }
+
+    // Bei null Umsatz: Aggressiv Content + Affiliate pushen
+    const [umsatzRes] = await db.select({ 
+      total: sql<string>`COALESCE(SUM(betrag),0)` 
+    }).from(transactionsTable)
+      .where(sql`typ = 'einnahme' AND created_at >= NOW() - INTERVAL '24 hours'`);
+    
+    if (parseFloat(umsatzRes?.total ?? "0") === 0) {
+      globalQueue.fuegeHinzu("digitalprodukt_scan", {}, { prioritaet: 1 });
+      globalQueue.fuegeHinzu("seo_content_scan", {}, { prioritaet: 2 });
+      globalQueue.fuegeHinzu("email_sequenzen_erstellen", {}, { prioritaet: 2 });
+      empfehlungen.push("KEIN Umsatz in 24h → Aggressiver Revenue-Push gestartet");
     }
 
     if (fehlerAgenten.length > 0) {

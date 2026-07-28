@@ -42,8 +42,8 @@ interface KiVorschlag {
   automatisierbarkeitScore: number;
 }
 
-const MAX_OFFENE_VORSCHLAEGE = 8;
-const AUTO_CONFIRM_SCHWELLE = 75; // Score ab dem automatisch umgesetzt wird
+const MAX_OFFENE_VORSCHLAEGE = 15;
+const AUTO_CONFIRM_SCHWELLE = 55; // Score ab dem automatisch umgesetzt wird (aggressiver)
 const MARKEN = ["CyberSarah", "GeldPilot AI", "UnternehmerGPT"] as const;
 
 function clampScore(n: unknown): number {
@@ -123,7 +123,7 @@ export class HaraAgent extends AgentBase {
     }
 
     const kontext = await this.sammleKontext();
-    const anzahlNeu = Math.min(4, MAX_OFFENE_VORSCHLAEGE - offene.length);
+    const anzahlNeu = Math.min(6, MAX_OFFENE_VORSCHLAEGE - offene.length);
     const vorschlaege = await this.generiereVorschlaege(kontext, anzahlNeu);
 
     let gespeichert = 0;

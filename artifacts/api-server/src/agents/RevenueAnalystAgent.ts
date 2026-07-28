@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
-import { revenueOpportunitiesTable, contentTable, campaignsTable, agentLogsTable } from "@workspace/db";
-import { eq, desc, and, gt } from "drizzle-orm";
+import { revenueOpportunitiesTable, agentLogsTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { openai, openaiVerfuegbar } from "../lib/openaiClient";
 import { getStripeClient } from "../lib/stripeClient";
@@ -27,7 +27,7 @@ export class RevenueAnalystAgent extends AgentBase {
   }
 
   protected beschreibungText(): string {
-    return "Scannt Affiliate-Programme, findet echte Umsatzchancen, erstellt Stripe Payment Links, generiert Marketing-Kampagnen — aktiv bei echtem Umsatz";
+    return "Scannt Affiliate-Programme, findet echte Umsatzchancen, erstellt Stripe Payment Links — aktiv bei echtem Umsatz";
   }
 
   async ausfuehren(aufgabe: Aufgabe): Promise<AufgabeErgebnis> {
@@ -40,8 +40,8 @@ export class RevenueAnalystAgent extends AgentBase {
         return this.erstelleStripeLinks();
       case "ki_chancen_analysieren":
         return this.analysiereKiChancen();
-      case "marketing_kampagnen_erstellen":
-        return this.erstelleMarketingKampagnen();
+      case "auto_produkte_erstellen":
+        return this.erstelleAutonomeProdukte();
       default:
         return this.scanneChancen();
     }
@@ -145,149 +145,6 @@ export class RevenueAnalystAgent extends AgentBase {
     };
   }
 
-  /**
-   * NEU: Autonome Marketing-Kampagnen erstellen.
-   * Nimmt aktive Produkte mit Stripe-Links und generiert automatisch
-     * - Social-Media-Content (TikTok, Instagram, YouTube, LinkedIn)
-     * - Marketing-Kampagnen in der campaignsTable
-     * Der Content wird mit Status "generiert" eingefügt,
-     * damit der InfluencerAutoPostAgent ihn automatisch aufnimmt.
-     */
-  private async erstelleMarketingKampagnen(): Promise<AufgabeErgebnis> {
-    const aktiveChancen = await db
-      .select()
-      .from(revenueOpportunitiesTable)
-      .where(
-        and(
-          eq(revenueOpportunitiesTable.status, "aktiv"),
-        )
-      )
-      .orderBy(desc(revenueOpportunitiesTable.geschaetzterMonatsumsatz))
-      .limit(10);
-
-    if (aktiveChancen.length === 0) {
-      return {
-        success: true,
-        message: "Keine aktiven Produkte für Marketing-Kampagnen gefunden",
-        metadaten: {},
-      };
-    }
-
-    let contentErstellt = 0;
-    let kampagnenErstellt = 0;
-
-    for (const produkt of aktiveChancen) {
-      // Prüfe ob bereits Content für dieses Produkt existiert
-      const vorhandenerContent = await db
-        .select({ id: contentTable.id })
-        .from(contentTable)
-        .where(eq(contentTable.titel, `🏆 ${produkt.titel}`))
-        .limit(1);
-
-      if (vorhandenerContent.length > 0) continue;
-
-      // Prüfe ob bereits eine Kampagne existiert
-      const vorhandeneKampagne = await db
-        .select({ id: campaignsTable.id })
-        .from(campaignsTable)
-        .where(eq(campaignsTable.name, `Marketing: ${produkt.titel}`))
-        .limit(1);
-
-      if (vorhandeneKampagne.length === 0) {
-        // Marketing-Kampagne erstellen
-        await db.insert(campaignsTable).values({
-          name: `Marketing: ${produkt.titel}`,
-          marke: produkt.marke ?? "CyberSarah",
-          typ: produkt.kanal === "affiliate" ? "affiliate" : "eigenes_produkt",
-          netzwerk: produkt.kanal,
-          status: "aktiv",
-          affiliateLink: produkt.affiliateUrl ?? produkt.stripePaymentLink ?? null,
-          startDatum: new Date(),
-        });
-        kampagnenErstellt++;
-      }
-
-      // KI-generierten Marketing-Content erstellen
-      if (openaiVerfuegbar) {
-        try {
-          const platformen = [
-            { name: "TikTok", typ: "tiktok", anweisung: "Kurze, energetische Hook (max 150 Zeichen). 3-5 Hashtags. Direkt, motivierend." },
-            { name: "Instagram", typ: "reel", anweisung: "Caption max 300 Zeichen + 10 Hashtags. Emojis. Story-Format. CTA am Ende." },
-            { name: "YouTube", typ: "kurzVideo", anweisung: "YouTube Shorts Skript: Hook (0-3s), Hauptinhalt (15-50s), CTA (5s). Max 200 Wörter." },
-            { name: "LinkedIn", typ: "blogartikel", anweisung: "Professionell, Insights-fokussiert. Max 300 Wörter. Fachlich, aber zugänglich." },
-          ];
-
-          const platform = platformen[Math.floor(Math.random() * platformen.length)]!;
-
-          const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-              {
-                role: "system",
-                content: `Du bist ein Social-Media-Marketing-Experte für die Marke ${produkt.marke ?? "CyberSarah"}. Du erstellst überzeugende Werbetexte, die verkaufen. Schreibe auf Deutsch.`,
-              },
-              {
-                role: "user",
-                content: `Erstelle einen ${platform.name}-Marketing-Text für: "${produkt.titel}"
-
-Beschreibung: ${produkt.beschreibung ?? "Premium KI-Tool"}
-
-Plattform-Anweisung: ${platform.anweisung}
-
-${produkt.stripePaymentLink ? `Preis-Link: ${produkt.stripePaymentLink}` : ""}
-${produkt.affiliateUrl ? `Affiliate-Link: ${produkt.affiliateUrl}` : ""}
-
-Antworte NUR mit dem fertigen Marketing-Text. Keine Erklärungen.`,
-              },
-            ],
-            temperature: 0.8,
-            max_tokens: 500,
-          });
-
-          const inhalt = completion.choices[0]?.message?.content?.trim() ?? "";
-          if (inhalt.length > 10) {
-            await db.insert(contentTable).values({
-              marke: produkt.marke ?? "CyberSarah",
-              typ: platform.typ,
-              plattform: platform.name,
-              titel: `🏆 ${produkt.titel}`,
-              inhalt,
-              status: "generiert",
-              metadaten: JSON.stringify({
-                produktId: produkt.id,
-                stripeLink: produkt.stripePaymentLink,
-                affiliateUrl: produkt.affiliateUrl,
-                kanal: produkt.kanal,
-              }),
-            });
-            contentErstellt++;
-          }
-        } catch (err) {
-          logger.warn({ err, produkt: produkt.titel }, "Marketing-Content-Generierung fehlgeschlagen");
-        }
-      }
-    }
-
-    // Agent-Log
-    if (this.agentId) {
-      await db.insert(agentLogsTable).values({
-        agentId: this.agentId,
-        agentName: "Revenue Analyst Agent",
-        aktion: "Marketing-Kampagnen",
-        status: "erfolgreich",
-        nachricht: `${contentErstellt} Content-Stücke + ${kampagnenErstellt} Kampagnen für ${aktiveChancen.length} aktive Produkte erstellt`,
-      });
-    }
-
-    logger.info({ contentErstellt, kampagnenErstellt, produkte: aktiveChancen.length }, "📢 Marketing-Kampagnen autonom erstellt");
-
-    return {
-      success: true,
-      message: `Marketing: ${contentErstellt} Content + ${kampagnenErstellt} Kampagnen für ${aktiveChancen.length} Produkte`,
-      metadaten: { contentErstellt, kampagnenErstellt, produkte: aktiveChancen.length },
-    };
-  }
-
   private async analysiereKiChancen(): Promise<AufgabeErgebnis> {
     const aktiveChancen = await db
       .select()
@@ -300,7 +157,7 @@ Antworte NUR mit dem fertigen Marketing-Text. Keine Erklärungen.`,
 
 Aktive Revenue-Kanäle: ${aktiveChancen.map(c => `${c.titel} (${c.kanal}): ${c.tatsaechlicherUmsatz}€ tatsächlich`).join(", ")}
 
-Generiere 3 neue, spezifische Revenue-Chancen für den deutschsprachigen Markt 2026.
+Generiere 3 neue, spezifische Revenue-Chancen für den deutschsprachigen Markt 2026. 
 Fokus: digitale Produkte, Affiliate-Marketing, Coaching.
 Antworte als JSON: {"chancen": [{"titel": "...", "beschreibung": "...", "kanal": "affiliate|eigenes_produkt|abo|coaching", "marke": "CyberSarah|GeldPilot AI|UnternehmerGPT", "geschaetzterMonatsumsatz": 0}]}`;
 
@@ -367,4 +224,72 @@ Antworte als JSON: {"chancen": [{"titel": "...", "beschreibung": "...", "kanal":
       return { success: false, message: "KI-Analyse fehlgeschlagen", metadaten: {} };
     }
   }
+
+  // ─── Autonome Produkt-Erstellung: Top-Chancen sofort in Stripe-Produkte umwandeln ──
+  private async erstelleAutonomeProdukte(): Promise<AufgabeErgebnis> {
+    // Alle "eigenes_produkt" Chancen ohne Payment-Link
+    const produkte = await db
+      .select()
+      .from(revenueOpportunitiesTable)
+      .where(eq(revenueOpportunitiesTable.kanal, "eigenes_produkt"))
+      .orderBy(desc(revenueOpportunitiesTable.geschaetzterMonatsumsatz))
+      .limit(3);
+
+    let erstellt = 0;
+
+    for (const produkt of produkte) {
+      if (produkt.stripePaymentLink) continue;
+
+      try {
+        const stripe = getStripeClient();
+        // Preis = 10% des geschätzten Monatsumsatzes, mindestens €19
+        const preis = Math.max(Math.round(Number(produkt.geschaetzterMonatsumsatz ?? 97) * 0.1 * 100), 1900);
+
+        const stripeProdukt = await stripe.products.create({
+          name: produkt.titel,
+          description: produkt.beschreibung ?? `KI-generiertes Produkt für ${produkt.marke}`,
+          metadata: { marke: produkt.marke ?? "CyberSarah", kanal: produkt.kanal, quelle: "revenue_analyst_auto" },
+        });
+
+        const stripePreis = await stripe.prices.create({
+          product: stripeProdukt.id,
+          unit_amount: preis,
+          currency: "eur",
+          metadata: { quelle: "revenue_analyst_auto" },
+        });
+
+        const paymentLink = await stripe.paymentLinks.create({
+          line_items: [{ price: stripePreis.id, quantity: 1 }],
+          after_completion: { type: "redirect", redirect: { url: "https://cybersarah.de/danke" } },
+          metadata: { quelle: "revenue_analyst_auto" },
+        });
+
+        await db.update(revenueOpportunitiesTable)
+          .set({ stripePaymentLink: paymentLink.url, status: "aktiv", updatedAt: new Date() })
+          .where(eq(revenueOpportunitiesTable.id, produkt.id));
+
+        erstellt++;
+        logger.info({ produkt: produkt.titel, link: paymentLink.url }, "Revenue-Analyst: Auto-Produkt erstellt");
+      } catch (err) {
+        logger.warn({ err, produkt: produkt.titel }, "Revenue-Analyst: Auto-Produkt-Erstellung fehlgeschlagen");
+      }
+    }
+
+    if (this.agentId) {
+      await db.insert(agentLogsTable).values({
+        agentId: this.agentId,
+        agentName: "Revenue Analyst Agent",
+        aktion: "Autonome Produkt-Erstellung",
+        status: "erfolgreich",
+        nachricht: `${erstellt} Stripe-Produkte automatisch erstellt und verkaufsbereit`,
+      });
+    }
+
+    return {
+      success: true,
+      message: `${erstellt} neue Stripe-Produkte autonom erstellt — sofort verkaufbar via Payment-Links`,
+      metadaten: { erstellteProdukte: erstellt },
+    };
+  }
+
 }
