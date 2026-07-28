@@ -1,12 +1,17 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
-  Activity, LayoutDashboard, Cpu, Megaphone, FileText, DollarSign,
-  TerminalSquare, TrendingUp, Rocket, Zap, Brain, Globe,
-  Users, Bot, Search, Mail, Clapperboard, Recycle, Target, Menu, X,
-  Key, MessageCircle, Newspaper,
+  Activity, LayoutDashboard, Zap, Bot, TrendingUp, Rocket,
+  Users, FileText, Search, Globe, Clapperboard, Recycle,
+  Mail, Megaphone, Brain, DollarSign, Target, Cpu,
+  Newspaper, MessageCircle, Key, TerminalSquare,
+  Menu, X, Sparkles, Circle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Navigation
+// ═══════════════════════════════════════════════════════════════════════════════
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, gruppe: "umsatz" },
@@ -15,6 +20,8 @@ const navigation = [
   { name: "Chancen", href: "/chancen", icon: TrendingUp, gruppe: "umsatz" },
   { name: "Expansion", href: "/expansion", icon: Rocket, gruppe: "umsatz" },
   { name: "Finance-Team", href: "/finance-team", icon: Users, badge: "KI", gruppe: "umsatz" },
+  { name: "Newsletter", href: "/newsletter", icon: Newspaper, badge: "NEU", gruppe: "umsatz" },
+  { name: "WhatsApp", href: "/whatsapp", icon: MessageCircle, badge: "NEU", gruppe: "umsatz" },
   { name: "Content", href: "/content", icon: FileText, gruppe: "content" },
   { name: "SEO-Empire", href: "/seo-content", icon: Search, badge: "AUTO", gruppe: "content" },
   { name: "KI-Influencer", href: "/influencer-hub", icon: Globe, badge: "AUTO", gruppe: "content" },
@@ -26,58 +33,73 @@ const navigation = [
   { name: "Finanzen", href: "/finanzen", icon: DollarSign, gruppe: "system" },
   { name: "Attribution", href: "/attribution", icon: Target, gruppe: "system" },
   { name: "Agenten", href: "/agenten", icon: Cpu, gruppe: "system" },
-  { name: "Newsletter", href: "/newsletter", icon: Newspaper, badge: "NEU", gruppe: "umsatz" },
-  { name: "WhatsApp", href: "/whatsapp", icon: MessageCircle, badge: "NEU", gruppe: "umsatz" },
-  { name: "Master-Agent", href: "/master-agent", icon: Brain, badge: "NEU", gruppe: "system" },
-  { name: "API-Keys", href: "/einstellungen", icon: Key, badge: "NEU", gruppe: "system" },
+  { name: "Master-Agent", href: "/master-agent", icon: Brain, gruppe: "system" },
+  { name: "API-Keys", href: "/einstellungen", icon: Key, gruppe: "system" },
   { name: "Protokolle", href: "/protokolle", icon: TerminalSquare, gruppe: "system" },
 ];
 
-const mobileNavPrimary = [
-  { name: "Start", href: "/", icon: LayoutDashboard },
-  { name: "Sofort €", href: "/sofort-start", icon: Zap },
-  { name: "HARA", href: "/hara", icon: Bot },
-  { name: "Mehr", href: "#more", icon: Menu },
-];
+// ═══════════════════════════════════════════════════════════════════════════════
+// Premium Bottom Navigation — 5 Tabs für Einhandbedienung
+// ═══════════════════════════════════════════════════════════════════════════════
 
-const mobileNavSecondary = [
+const bottomNav = [
+  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Revenue", href: "/sofort-start", icon: Zap },
+  { name: "HARA", href: "/hara", icon: Bot },
   { name: "Content", href: "/content", icon: FileText },
-  { name: "SEO", href: "/seo-content", icon: Search },
-  { name: "Video", href: "/faceless-video", icon: Clapperboard },
-  { name: "Chancen", href: "/chancen", icon: TrendingUp },
-  { name: "Finance", href: "/finance-team", icon: Users },
-  { name: "WhatsApp", href: "/whatsapp", icon: MessageCircle },
-  { name: "Alle", href: "#all", icon: Menu },
+  { name: "Mehr", href: "#menu", icon: Menu, isMenu: true },
 ];
 
 const gruppenLabel: Record<string, string> = {
-  umsatz: "💰 Umsatz",
-  content: "📱 Content",
-  system: "⚙️ System",
+  umsatz: "💰 Umsatz & Revenue",
+  content: "📱 Content & Marketing",
+  system: "⚙️ System & Steuerung",
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Layout Component
+// ═══════════════════════════════════════════════════════════════════════════════
+
 export function Layout({ children }: { children: ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [sidebarOffen, setSidebarOffen] = useState(false);
-  const [mehrMenue, setMehrMenue] = useState(false);
 
   const gruppen = ["umsatz", "content", "system"] as const;
+
+  const aktuellerTab = bottomNav.findIndex(n => {
+    if (n.href === "#menu") return false;
+    if (n.href === "/") return location === "/";
+    return location.startsWith(n.href);
+  });
+  const aktiverIndex = aktuellerTab >= 0 ? aktuellerTab : 0;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
 
+      {/* ── Overlay für Sidebar ─────────────────────────────────────────── */}
+      {sidebarOffen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+          onClick={() => setSidebarOffen(false)}
+        />
+      )}
+
       {/* ── Desktop Sidebar ──────────────────────────────────────────────── */}
-      <aside className="hidden md:flex w-56 lg:w-64 flex-shrink-0 border-r border-border bg-card flex-col">
-        <div className="h-14 flex items-center px-4 border-b border-border">
-          <div className="flex items-center gap-2 text-primary font-bold text-base tracking-tight">
-            <Activity className="h-4 w-4" />
-            <span>CyberSarah OS</span>
+      <aside className={cn(
+        "hidden md:flex w-60 lg:w-64 flex-shrink-0 border-r border-border bg-card/80 backdrop-blur-xl flex-col"
+      )}>
+        <div className="h-14 flex items-center px-5 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
+              <Activity className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-bold text-sm tracking-tight gradient-text">CyberSarah OS</span>
           </div>
         </div>
-        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {gruppen.map((gruppe) => (
             <div key={gruppe}>
-              <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mt-2">
+              <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mt-3">
                 {gruppenLabel[gruppe]}
               </div>
               {navigation.filter(n => n.gruppe === gruppe).map((item) => {
@@ -85,13 +107,21 @@ export function Layout({ children }: { children: ReactNode }) {
                 return (
                   <Link key={item.name} href={item.href}>
                     <div className={cn(
-                      "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors cursor-pointer",
-                      isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 cursor-pointer",
+                      isActive
+                        ? "bg-violet-500/10 text-violet-300 border border-violet-500/20"
+                        : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
                     )}>
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.name}</span>
+                      <item.icon className={cn("h-4.5 w-4.5 shrink-0", isActive && "drop-shadow-[0_0_8px_rgba(124,58,237,0.3)]")} />
+                      <span className="flex-1">{item.name}</span>
                       {item.badge && (
-                        <span className="ml-auto text-[9px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                        <span className={cn(
+                          "text-[9px] font-bold px-1.5 py-0.5 rounded-md",
+                          item.badge === "AUTO" && "bg-blue-500/10 text-blue-400",
+                          item.badge === "KI" && "bg-violet-500/10 text-violet-400",
+                          item.badge === "NEU" && "bg-emerald-500/10 text-emerald-400",
+                          item.badge === "€€€" && "bg-amber-500/10 text-amber-400",
+                        )}>
                           {item.badge}
                         </span>
                       )}
@@ -104,144 +134,162 @@ export function Layout({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      {/* ── Mobile Sidebar (Overlay) ─────────────────────────────────────── */}
-      {sidebarOffen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarOffen(false)} />
-          <div className="relative w-72 bg-card border-r border-border overflow-y-auto animate-slide-right">
-            <div className="h-14 flex items-center justify-between px-4 border-b border-border">
-              <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                <Activity className="h-4 w-4" />
-                <span>Navigation</span>
-              </div>
-              <button onClick={() => setSidebarOffen(false)} className="p-2">
-                <X className="h-5 w-5 text-muted-foreground" />
-              </button>
+      {/* ── Mobile Sidebar (Drawer) ──────────────────────────────────────── */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 w-72 bg-card/95 backdrop-blur-2xl border-r border-border transform transition-transform duration-300 ease-out md:hidden",
+        sidebarOffen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="h-14 flex items-center justify-between px-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
+              <Activity className="h-3.5 w-3.5 text-white" />
             </div>
-            <nav className="py-2 px-2">
-              {gruppen.map((gruppe) => (
-                <div key={gruppe}>
-                  <div className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mt-2">
-                    {gruppenLabel[gruppe]}
-                  </div>
-                  {navigation.filter(n => n.gruppe === gruppe).map((item) => {
-                    const isActive = location === item.href;
-                    return (
-                      <Link key={item.name} href={item.href} onClick={() => setSidebarOffen(false)}>
-                        <div className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors cursor-pointer",
-                          isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}>
-                          <item.icon className="h-5 w-5 shrink-0" />
-                          <span className="font-medium">{item.name}</span>
-                          {item.badge && (
-                            <span className="ml-auto text-[9px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-                              {item.badge}
-                            </span>
-                          )}
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              ))}
-            </nav>
+            <span className="font-bold text-sm gradient-text">CyberSarah</span>
           </div>
+          <button className="p-2 -mr-2" onClick={() => setSidebarOffen(false)}>
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
         </div>
-      )}
+        <nav className="overflow-y-auto h-full pb-32 px-2 pt-2 space-y-0.5">
+          {gruppen.map((gruppe) => (
+            <div key={gruppe}>
+              <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mt-3">
+                {gruppenLabel[gruppe]}
+              </div>
+              {navigation.filter(n => n.gruppe === gruppe).map((item) => {
+                const isActive = location === item.href;
+                return (
+                  <div key={item.name} onClick={() => { setLocation(item.href); setSidebarOffen(false); }}>
+                    <div className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 cursor-pointer",
+                      isActive
+                        ? "bg-violet-500/10 text-violet-300 border border-violet-500/20"
+                        : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                    )}>
+                      <item.icon className="h-4.5 w-4.5 shrink-0" />
+                      <span className="flex-1">{item.name}</span>
+                      {item.badge && (
+                        <span className={cn(
+                          "text-[9px] font-bold px-1.5 py-0.5 rounded-md",
+                          item.badge === "AUTO" && "bg-blue-500/10 text-blue-400",
+                          item.badge === "KI" && "bg-violet-500/10 text-violet-400",
+                          item.badge === "NEU" && "bg-emerald-500/10 text-emerald-400",
+                          item.badge === "€€€" && "bg-amber-500/10 text-amber-400",
+                        )}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+      </aside>
 
       {/* ── Main Content ─────────────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col overflow-hidden relative min-w-0">
         {/* Header */}
-        <header className="h-11 md:h-14 flex items-center justify-between px-3 md:px-6 border-b border-border bg-card/50 backdrop-blur-sm z-10 shrink-0">
-          <div className="flex items-center gap-2">
-            <button className="md:hidden p-1.5 -ml-1" onClick={() => setSidebarOffen(true)}>
-              <Menu className="h-5 w-5 text-muted-foreground" />
+        <header className="h-12 md:h-14 flex items-center justify-between px-4 md:px-6 border-b border-border bg-card/30 backdrop-blur-xl z-10 shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              className="md:hidden p-2 -ml-2 rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors"
+              onClick={() => setSidebarOffen(true)}
+              aria-label="Menü öffnen"
+            >
+              <Menu className="h-5 w-5 text-foreground" />
             </button>
-            <div className="flex items-center gap-1.5 text-primary font-bold text-xs md:hidden">
-              <Activity className="h-3.5 w-3.5" />
-              <span>CyberSarah</span>
+            <div className="flex items-center gap-2 md:hidden">
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
+                <Activity className="h-3.5 w-3.5 text-white" />
+              </div>
+              <span className="font-bold text-xs gradient-text">CyberSarah</span>
             </div>
             <h1 className="hidden md:block text-sm font-medium text-muted-foreground">
               {navigation.find((n) => n.href === location)?.name || "Übersicht"}
             </h1>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 text-[10px] md:text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+              </span>
+              LIVE
             </span>
-            <span className="text-[10px] md:text-xs font-mono text-green-500">LIVE</span>
           </div>
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-y-auto p-3 md:p-6 lg:p-8 pb-36 md:pb-6">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 pb-36 md:pb-6">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
         </div>
       </main>
 
-      {/* ── Mobile Bottom Navigation (2 Reihen) ─────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-lg mobile-nav">
-        {/* Reihe 1: Hauptnavigation */}
-        <div className="flex items-stretch h-[52px] border-b border-border/30">
-          {mobileNavPrimary.map((item) => {
-            const isActive = location === item.href;
-            const isMore = item.href === "#more";
-            return (
-              <div key={item.name} className="flex-1">
-                {isMore ? (
-                  <button
-                    className="flex flex-col items-center justify-center w-full h-full gap-0.5 text-muted-foreground active:text-primary transition-colors"
-                    onClick={() => setSidebarOffen(true)}
-                  >
+      {/* ── FLOATING ACTION BUTTON ─────────────────────────────────────── */}
+      <button
+        className="fab md:hidden"
+        onClick={() => setLocation("/sofort-start")}
+        aria-label="Sofort Start"
+      >
+        <Sparkles className="h-6 w-6" />
+      </button>
+
+      {/* ── PREMIUM BOTTOM NAVIGATION (Single Row, 5 Tabs) ──────────────── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 safe-bottom">
+        {/* Glas-Hintergrund */}
+        <div className="absolute inset-0 bg-card/90 backdrop-blur-2xl border-t border-white/10" />
+        
+        <div className="relative flex items-stretch h-[72px] px-2 pb-1">
+          {bottomNav.map((item, idx) => {
+            const isActive = idx === aktiverIndex;
+            const isMenu = item.href === "#menu";
+
+            if (isMenu) {
+              return (
+                <button
+                  key={item.name}
+                  className="flex-1 flex flex-col items-center justify-center gap-0.5 text-muted-foreground active:text-violet-400 transition-colors rounded-xl"
+                  onClick={() => setSidebarOffen(true)}
+                  aria-label="Mehr Menü"
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/5 border border-white/10">
                     <item.icon className="h-5 w-5" />
-                    <span className="text-[9px] font-medium leading-none">{item.name}</span>
-                  </button>
-                ) : (
-                  <Link href={item.href}>
-                    <div className={cn(
-                      "flex flex-col items-center justify-center h-full gap-0.5 transition-colors",
-                      isActive ? "text-primary" : "text-muted-foreground active:text-primary"
-                    )}>
-                      <item.icon className={cn("h-5 w-5", isActive && "drop-shadow-[0_0_6px_hsl(var(--primary))]")} />
-                      <span className={cn("text-[9px] font-medium leading-none", isActive && "font-bold")}>{item.name}</span>
-                    </div>
-                  </Link>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {/* Reihe 2: Schnellzugriff */}
-        <div className="flex items-stretch h-[48px]">
-          {mobileNavSecondary.map((item) => {
-            const isActive = location === item.href;
-            const isAll = item.href === "#all";
+                  </div>
+                  <span className="text-[9px] font-medium">{item.name}</span>
+                </button>
+              );
+            }
+
             return (
-              <div key={item.name} className="flex-1">
-                {isAll ? (
-                  <button
-                    className="flex flex-col items-center justify-center w-full h-full gap-0.5 text-muted-foreground active:text-primary transition-colors"
-                    onClick={() => setSidebarOffen(true)}
-                  >
-                    <item.icon className="h-4.5 w-4.5" />
-                    <span className="text-[8px] font-medium leading-none">{item.name}</span>
-                  </button>
-                ) : (
-                  <Link href={item.href}>
-                    <div className={cn(
-                      "flex flex-col items-center justify-center h-full gap-0.5 transition-colors",
-                      isActive ? "text-primary" : "text-muted-foreground active:text-primary"
-                    )}>
-                      <item.icon className={cn("h-4.5 w-4.5", isActive && "drop-shadow-[0_0_4px_hsl(var(--primary))]")} />
-                      <span className="text-[8px] font-medium leading-none">{item.name}</span>
-                    </div>
-                  </Link>
-                )}
-              </div>
+              <Link key={item.name} href={item.href}>
+                <div className={cn(
+                  "flex-1 flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all duration-200 py-1",
+                  isActive ? "text-violet-300" : "text-muted-foreground active:text-violet-400"
+                )}>
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
+                    isActive
+                      ? "bg-violet-500/15 border border-violet-500/25 shadow-[0_0_20px_rgba(124,58,237,0.1)]"
+                      : "bg-transparent"
+                  )}>
+                    <item.icon className={cn(
+                      "h-5 w-5 transition-all duration-200",
+                      isActive && "drop-shadow-[0_0_8px_rgba(124,58,237,0.4)]"
+                    )} />
+                  </div>
+                  <span className={cn(
+                    "text-[9px] font-medium transition-all duration-200",
+                    isActive && "font-bold"
+                  )}>
+                    {item.name}
+                  </span>
+                  {isActive && <div className="nav-dot" />}
+                </div>
+              </Link>
             );
           })}
         </div>
