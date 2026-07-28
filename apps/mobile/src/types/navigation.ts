@@ -29,3 +29,5 @@ export type AuthStackParamList = {
   Register: undefined;
   ForgotPassword: undefined;
 };
+
+export type ScreenNames = keyof RootStackParamList & keyof MainTabParamList;
