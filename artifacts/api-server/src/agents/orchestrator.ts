@@ -210,6 +210,27 @@ function registriereQueueHandler(): void {
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "ki_chancen_analysieren" } });
   });
 
+
+  // ── Revenue Analyst: Marketing-Kampagnen (generiert Content + Kampagnen) ──
+  globalQueue.registriereHandler("marketing_kampagnen_erstellen", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof RevenueAnalystAgent);
+    if (!agent) throw new Error("RevenueAnalystAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "marketing_kampagnen_erstellen" } });
+  });
+
+  // ── Monetization: Upsell-Strategie ──
+  globalQueue.registriereHandler("monetization_upsell", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof MonetizationAgent);
+    if (!agent) throw new Error("MonetizationAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "upsell_strategie" } });
+  });
+
+  // ── Monetization: Preisoptimierung ──
+  globalQueue.registriereHandler("monetization_preisoptimierung", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof MonetizationAgent);
+    if (!agent) throw new Error("MonetizationAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "preisoptimierung" } });
+  });
   // ── Finance-Optimierungs-Team ──
   globalQueue.registriereHandler("affiliate_registrar_vorbereiten", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof AffiliateRegistrarAgent);
@@ -461,11 +482,17 @@ async function mainLoop(): Promise<void> {
     if (mainLoopZyklus % 5 === 0) {
       globalQueue.fuegeHinzu("revenue_analyse", { aktion: "umsatz_analysieren" }, { prioritaet: 2, maxVersuche: 3 });
     }
-    // Alle 15 Min: Sales + Monetization
+    // Alle 15 Min: Sales + Monetization + Marketing-Kampagnen
     if (mainLoopZyklus % 15 === 0) {
       globalQueue.fuegeHinzu("sales_optimierung", {}, { prioritaet: 3 });
       globalQueue.fuegeHinzu("monetization_funnel", { aktion: "funnel_optimieren" }, { prioritaet: 3 });
       globalQueue.fuegeHinzu("monetization_affiliate", { aktion: "affiliate_analyse" }, { prioritaet: 3 });
+      globalQueue.fuegeHinzu("marketing_kampagnen_erstellen", { aktion: "marketing_kampagnen_erstellen" }, { prioritaet: 2 });
+    }
+    // Alle 30 Min: Upsell + Preisoptimierung (Revenue-Aktionen)
+    if (mainLoopZyklus % 30 === 0) {
+      globalQueue.fuegeHinzu("monetization_upsell", { aktion: "upsell_strategie" }, { prioritaet: 2 });
+      globalQueue.fuegeHinzu("monetization_preisoptimierung", { aktion: "preisoptimierung" }, { prioritaet: 2 });
     }
     // Alle 20 Min: Community Management
     if (mainLoopZyklus % 20 === 0) {
@@ -724,6 +751,30 @@ export function starteOrchestrator(): void {
   // vom Replit-Schutzschild blockiert werden (Webhook bleibt als Fallback aktiv).
   cron.schedule("*/10 * * * *", async () => {
     try {
+      const { syncStripeTransaktionen } = await import("../lib/stripeSync");
+      const ergebnis = await syncStripeTransaktionen();
+      if (ergebnis.neu > 0) {
+        logger.info(ergebnis, "💶 Stripe-Sync: neue Zahlungen übernommen");
+      }
+    } catch (err) {
+      logger.warn({ err }, "Stripe-Sync fehlgeschlagen");
+    }
+  });
+
+  // ── Marketing-Kampagnen: alle 4 Stunden (RevenueAnalystAgent) ──
+  cron.schedule("0 */4 * * *", () => {
+    globalQueue.fuegeHinzu("marketing_kampagnen_erstellen", { aktion: "marketing_kampagnen_erstellen" }, { prioritaet: 2 });
+  });
+
+  // ── Monetization Upsell: 2x täglich (06:00, 18:00) ──
+  cron.schedule("0 6,18 * * *", () => {
+    globalQueue.fuegeHinzu("monetization_upsell", { aktion: "upsell_strategie" }, { prioritaet: 2 });
+  });
+
+  // ── Preisoptimierung: 3x täglich (05:00, 12:00, 20:00) ──
+  cron.schedule("0 5,12,20 * * *", () => {
+    globalQueue.fuegeHinzu("monetization_preisoptimierung", { aktion: "preisoptimierung" }, { prioritaet: 2 });
+  });
 
   // Newsletter-Agent: Jeden Freitag um 08:00 Uhr
   cron.schedule("0 8 * * 5", async () => {
@@ -735,15 +786,6 @@ export function starteOrchestrator(): void {
   cron.schedule("30 9 * * *", async () => {
     logger.info("📱 WhatsApp-Agent: Täglicher Tipp wird gesendet...");
     await taeglicheWhatsAppAufgabe();
-  });
-      const { syncStripeTransaktionen } = await import("../lib/stripeSync");
-      const ergebnis = await syncStripeTransaktionen();
-      if (ergebnis.neu > 0) {
-        logger.info(ergebnis, "💶 Stripe-Sync: neue Zahlungen übernommen");
-      }
-    } catch (err) {
-      logger.warn({ err }, "Stripe-Sync fehlgeschlagen");
-    }
   });
 
   // ─── Sofort beim Start: Chancen scannen + Master-Check + Auto-Recovery ──────
@@ -761,6 +803,33 @@ export function starteOrchestrator(): void {
     }
     // Expansion-Chancen beim ersten Start befüllen
     globalQueue.fuegeHinzu("expansion_scan", { aktion: "chancen_scannen" }, { prioritaet: 2 });
+
+    // ── Social-Media-Plattformen auto-initialisieren (damit Auto-Post funktioniert) ──
+    try {
+      const { influencerPlatformenTable } = await import("@workspace/db");
+      const vorhandene = await db.select().from(influencerPlatformenTable).limit(1);
+      if (vorhandene.length === 0) {
+        logger.info("📱 Keine Social-Media-Plattformen vorhanden — initialisiere Standard-Plattformen");
+        const plattformen = [
+          { name: "tiktok", anzeigeName: "TikTok", symbol: "🎵", aktiv: true, postingsProTag: 3, besteZeiten: "08:00,13:00,19:00" },
+          { name: "instagram", anzeigeName: "Instagram", symbol: "📸", aktiv: true, postingsProTag: 3, besteZeiten: "09:00,14:00,20:00" },
+          { name: "youtube", anzeigeName: "YouTube", symbol: "🎬", aktiv: true, postingsProTag: 2, besteZeiten: "10:00,16:00" },
+          { name: "linkedin", anzeigeName: "LinkedIn", symbol: "💼", aktiv: true, postingsProTag: 2, besteZeiten: "07:00,12:00" },
+          { name: "twitter", anzeigeName: "X / Twitter", symbol: "🐦", aktiv: true, postingsProTag: 4, besteZeiten: "08:00,12:00,17:00,21:00" },
+        ];
+        for (const p of plattformen) {
+          await db.insert(influencerPlatformenTable).values(p);
+        }
+        logger.info({ anzahl: plattformen.length }, "📱 Social-Media-Plattformen initialisiert");
+      }
+    } catch (err) {
+      logger.warn({ err }, "Social-Media-Plattformen-Initialisierung fehlgeschlagen");
+    }
+
+    // ── Marketing-Kampagnen sofort beim Start erstellen ──
+    globalQueue.fuegeHinzu("marketing_kampagnen_erstellen", { aktion: "marketing_kampagnen_erstellen" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("monetization_upsell", { aktion: "upsell_strategie" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_preisoptimierung", { aktion: "preisoptimierung" }, { prioritaet: 2 });
 
     // ─── Auto-Recovery: Wenn System vorher aktiv war → sofort alle Agenten neu starten ──
     try {
@@ -907,6 +976,9 @@ export async function fuehreAlleAgentanAus(): Promise<{ gestartet: number; jobId
   jobIds.push(globalQueue.fuegeHinzu("revenue_analyst_stripe", { aktion: "stripe_link_erstellen" }, { prioritaet: 2 }));
   jobIds.push(globalQueue.fuegeHinzu("monetization_affiliate", { aktion: "affiliate_analyse" }, { prioritaet: 2 }));
   jobIds.push(globalQueue.fuegeHinzu("monetization_funnel", { aktion: "funnel_optimieren" }, { prioritaet: 2 }));
+  jobIds.push(globalQueue.fuegeHinzu("marketing_kampagnen_erstellen", { aktion: "marketing_kampagnen_erstellen" }, { prioritaet: 2 }));
+  jobIds.push(globalQueue.fuegeHinzu("monetization_upsell", { aktion: "upsell_strategie" }, { prioritaet: 2 }));
+  jobIds.push(globalQueue.fuegeHinzu("monetization_preisoptimierung", { aktion: "preisoptimierung" }, { prioritaet: 2 }));
 
   // Priorität 3: Content + Sales + Community
   const marken = ["CyberSarah", "GeldPilot AI", "UnternehmerGPT"] as const;
@@ -1028,8 +1100,10 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
       }
 
       case "monetization": {
-        const jobId = globalQueue.fuegeHinzu("monetization_funnel", { aktion: "funnel_optimieren" }, { prioritaet: 1 });
-        return { success: true, message: `Monetization Agent: Funnel-Job ${jobId} gestartet` };
+        const j1 = globalQueue.fuegeHinzu("monetization_funnel", { aktion: "funnel_optimieren" }, { prioritaet: 1 });
+        const j2 = globalQueue.fuegeHinzu("monetization_upsell", { aktion: "upsell_strategie" }, { prioritaet: 1 });
+        const j3 = globalQueue.fuegeHinzu("monetization_preisoptimierung", { aktion: "preisoptimierung" }, { prioritaet: 1 });
+        return { success: true, message: `Monetization Agent: 3 Jobs gestartet (Funnel ${j1}, Upsell ${j2}, Preis ${j3})` };
       }
 
       case "master": {
@@ -1038,8 +1112,9 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
       }
 
       case "revenue_analyst": {
-        const jobId = globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "chancen_scannen" }, { prioritaet: 1 });
-        return { success: true, message: `Revenue Analyst: Chancen-Scan ${jobId} gestartet` };
+        const j1 = globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "chancen_scannen" }, { prioritaet: 1 });
+        const j2 = globalQueue.fuegeHinzu("marketing_kampagnen_erstellen", { aktion: "marketing_kampagnen_erstellen" }, { prioritaet: 1 });
+        return { success: true, message: `Revenue Analyst: 2 Jobs gestartet (Scan ${j1}, Marketing ${j2})` };
       }
 
       case "affiliate_registrar": {
