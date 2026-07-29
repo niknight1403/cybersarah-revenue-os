@@ -37,6 +37,7 @@ import stripePortalRouter from "./stripePortal";
 import emailRoutesRouter from "./emailRoutes";
 import pushRoutesRouter from "./pushRoutes";
 import socialRoutesRouter from "./socialRoutes";
+import crossSellRoutesRouter from "./crossSellRoutes";
 import subscriptionRoutesRouter from "./subscriptionRoutes";
 
 const router: IRouter = Router();
@@ -79,6 +80,7 @@ router.use(stripePortalRouter);
 router.use(emailRoutesRouter);
 router.use(pushRoutesRouter);
 router.use(socialRoutesRouter);
+router.use(crossSellRoutesRouter);
 router.use(subscriptionRoutesRouter);
 
 export default router;

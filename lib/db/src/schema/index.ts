@@ -26,3 +26,4 @@ export * from "./loyaltyPrograms";
 export * from "./affiliates";
 export * from "./salesChat";
 export * from "./subscriptions";
+export * from "./crossSell";
