@@ -22,12 +22,12 @@ declare const __DEV__: boolean;
 // ─── REST API URL ────────────────────────────────────────────────────
 export const API_BASE_URL: string = __DEV__
   ? `http://${HETZNER_IP}:${HETZNER_PORT}/api`
-  : `https://${PROD_DOMAIN}/api`;
+  : `http://${HETZNER_IP}:${HETZNER_PORT}/api`;
 
 // ─── WebSocket URL ──────────────────────────────────────────────────
 export const WS_BASE_URL: string = __DEV__
   ? `ws://${HETZNER_IP}:${HETZNER_PORT}/ws`
-  : `wss://${PROD_DOMAIN}/ws`;
+  : `ws://${HETZNER_IP}:${HETZNER_PORT}/ws`;
 
 // ─── Health-Check Endpoint ──────────────────────────────────────────
 export const HEALTH_ENDPOINT = '/healthz' as const;
