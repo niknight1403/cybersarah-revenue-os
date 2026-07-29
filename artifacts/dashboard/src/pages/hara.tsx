@@ -130,11 +130,22 @@ export default function Hara() {
 
   const handleScan = () => {
     scan.mutate(undefined, {
-      onSuccess: (data) => {
-        refresh();
-        toast({ title: "🔍 HARA-Scan abgeschlossen", description: data.message });
+      onSuccess: (data: any) => {
+        if (data.background) {
+          toast({ title: "🔍 HARA-Scan gestartet", description: "Läuft im Hintergrund (30-60s) — Daten werden automatisch aktualisiert" });
+          setTimeout(() => {
+            refresh();
+            toast({ title: "🔄 HARA aktualisiert", description: "Neue Vorschläge werden geladen" });
+          }, 10000);
+        } else {
+          refresh();
+          toast({ title: "🔍 HARA-Scan abgeschlossen", description: data.message });
+        }
       },
-      onError: () => toast({ title: "Scan fehlgeschlagen", variant: "destructive" }),
+      onError: (err: any) => {
+        console.error("HARA Fehler:", err);
+        toast({ title: "Scan fehlgeschlagen", variant: "destructive" });
+      },
     });
   };
 

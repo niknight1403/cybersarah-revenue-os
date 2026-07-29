@@ -44,8 +44,8 @@ interface KiVorschlag {
   automatisierbarkeitScore: number;
 }
 
-const MAX_OFFENE_VORSCHLAEGE = 25;
-const AUTO_CONFIRM_SCHWELLE = 40;
+const MAX_OFFENE_VORSCHLAEGE = 50;
+const AUTO_CONFIRM_SCHWELLE = 30;
 const AUTO_RETRY_TAGE = 7;
 const MARKEN = ["CyberSarah", "GeldPilot AI", "UnternehmerGPT"] as const;
 
@@ -162,7 +162,7 @@ export class HaraAgent extends AgentBase {
     // Stripe-Umsatz für Kontext sammeln
     const stripeUmsatz = await this.sammleStripeUmsatz();
     const kontext = await this.sammleKontext();
-    const anzahlNeu = Math.min(8, MAX_OFFENE_VORSCHLAEGE - offene.length);
+    const anzahlNeu = Math.min(12, MAX_OFFENE_VORSCHLAEGE - offene.length);
     const vorschlaege = await this.generiereVorschlaege(kontext, anzahlNeu);
 
     let gespeichert = 0;
@@ -357,7 +357,195 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
   }
 
   private generiereTemplateVorschlaege(anzahl: number): KiVorschlag[] {
+    const EXTRA_TEMPLATES = anzahl > 6;
     const templates: KiVorschlag[] = [
+      {
+        titel: "TikTok Viral Funnel — KI-Prompt Basic Launch",
+        marke: "CyberSarah",
+        kanal: "eigenes_produkt",
+        businessCase: "Launch des KI-Prompt Basic Pakets (€19) mit TikTok Livestream + 5 viralen Kurzvideos täglich. Ziel: 100 Verkäufe/Monat = €1.900.",
+        roiErwartung: "€1.900/Monat bei 100 Verkäufen",
+        geschaetzterMonatsumsatz: 1900,
+        ressourcen: ["Stripe", "TikTok Account", "Video-Templates"],
+        automatisierungsPfad: [
+          { beschreibung: "Stripe-Produkt erstellen", typ: "auto_stripe_produkt" },
+          { beschreibung: "Payment-Link generieren", typ: "auto_payment_link" },
+          { beschreibung: "TikTok Content Plan generieren", typ: "auto_content" },
+          { beschreibung: "Kampagne starten", typ: "auto_kampagne" },
+        ],
+        roiScore: 84,
+        geschwindigkeitScore: 80,
+        automatisierbarkeitScore: 90,
+      },
+      {
+        titel: "Instagram Reels Automation — KI-Influencer Aufbau",
+        marke: "GeldPilot AI",
+        kanal: "content",
+        businessCase: "Automatisierte Instagram-Reels mit KI-Influencer. 3 Reels/Tag, organische Reichweite, Affiliate-Links in Bio. Ziel: 10.000 Follower/Monat.",
+        roiErwartung: "€1.500/Monat via Affiliate",
+        geschaetzterMonatsumsatz: 1500,
+        ressourcen: ["Instagram Account", "KI-Video-Generator", "Canva"],
+        automatisierungsPfad: [
+          { beschreibung: "Content-Strategie erstellen", typ: "auto_content" },
+          { beschreibung: "30-Tage-Content-Plan generieren", typ: "auto_content" },
+          { beschreibung: "Instagram-Kampagne anlegen", typ: "auto_kampagne" },
+        ],
+        roiScore: 82,
+        geschwindigkeitScore: 85,
+        automatisierbarkeitScore: 88,
+      },
+      {
+        titel: "Weekly LinkedIn Thought Leadership — KI-Automation",
+        marke: "UnternehmerGPT",
+        kanal: "content",
+        businessCase: "Tägliche LinkedIn-Beiträge via KI-Generierung. Thought Leadership für KI-Business-Themen. Generiert hochwertige B2B-Leads.",
+        roiErwartung: "€800/Monat via Lead-Gen",
+        geschaetzterMonatsumsatz: 800,
+        ressourcen: ["LinkedIn Account", "OpenAI API", "Content-Kalender"],
+        automatisierungsPfad: [
+          { beschreibung: "Content-Recherche", typ: "auto_content" },
+          { beschreibung: "Wöchentliche Beitrags-Serie", typ: "auto_content" },
+          { beschreibung: "Lead-Magnet-Kampagne", typ: "auto_kampagne" },
+        ],
+        roiScore: 76,
+        geschwindigkeitScore: 90,
+        automatisierbarkeitScore: 92,
+      },
+      {
+        titel: "KI-Newsletter with Paid Subscription",
+        marke: "CyberSarah",
+        kanal: "abo",
+        businessCase: "Premium KI-Business Newsletter via Stripe-Mitgliedschaft. Wöchentliche KI-Tutorials, Tools & Strategies. €19/Monat oder €190/Jahr.",
+        roiErwartung: "€950/Monat bei 50 Abos",
+        geschaetzterMonatsumsatz: 950,
+        ressourcen: ["Stripe", "E-Mail-Plattform", "Content-KI"],
+        automatisierungsPfad: [
+          { beschreibung: "Stripe-Abo-Produkt erstellen", typ: "auto_stripe_produkt" },
+          { beschreibung: "Payment-Link generieren", typ: "auto_payment_link" },
+          { beschreibung: "Welcome-Content generieren", typ: "auto_content" },
+        ],
+        roiScore: 80,
+        geschwindigkeitScore: 75,
+        automatisierbarkeitScore: 85,
+      },
+      {
+        titel: "YouTube Automation — Passive Income via Tutorials",
+        marke: "GeldPilot AI",
+        kanal: "content",
+        businessCase: "Automatisierte YouTube Shorts mit KI-Tutorial-Inhalten. 2 Shorts/Tag + 1 Langvideo/Woche. Monetarisierung via Affiliate + Produkte.",
+        roiErwartung: "€2.500/Monat via Ads + Affiliate",
+        geschaetzterMonatsumsatz: 2500,
+        ressourcen: ["YouTube Account", "KI-Video-Generator", "ElevenLabs TTS"],
+        automatisierungsPfad: [
+          { beschreibung: "YouTube-Content-Plan", typ: "auto_content" },
+          { beschreibung: "Video-Skripte generieren", typ: "auto_content" },
+          { beschreibung: "Kampagne mit Affiliate-Links", typ: "auto_kampagne" },
+        ],
+        roiScore: 85,
+        geschwindigkeitScore: 70,
+        automatisierbarkeitScore: 82,
+      },
+      {
+        titel: "WhatsApp KI-Bot — 24/7 Sales Automation",
+        marke: "CyberSarah",
+        kanal: "eigenes_produkt",
+        businessCase: "KI-gestützter WhatsApp-Vertriebsbot für Produktverkauf, Terminbuchung und Kundenservice. Reduziert manuellen Aufwand um 80%.",
+        roiErwartung: "€1.200/Monat via mehr Konversionen",
+        geschaetzterMonatsumsatz: 1200,
+        ressourcen: ["WhatsApp Business API", "OpenAI", "Stripe"],
+        automatisierungsPfad: [
+          { beschreibung: "WhatsApp Bot System prompt", typ: "auto_content" },
+          { beschreibung: "Stripe-Zahlungslink integrieren", typ: "auto_payment_link" },
+          { beschreibung: "Kampagne starten", typ: "auto_kampagne" },
+        ],
+        roiScore: 78,
+        geschwindigkeitScore: 85,
+        automatisierbarkeitScore: 80,
+      },
+      {
+        titel: "Instagram DM Automation — Sales Funnel",
+        marke: "CyberSarah",
+        kanal: "eigenes_produkt",
+        businessCase: "Automatisierte Instagram DMs via ManyChat/KI für Produktverkauf. Scale von 1:1 auf 1:1000 Betreuung. Konversion aus Kommentaren.",
+        roiErwartung: "€1.800/Monat via DM-Verkauf",
+        geschaetzterMonatsumsatz: 1800,
+        ressourcen: ["Instagram Account", "OpenAI API", "Stripe"],
+        automatisierungsPfad: [
+          { beschreibung: "DM-Verkaufsskript generieren", typ: "auto_content" },
+          { beschreibung: "Payment-Link erstellen", typ: "auto_payment_link" },
+          { beschreibung: "Kampagne automatisieren", typ: "auto_kampagne" },
+        ],
+        roiScore: 81,
+        geschwindigkeitScore: 78,
+        automatisierbarkeitScore: 86,
+      },
+      {
+        titel: "TikTok Shop Dropshipping — KI-Katalog",
+        marke: "CyberSarah",
+        kanal: "eigenes_produkt",
+        businessCase: "TikTok Shop mit 10 KI-optimierten Produktlisten. Automatisierte Produktbeschreibungen + virale Videos. Niedrige Konkurrenz, hohe Marge.",
+        roiErwartung: "€3.200/Monat",
+        geschaetzterMonatsumsatz: 3200,
+        ressourcen: ["TikTok Shop", "KI-Content", "Stripe Connect"],
+        automatisierungsPfad: [
+          { beschreibung: "Produktliste KI-optimieren", typ: "auto_content" },
+          { beschreibung: "Payment-Link für Checkout", typ: "auto_payment_link" },
+          { beschreibung: "TikTok-Kampagne starten", typ: "auto_kampagne" },
+        ],
+        roiScore: 86,
+        geschwindigkeitScore: 72,
+        automatisierbarkeitScore: 78,
+      },
+      {
+        titel: "KI-Coaching Funnel — 1:1 Premium",
+        marke: "CyberSarah",
+        kanal: "coaching",
+        businessCase: "Verkaufstrichter für 1:1 KI-Business-Coaching. Lead-Magnet → Webinar → Buchung. €497/Session, 10 Sessions = €4.970/Monat.",
+        roiErwartung: "€4.970/Monat bei 10 Sessions",
+        geschaetzterMonatsumsatz: 4970,
+        ressourcen: ["Stripe", "Calendly API", "E-Mail Automation"],
+        automatisierungsPfad: [
+          { beschreibung: "Coaching-Seite auf Stripe", typ: "auto_stripe_produkt" },
+          { beschreibung: "Payment-Link für Coaching", typ: "auto_payment_link" },
+          { beschreibung: "Lead-Nurture-Kampagne", typ: "auto_kampagne" },
+        ],
+        roiScore: 90,
+        geschwindigkeitScore: 68,
+        automatisierbarkeitScore: 75,
+      },
+      {
+        titel: "TikTok Shop Bundle — Basic + Pro + Bonus",
+        marke: "CyberSarah",
+        kanal: "eigenes_produkt",
+        businessCase: "Bundle aus Basic (€19) + Pro (€49) Paket mit Bonus-Content. Rabattierter Bundle-Preis €59. Höherer Warenkorbwert.",
+        roiErwartung: "€2.950/Monat bei 50 Bundles",
+        geschaetzterMonatsumsatz: 2950,
+        ressourcen: ["Stripe", "Bundle-Seite", "Bonus-Content"],
+        automatisierungsPfad: [
+          { beschreibung: "Bundle als Stripe-Produkt", typ: "auto_stripe_produkt" },
+          { beschreibung: "Bundle-Payment-Link", typ: "auto_payment_link" },
+          { beschreibung: "Bundle-Launch-Kampagne", typ: "auto_kampagne" },
+        ],
+        roiScore: 87,
+        geschwindigkeitScore: 82,
+        automatisierbarkeitScore: 85,
+      },
+      {
+        titel: "Twitter/X Thread Funnel — KI-Viral",
+        marke: "UnternehmerGPT",
+        kanal: "content",
+        businessCase: "Tägliche KI-Threads auf X/Twitter für organische Reichweite. Lead-Magnet in Bio. 3 Threads/Tag = schnelles Follower-Wachstum.",
+        roiErwartung: "€600/Monat via Lead-Gen",
+        geschaetzterMonatsumsatz: 600,
+        ressourcen: ["X/Twitter Account", "OpenAI", "Lead-Magnet"],
+        automatisierungsPfad: [
+          { beschreibung: "Thread-Content-Serie", typ: "auto_content" },
+          { beschreibung: "Lead-Magnet-Kampagne", typ: "auto_kampagne" },
+        ],
+        roiScore: 72,
+        geschwindigkeitScore: 92,
+        automatisierbarkeitScore: 94,
+      },
       {
         titel: "KI-Prompt Pro Bundle — TikTok Shop Launch",
         marke: "CyberSarah",
@@ -534,7 +722,7 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
 
         switch (schritt.typ) {
           case "auto_stripe_produkt":
-            ergebnis = await this.erstelleStripeProdukt(proposal.titel, marke);
+            ergebnis = await this.erstelleStripeProdukt(proposal.titel, marke, Number(proposal.geschaetzterMonatsumsatz ?? 0));
             break;
           case "auto_payment_link":
             ergebnis = await this.erstellePaymentLink(proposal.titel, marke);
@@ -609,21 +797,32 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
     };
   }
 
-  private async erstelleStripeProdukt(name: string, marke: string): Promise<string> {
+  private async erstelleStripeProdukt(name: string, marke: string, geschaetzterMonatsumsatz?: number): Promise<string> {
     try {
       const stripe = getStripeClient();
+      
+      // Dynamischer Preis basierend auf geschätztem Monatsumsatz
+      // Skalierung: €9-€197 pro Einheit
+      const monatswert = Number(geschaetzterMonatsumsatz ?? 0);
+      let preisInCent = 1900; // Default €19
+      if (monatswert >= 4000) preisInCent = 19700; // €197
+      else if (monatswert >= 2000) preisInCent = 9700; // €97
+      else if (monatswert >= 1000) preisInCent = 4900; // €49
+      else if (monatswert >= 500) preisInCent = 2900; // €29
+      else if (monatswert >= 100) preisInCent = 1900; // €19
+      else preisInCent = 900; // €9
 
       const produkt = await stripe.products.create({
         name: `${name} — ${marke}`,
-        description: `Generiert vom HARA Revenue Agent für ${marke}`,
-        metadata: { quelle: "hara", marke, system: "CyberSarah-OS" },
+        description: `HARA-generiert | Geschätzter monatlicher Umsatz: €${monatswert} | Marke: ${marke}`,
+        metadata: { quelle: "hara", marke, system: "CyberSarah-OS", geschaetzterMonatsumsatz: String(monatswert) },
       });
 
       const preis = await stripe.prices.create({
         product: produkt.id,
-        unit_amount: 1900,
+        unit_amount: preisInCent,
         currency: "eur",
-        metadata: { quelle: "hara" },
+        metadata: { quelle: "hara", preisModell: monatswert >= 4000 ? "premium" : monatswert >= 1000 ? "standard" : "einstieg" },
       });
 
       if (db) {
@@ -651,11 +850,12 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
     try {
       const stripe = getStripeClient();
 
+      // Verwende Marke + aktuelle Produkte für besseres Matching
       let preisId: string | undefined;
       if (db) {
         try {
           const [produkt] = await db.select().from(produkteTable)
-            .where(sql`${produkteTable.name} LIKE ${"%" + name + "%"}`)
+            .where(sql`${produkteTable.name} LIKE ${"%" + name.slice(0, 40) + "%"}`)
             .orderBy(desc(produkteTable.createdAt))
             .limit(1);
           preisId = produkt?.stripePreisId ?? undefined;
@@ -663,7 +863,7 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
       }
 
       if (!preisId) {
-        return "Kein Preis gefunden — Payment-Link übersprungen (Produkt erst zuerst erstellen)";
+        return "Kein Preis gefunden — Payment-Link übersprungen (Produkt zuerst erstellen)";
       }
 
       const link = await stripe.paymentLinks.create({
@@ -674,6 +874,15 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
         },
         metadata: { quelle: "hara", produkt: name },
       });
+
+      // Speichere Payment-Link in DB
+      if (db) {
+        try {
+          await db.update(produkteTable)
+            .set({ stripePaymentLink: link.url, updatedAt: new Date() })
+            .where(eq(produkteTable.stripePreisId, preisId));
+        } catch { /* ignorieren */ }
+      }
 
       return `Payment-Link erstellt: ${link.url}`;
     } catch (err) {
@@ -713,8 +922,8 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
         const [kampagne] = await db.insert(campaignsTable).values({
           name: `HARA: ${name}`.slice(0, 200),
           marke,
+          typ: "kampagne",
           status: "aktiv",
-          budget: "0",
           kategorie: kanal.slice(0, 50),
           startDatum: new Date(),
         }).returning();

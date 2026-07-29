@@ -9,6 +9,7 @@ import type { DS24IpnPayload } from "./lib/digistoreClient";
 import router from "./routes";
 import stripeWebhookRouter from "./routes/stripeWebhook";
 import seoBlogRouter from "./routes/seoBlogSitemap";
+import publicSiteRouter from "./routes/publicSite";
 import { corsOptions } from "./lib/corsConfig";
 import { db } from "@workspace/db";
 import { webhookEventsTable } from "@workspace/db";
@@ -127,9 +128,16 @@ app.use(express.urlencoded({ extended: true }));
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dashboardPath = path.resolve(__dirname, "../../dashboard");
+const dashboardPath = path.resolve(__dirname, "../../dashboard/dist");
 
-app.use(express.static(dashboardPath, { index: "index.html" }));
+app.use("/app", express.static(dashboardPath, { index: "index.html" }));
+
+// Redirect /app to /app/ for SPA
+app.get("/app", (_req, res) => res.redirect("/app/"));
+
+// ─── Public Routes (vor statischen Dateien) ──
+app.use("/", publicSiteRouter);
+app.use("/", seoBlogRouter);
 
 // ─── DB-Fehler-Handling (loggt Fehler sichtbar statt sie zu verschlucken) ───
 
@@ -148,7 +156,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   next(err);
 });
 
-app.use("/", seoBlogRouter);
 app.use("/api", router);
 
 // ─── Digistore24 Status-Endpoint (REST, nicht Webhook) ──────────────────────

@@ -185,7 +185,7 @@ export class LoyaltyAgent extends AgentBase {
     }
 
     // Willkommens-Punkte für neue Kunden
-    const alleKartenEmails = new Set(karten.map(k => k.kundenEmail).filter(Boolean));
+    const alleKartenEmails = new Set((karten ?? []).map(k => k.kundenEmail).filter(Boolean));
 
     // Aus Lead-Tabelle neue potenzielle Kunden holen
     const neueLeads = await db
@@ -193,8 +193,8 @@ export class LoyaltyAgent extends AgentBase {
       .from(leadsTable)
       .limit(50);
 
-    for (const lead of neueLeads) {
-      if (lead.email && !alleKartenEmails.has(lead.email)) {
+    for (const lead of (neueLeads ?? [])) {
+      if (lead?.email && !alleKartenEmails.has(lead.email)) {
         const [card] = await db.insert(loyaltyCardsTable).values({
           programId: program.id,
           kundenEmail: lead.email,

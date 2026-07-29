@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -28,6 +29,13 @@ import ContentRecycling from "@/pages/contentRecycling";
 import Attribution from "@/pages/attribution";
 import Newsletter from "@/pages/newsletter";
 import WhatsApp from "@/pages/whatsapp";
+import EmailAutomation from "@/pages/emailAutomation";
+import SocialMedia from "@/pages/socialMedia";
+import PushNotifications from "@/pages/pushNotifications";
+import StripeDashboard from "@/pages/stripeDashboard";
+import StripeProdukte from "@/pages/stripeProdukte";
+import StripeZahlungen from "@/pages/stripeZahlungen";
+import StripeAbos from "@/pages/stripeAbos";
 import { CouponDashboard } from "@/pages/couponDashboard";
 import { LoyaltyDashboard } from "@/pages/loyaltyDashboard";
 import { AffiliateDashboard } from "@/pages/affiliateDashboard";
@@ -36,9 +44,18 @@ import { CrossSellDashboard } from "@/pages/crossSellDashboard";
 import { MobileRevenue } from "@/pages/mobileRevenue";
 import { ConversionDashboard } from "@/pages/conversionDashboard";
 import { SubscriptionDashboard } from "@/pages/subscriptionDashboard";
+import { StartupScreen } from "@/pages/_startup";
 import { useEffect } from "react";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30_000,
+    },
+  },
+});
 
 function Router() {
   return (
@@ -89,9 +106,15 @@ function Router() {
 }
 
 function App() {
+  const [started, setStarted] = useState(false);
+
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
+
+  if (!started) {
+    return <StartupScreen onComplete={() => setStarted(true)} />;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

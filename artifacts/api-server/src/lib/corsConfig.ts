@@ -34,7 +34,7 @@ function buildAllowedOrigins(): Set<string> {
 }
 
 const allowedOrigins = buildAllowedOrigins();
-const localhostOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const localhostOriginPattern = /^(https?:|capacitor:|file:)\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
 function isAllowedOrigin(origin: string): boolean {
   return allowedOrigins.has(origin) || localhostOriginPattern.test(origin);
