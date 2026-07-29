@@ -7,6 +7,7 @@ export const campaignsTable = pgTable("campaigns", {
   name: varchar("name", { length: 255 }).notNull(),
   marke: varchar("marke", { length: 64 }).notNull(),
   typ: varchar("typ", { length: 64 }).notNull(),
+  kategorie: varchar("kategorie", { length: 64 }),
   netzwerk: varchar("netzwerk", { length: 64 }).default("keins"),
   status: varchar("status", { length: 64 }).notNull().default("aktiv"),
   affiliateLink: text("affiliate_link"),

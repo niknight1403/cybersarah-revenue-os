@@ -13,6 +13,9 @@ export const produkteTable = pgTable("produkte", {
   inhalt: text("inhalt"),                  // generierter Produktinhalt (JSON)
   aktiv: boolean("aktiv").default(false),
   verkauft: decimal("verkauft", { precision: 10, scale: 2 }).default("0"),
+  verkaeufeAnzahl: text("verkaeufe_anzahl").default("0"),
+  pausiertAm: timestamp("pausiert_am"),
+  quelle: text("quelle"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

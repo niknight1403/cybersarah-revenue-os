@@ -11,6 +11,7 @@ export const transactionsTable = pgTable("transactions", {
   betrag: numeric("betrag", { precision: 12, scale: 2 }).notNull(),
   waehrung: varchar("waehrung", { length: 3 }).notNull().default("EUR"),
   beschreibung: text("beschreibung"),
+  produktName: varchar("produkt_name", { length: 255 }),
   campaignId: integer("campaign_id").references(() => campaignsTable.id),
   stripeEventId: varchar("stripe_event_id", { length: 255 }).unique(),
   metadaten: text("metadaten"),
