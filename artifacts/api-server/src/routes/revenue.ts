@@ -1,13 +1,49 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { revenueOpportunitiesTable } from "@workspace/db";
-import { desc } from "drizzle-orm";
-import { eq } from "drizzle-orm";
+import { revenueOpportunitiesTable, transactionsTable } from "@workspace/db";
+import { desc, eq, gte, sql } from "drizzle-orm";
 import { fuehreAlleAgentanAus } from "../agents/orchestrator";
 
 const router = Router();
 
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// REVENUE SUMMARY — Für Mobile Dashboard
+// ═══════════════════════════════════════════════════════════════════════════════
+
+router.get("/revenue", async (_req, res) => {
+  const heute = new Date();
+  heute.setHours(0, 0, 0, 0);
+  const vor30Tagen = new Date();
+  vor30Tagen.setDate(vor30Tagen.getDate() - 30);
+
+  const [heuteResult, monatResult, transaktionen] = await Promise.all([
+    db.select({ summe: sql<number>`COALESCE(SUM(betrag), 0)` })
+      .from(transactionsTable)
+      .where(gte(transactionsTable.createdAt, heute)),
+    db.select({ summe: sql<number>`COALESCE(SUM(betrag), 0)` })
+      .from(transactionsTable)
+      .where(gte(transactionsTable.createdAt, vor30Tagen)),
+    db.select()
+      .from(transactionsTable)
+      .orderBy(desc(transactionsTable.createdAt))
+      .limit(20),
+  ]);
+
+  res.json({
+    heute: Number(heuteResult[0]?.summe ?? 0),
+    letzte30Tage: Number(monatResult[0]?.summe ?? 0),
+    summe: Number(monatResult[0]?.summe ?? 0),
+    transaktionen: transaktionen.map(t => ({
+      id: t.id, betrag: t.betrag, produktName: t.produktName,
+      beschreibung: t.beschreibung, quelle: t.quelle,
+      createdAt: t.createdAt,
+    })),
+  });
+});
+
 // GET /revenue/opportunities
+
 router.get("/revenue/opportunities", async (req, res) => {
   try {
     if (!db) { res.json([]); return; }
