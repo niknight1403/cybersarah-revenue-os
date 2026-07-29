@@ -13,6 +13,7 @@ import stripe
 
 from app.database import init_db, close_db
 from app.auth.routes import router as auth_router
+from app.routes.agents import router as agents_router, register_default_agents
 from app.settings import settings
 
 
@@ -22,20 +23,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Startup/Shutdown-Events."""
     logger.info(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} startet...")
     logger.info(f"   Environment: {settings.ENVIRONMENT}")
-    logger.info(f"   Debug: {settings.DEBUG}")
 
     # Stripe-API-Key setzen
     if settings.STRIPE_SECRET_KEY:
         stripe.api_key = str(settings.STRIPE_SECRET_KEY)
         logger.info("   Stripe: API-Key konfiguriert")
     else:
-        logger.warning("   Stripe: KEIN API-Key gesetzt — Zahlungen deaktiviert")
+        logger.warning("   Stripe: KEIN API-Key — Zahlungen deaktiviert")
 
     # Datenbank initialisieren
     try:
         await init_db()
+        logger.info("   Datenbank: Initialisiert")
     except Exception as exc:
         logger.error(f"   DB INIT FAILED: {exc}")
+
+    # KI-Agenten registrieren
+    try:
+        register_default_agents()
+    except Exception as exc:
+        logger.error(f"   AGENT INIT FAILED: {exc}")
 
     yield
 
@@ -82,6 +89,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 # ─── Router einbinden ──────────────────────────────────────────
 app.include_router(auth_router, prefix="/api")
+app.include_router(agents_router, prefix="/api")
 
 
 # ─── Health-Check ──────────────────────────────────────────────
@@ -92,6 +100,8 @@ async def health_check() -> dict:
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT,
+        "openai_available": bool(settings.OPENAI_API_KEY),
+        "stripe_configured": bool(settings.STRIPE_SECRET_KEY),
         "timestamp": __import__("time").time(),
     }
 

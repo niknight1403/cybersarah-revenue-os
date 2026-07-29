@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import {
   Activity, LayoutDashboard, Zap, Bot, TrendingUp, Rocket,
   Users, FileText, Search, Globe, Clapperboard, Recycle,
-  Mail, Megaphone, Brain, DollarSign, Target, Cpu,
+  Mail, Megaphone, Brain, DollarSign, Target, Cpu, CreditCard, Package, Repeat,
   Newspaper, MessageCircle, Key, TerminalSquare,
   Menu, X, Sparkles, Circle,
 } from "lucide-react";
@@ -22,20 +22,27 @@ const navigation = [
   { name: "Finance-Team", href: "/finance-team", icon: Users, badge: "KI", gruppe: "umsatz" },
   { name: "Newsletter", href: "/newsletter", icon: Newspaper, badge: "NEU", gruppe: "umsatz" },
   { name: "WhatsApp", href: "/whatsapp", icon: MessageCircle, badge: "NEU", gruppe: "umsatz" },
+  { name: "📧 E-Mail-Auto", href: "/email", icon: Mail, badge: "NEU", gruppe: "umsatz" },
   { name: "Content", href: "/content", icon: FileText, gruppe: "content" },
   { name: "SEO-Empire", href: "/seo-content", icon: Search, badge: "AUTO", gruppe: "content" },
   { name: "KI-Influencer", href: "/influencer-hub", icon: Globe, badge: "AUTO", gruppe: "content" },
   { name: "Faceless-Video", href: "/faceless-video", icon: Clapperboard, gruppe: "content" },
+  { name: "📱 Social Hub", href: "/social-media", icon: Share2, badge: "NEU", gruppe: "content" },
   { name: "Content-Recycling", href: "/content-recycling", icon: Recycle, gruppe: "content" },
   { name: "E-Mail-Listen", href: "/email-listen", icon: Mail, gruppe: "content" },
   { name: "Kampagnen", href: "/kampagnen", icon: Megaphone, gruppe: "content" },
   { name: "Trading AI", href: "/trading", icon: Brain, badge: "KI", gruppe: "system" },
   { name: "Finanzen", href: "/finanzen", icon: DollarSign, gruppe: "system" },
+  { name: "💳 Stripe", href: "/stripe", icon: CreditCard, badge: "NEU", gruppe: "system" },
+  { name: "  └ Produkte", href: "/stripe/produkte", icon: Package, gruppe: "system" },
+  { name: "  └ Zahlungen", href: "/stripe/zahlungen", icon: CreditCard, gruppe: "system" },
+  { name: "  └ Abos", href: "/stripe/abos", icon: Repeat, gruppe: "system" },
   { name: "Attribution", href: "/attribution", icon: Target, gruppe: "system" },
   { name: "Agenten", href: "/agenten", icon: Cpu, gruppe: "system" },
   { name: "Master-Agent", href: "/master-agent", icon: Brain, gruppe: "system" },
   { name: "API-Keys", href: "/einstellungen", icon: Key, gruppe: "system" },
   { name: "Protokolle", href: "/protokolle", icon: TerminalSquare, gruppe: "system" },
+  { name: "🔔 Push", href: "/push", icon: Bell, badge: "NEU", gruppe: "system" },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════

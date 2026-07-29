@@ -5,7 +5,6 @@ import { db } from "@workspace/db";
 import { agentsTable, agentLogsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { sendAgentAlert, sendSystemAlert, sendUmsatzAlert } from "../lib/pushNotifications";
 import { globalQueue } from "./JobQueue";
 import { AgentBase, type Aufgabe, type AufgabeErgebnis } from "./AgentBase";
 import { InfluencerAgent } from "./InfluencerAgent";
@@ -194,10 +193,6 @@ function registriereQueueHandler(): void {
 
   // ── Revenue Analyst Agent ──
   globalQueue.registriereHandler("revenue_analyst_scan", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
-    // Push-Benachrichtigung bei neuen Chancen
-    try {
-      sendAgentAlert("Revenue Analyst", "aktiv", "Scan läuft").catch(() => {});
-    } catch {}
     const agent = subAgenten.find(a => a instanceof RevenueAnalystAgent);
     if (!agent) throw new Error("RevenueAnalystAgent nicht gefunden");
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "chancen_scannen" } });
@@ -662,20 +657,20 @@ export function starteOrchestrator(): void {
     logger.info("🔄 Influencer Tages-Zähler zurückgesetzt");
   });
 
-  // Master Agent: alle 5 Minuten (erhöhte Frequenz)
-  cron.schedule("*/5 * * * *", () => {
+  // Master Agent: alle 30 Minuten
+  cron.schedule("*/15 * * * *", () => {
     globalQueue.fuegeHinzu("master_system_analyse", { aktion: "system_analyse" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("master_chancen_priorisierung", { aktion: "chancen_priorisierung" }, { prioritaet: 1 });
   });
 
-  // Revenue Analyst Agent: jede Stunde (maximale Frequenz)
+  // Revenue Analyst Agent: alle 2 Stunden
   cron.schedule("0 * * * *", () => {
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "chancen_scannen" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_stripe", { aktion: "stripe_link_erstellen" }, { prioritaet: 2 });
   });
 
-  // Revenue Analyst KI-Analyse: alle 4 Stunden
-  cron.schedule("0 */4 * * *", () => {
+  // Revenue Analyst KI-Analyse: täglich 08:00 (OpenAI nur einmal täglich)
+  cron.schedule("0 */6 * * *", () => {
     globalQueue.fuegeHinzu("revenue_analyst_ki", { aktion: "ki_chancen_analysieren" }, { prioritaet: 2 });
     globalQueue.fuegeHinzu("master_optimierung", { aktion: "optimierung" }, { prioritaet: 1 });
   });
@@ -683,19 +678,9 @@ export function starteOrchestrator(): void {
   // Watchdog starten (5-Min-Takt, 401-Erkennung + Auto-Reset)
   starteWatchdog();
 
-  // ─── Social-Media Auto-Post (3x täglich: 09:00, 14:00, 20:00) ──────────
-  cron.schedule("0 9,14,20 * * *", () => {
-    globalQueue.fuegeHinzu("social_auto_post", { aktion: "auto_post" }, { prioritaet: 2 });
-  });
-
-  // Social-Media Analytics-Report: täglich 22:00
-  cron.schedule("0 22 * * *", () => {
-    globalQueue.fuegeHinzu("social_analytics", { aktion: "analytics" }, { prioritaet: 3 });
-  });
-
   // ─── Expansion-Agenten Cron-Jobs ────────────────────────────────────────────
-  // Opportunity Scanner: alle 4h (häufiger für mehr Chancen)
-  cron.schedule("0 */4 * * *", () => {
+  // Opportunity Scanner: alle 6h
+  cron.schedule("0 */6 * * *", () => {
     globalQueue.fuegeHinzu("expansion_scan", { aktion: "chancen_scannen" }, { prioritaet: 2 });
   });
 
@@ -718,9 +703,9 @@ export function starteOrchestrator(): void {
     }
   });
 
-  // HARA Phase 1: alle 1 Stunde neue Revenue-Pakete generieren (aggressiv)
+  // HARA Phase 1: alle 4 Stunden neue Revenue-Pakete generieren (übersprungen,
   // wenn bereits genug Pakete auf Bestätigung/Umsetzung warten).
-  cron.schedule("0 * * * *", () => {
+  cron.schedule("0 */2 * * *", () => {
     globalQueue.fuegeHinzu("hara_scan", { aktion: "scan" }, { prioritaet: 2 });
   });
 

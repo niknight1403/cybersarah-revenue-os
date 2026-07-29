@@ -59,6 +59,13 @@ function Router() {
         <Route path="/content-recycling" component={() => <ErrorBoundary name="ContentRecycling"><ContentRecycling /></ErrorBoundary>} />
         <Route path="/newsletter" component={() => <ErrorBoundary name="Newsletter"><Newsletter /></ErrorBoundary>} />
         <Route path="/whatsapp" component={() => <ErrorBoundary name="WhatsApp"><WhatsApp /></ErrorBoundary>} />
+        <Route path="/email" component={() => <ErrorBoundary name="EmailAutomation"><EmailAutomation /></ErrorBoundary>} />
+        <Route path="/social-media" component={() => <ErrorBoundary name="SocialMedia"><SocialMedia /></ErrorBoundary>} />
+        <Route path="/push" component={() => <ErrorBoundary name="PushNotifications"><PushNotifications /></ErrorBoundary>} />
+        <Route path="/stripe" component={() => <ErrorBoundary name="StripeDashboard"><StripeDashboard /></ErrorBoundary>} />
+        <Route path="/stripe/produkte" component={() => <ErrorBoundary name="StripeProdukte"><StripeProdukte /></ErrorBoundary>} />
+        <Route path="/stripe/zahlungen" component={() => <ErrorBoundary name="StripeZahlungen"><StripeZahlungen /></ErrorBoundary>} />
+        <Route path="/stripe/abos" component={() => <ErrorBoundary name="StripeAbos"><StripeAbos /></ErrorBoundary>} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

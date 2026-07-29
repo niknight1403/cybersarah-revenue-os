@@ -17,8 +17,6 @@ import { getStripeClient, getWebhookSecret } from "./stripeClient";
 import { db } from "@workspace/db";
 import { transactionsTable, webhookEventsTable } from "@workspace/db";
 import { logger } from "./logger";
-import { sendEmail } from "./emailClient";
-import { orderConfirmation } from "./emailTemplates";
 
 // ─── Event-Deduplizierung ─────────────────────────────────────────────────────
 // Verhindert Doppelverarbeitung bei Stripe-Retries oder schnellen
