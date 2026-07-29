@@ -33,6 +33,7 @@ import LoyaltyDashboard from "@/pages/loyaltyDashboard";
 import AffiliateDashboard from "@/pages/affiliateDashboard";
 import SalesChatDashboard from "@/pages/salesChatDashboard";
 import { CrossSellDashboard } from "@/pages/crossSellDashboard";
+import { ConversionDashboard } from "@/pages/conversionDashboard";
 import SubscriptionDashboard from "@/pages/subscriptionDashboard";
 import { useEffect } from "react";
 
@@ -70,6 +71,7 @@ function Router() {
         <Route path="/affiliates" component={() => <ErrorBoundary name="AffiliateDashboard"><AffiliateDashboard /></ErrorBoundary>} />
         <Route path="/sales-chat" component={() => <ErrorBoundary name="SalesChatDashboard"><SalesChatDashboard /></ErrorBoundary>} />
         <Route path="/cross-sell" component={() => <ErrorBoundary name="CrossSellDashboard"><CrossSellDashboard /></ErrorBoundary>} />
+        <Route path="/conversion" component={() => <ErrorBoundary name="ConversionDashboard"><ConversionDashboard /></ErrorBoundary>} />
         <Route path="/subscriptions" component={() => <ErrorBoundary name="SubscriptionDashboard"><SubscriptionDashboard /></ErrorBoundary>} />
         <Route path="/email" component={() => <ErrorBoundary name="EmailAutomation"><EmailAutomation /></ErrorBoundary>} />
         <Route path="/social-media" component={() => <ErrorBoundary name="SocialMedia"><SocialMedia /></ErrorBoundary>} />

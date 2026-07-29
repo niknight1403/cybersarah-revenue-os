@@ -39,6 +39,7 @@ import pushRoutesRouter from "./pushRoutes";
 import socialRoutesRouter from "./socialRoutes";
 import crossSellRoutesRouter from "./crossSellRoutes";
 import subscriptionRoutesRouter from "./subscriptionRoutes";
+import conversionRoutesRouter from "./conversionRoutes";
 
 const router: IRouter = Router();
 
@@ -82,5 +83,6 @@ router.use(pushRoutesRouter);
 router.use(socialRoutesRouter);
 router.use(crossSellRoutesRouter);
 router.use(subscriptionRoutesRouter);
+router.use(conversionRoutesRouter);
 
 export default router;

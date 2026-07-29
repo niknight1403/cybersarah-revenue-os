@@ -26,6 +26,9 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -65,6 +68,9 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -107,6 +113,20 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
     globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "auto_bundle" }, { prioritaet: 3 });
   });
 
+
+  // ── Conversion Optimizer: Tests erstellen alle 30 Min, Analyse alle 15 Min, Apply alle 60 Min ──
+  cron.schedule("*/30 * * * *", () => {
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 2 });
+  });
+  cron.schedule("*/15 * * * *", () => {
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
+  });
+  cron.schedule("0 * * * *", () => {
+    globalQueue.fuegeHinzu("conversion_apply", { aktion: "apply_winners" }, { prioritaet: 2 });
+  });
+  cron.schedule("0 */3 * * *", () => {
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "full_scan" }, { prioritaet: 3 });
+  });
   // ── Cross-Sell Engine: Analyse alle 15 Min, Kampagnen alle 30 Min, Optimierung alle 2h ──
   cron.schedule("*/15 * * * *", () => {
     globalQueue.fuegeHinzu("cross_sell_analyze", { aktion: "analyze" }, { prioritaet: 2 });
@@ -125,6 +145,9 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -164,6 +187,7 @@ import { AffiliateAutomationAgent } from "./AffiliateAutomationAgent";
 import { SalesChatAgent } from "./SalesChatAgent";
 import { SubscriptionAgent } from "./SubscriptionAgent";
 import { CrossSellAgent } from "./CrossSellAgent";
+import { ConversionOptimizerAgent } from "./ConversionOptimizerAgent";
 import { scanneNeueProdukte, synchronisiereVerkaeufe, optimierePreiseUndPausiereFlops } from "./digitalproduktAgent";
 import { generiereSeoArtikel } from "./seoContentAgent";
 import { erstelleFehlendeSequenzen, versendeFaelligeEmails } from "./emailListenAgent";
@@ -213,6 +237,7 @@ const AGENT_DEFINITIONEN = [
   { name: "E-Mail-Listen-Monetarisierungs-Agent", typ: "email_listen_monetarisierung", beschreibung: "Erfasst echte Leads, generiert KI-Nurture-Sequenzen pro Marke, versendet fällige E-Mails automatisch per Webhook und trackt echte Klicks/Conversions auf Digitalprodukte" },
   { name: "Faceless-Video-Auto-Publish-Agent", typ: "faceless_video_auto_publish", beschreibung: "3-Phasen-Loop: generiert Faceless-Video-Skripte + Thumbnails per KI, veröffentlicht sie automatisch via Webhook mit Plattform-Rate-Limits und optimiert anhand echter Performance-Daten" },
   { name: "Content-Recycling-Agent", typ: "content_recycling", beschreibung: "Findet echte Top-Performer-Inhalte (Aufrufe), erstellt daraus per KI neue Varianten für andere Formate/Plattformen und speist sie automatisch in die Auto-Post-Pipeline ein" },
+  { name: "Conversion Optimizer Agent", typ: "conversion_optimizer", beschreibung: "AUTONOM: Erstellt A/B-Tests, tracked Conversions, berechnet Signifikanz, wendet Gewinner automatisch an" },
   { name: "Cross-Sell Engine Agent", typ: "cross_sell", beschreibung: "AUTONOM: Analysiert Käufe, erstellt KI-Produktempfehlungen und sendet personalisierte Multi-Channel-Kampagnen" },
   { name: "Subscription & Revenue Agent", typ: "subscription", beschreibung: "AUTONOM: Verwalte Abo-Pläne, wiederkehrende Zahlungen via Stripe, Dunning bei fehlgeschlagenen Zahlungen, Revenue-Forecasts" },
 ];
@@ -235,6 +260,7 @@ const subAgenten: AgentBase[] = [
   new SalesChatAgent(),
   new SubscriptionAgent(),
   new CrossSellAgent(),
+  new ConversionOptimizerAgent(),
 ];
 
 let mainLoopTimer: NodeJS.Timeout | null = null;
@@ -685,6 +711,24 @@ function registriereQueueHandler(): void {
     if (!agent) throw new Error("CrossSellAgent nicht gefunden");
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "optimize" } });
   });
+
+  // ── Conversion Optimizer Agent ──
+  globalQueue.registriereHandler("conversion_full", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof ConversionOptimizerAgent);
+    if (!agent) throw new Error("ConversionOptimizerAgent nicht gefunden");
+    const aktion = aufgabe.payload?.["aktion"] ?? "full_scan";
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion } });
+  });
+  globalQueue.registriereHandler("conversion_analyze", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof ConversionOptimizerAgent);
+    if (!agent) throw new Error("ConversionOptimizerAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "analyze" } });
+  });
+  globalQueue.registriereHandler("conversion_apply", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof ConversionOptimizerAgent);
+    if (!agent) throw new Error("ConversionOptimizerAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "apply_winners" } });
+  });
   // ── Affiliate Automation Agent ──
   globalQueue.registriereHandler("affiliate_full_sync", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof AffiliateAutomationAgent);
@@ -760,6 +804,9 @@ function registriereQueueHandler(): void {
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -791,6 +838,9 @@ function registriereQueueHandler(): void {
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -882,6 +932,9 @@ async function mainLoop(): Promise<void> {
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -1196,6 +1249,9 @@ export function starteOrchestrator(): void {
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -1239,6 +1295,9 @@ export function starteOrchestrator(): void {
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -1278,6 +1337,9 @@ export function starteOrchestrator(): void {
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -1356,6 +1418,9 @@ export function starteOrchestrator(): void {
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -1528,6 +1593,9 @@ export async function fuehreAlleAgentanAus(): Promise<{ gestartet: number; jobId
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -1675,6 +1743,9 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -1730,6 +1801,9 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
         const j2 = globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     // ── Sprint 8: Cross-Sell Engine beim Start ──
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+    // ── Sprint 9: Conversion Optimizer beim Start ──
+    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
     // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
     globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
@@ -1737,6 +1811,11 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
     globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
     globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
         return { success: true, message: `Subscription & Revenue Agent: 2 Jobs gestartet (Full-Check ${j1}, Sync ${j2})` };
+      }
+
+      case "conversion_optimizer": {
+        const jobId = globalQueue.fuegeHinzu("conversion_full", { aktion: "full_scan" }, { prioritaet: 1 });
+        return { success: true, message: `Conversion Optimizer Agent: Voll-Scan ${jobId} gestartet` };
       }
 
       case "cross_sell": {
