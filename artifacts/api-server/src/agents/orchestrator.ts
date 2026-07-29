@@ -20,6 +20,10 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
     // ── Loyalty & Referral: Programm init + erster Check ──
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
+
+    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
+    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
   });
   cron.schedule("*/5 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_check", { aktion: "check_carts" }, { prioritaet: 1 });
@@ -47,6 +51,10 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
   // ── Loyalty & Referral: Karten-Check alle 30 Min, Empfehlungen alle 2h, Geburtstage täglich 08:00 ──
   cron.schedule("*/30 * * * *", () => {
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
+
+    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
+    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
   });
   cron.schedule("0 */2 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "process_referrals" }, { prioritaet: 2 });
@@ -56,6 +64,19 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
   });
   cron.schedule("0 3 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "full_check" }, { prioritaet: 3 });
+  });
+  // ── Subscription & Revenue Agent: Sync alle 15 Min, Dunning alle 2h, Forecast täglich 07:00 ──
+  cron.schedule("\*\/15 \* \* \* \*", () => {
+    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+  });
+  cron.schedule("0 \*\/2 \* \* \*", () => {
+    globalQueue.fuegeHinzu("subscription_dunning", { aktion: "dunning" }, { prioritaet: 1 });
+  });
+  cron.schedule("0 7 \* \* \*", () => {
+    globalQueue.fuegeHinzu("subscription_forecast", { aktion: "forecast" }, { prioritaet: 2 });
+  });
+  cron.schedule("0 \*\/4 \* \* \*", () => {
+    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "full_check" }, { prioritaet: 3 });
   });
   });
 import { db } from "@workspace/db";
@@ -78,6 +99,7 @@ import { AbandonedCartRecoveryAgent } from "./AbandonedCartRecoveryAgent";
 import { LoyaltyAgent } from "./LoyaltyAgent";
 import { AffiliateAutomationAgent } from "./AffiliateAutomationAgent";
 import { SalesChatAgent } from "./SalesChatAgent";
+import { SubscriptionAgent } from "./SubscriptionAgent";
 import { scanneNeueProdukte, synchronisiereVerkaeufe, optimierePreiseUndPausiereFlops } from "./digitalproduktAgent";
 import { generiereSeoArtikel } from "./seoContentAgent";
 import { erstelleFehlendeSequenzen, versendeFaelligeEmails } from "./emailListenAgent";
@@ -127,6 +149,7 @@ const AGENT_DEFINITIONEN = [
   { name: "E-Mail-Listen-Monetarisierungs-Agent", typ: "email_listen_monetarisierung", beschreibung: "Erfasst echte Leads, generiert KI-Nurture-Sequenzen pro Marke, versendet fällige E-Mails automatisch per Webhook und trackt echte Klicks/Conversions auf Digitalprodukte" },
   { name: "Faceless-Video-Auto-Publish-Agent", typ: "faceless_video_auto_publish", beschreibung: "3-Phasen-Loop: generiert Faceless-Video-Skripte + Thumbnails per KI, veröffentlicht sie automatisch via Webhook mit Plattform-Rate-Limits und optimiert anhand echter Performance-Daten" },
   { name: "Content-Recycling-Agent", typ: "content_recycling", beschreibung: "Findet echte Top-Performer-Inhalte (Aufrufe), erstellt daraus per KI neue Varianten für andere Formate/Plattformen und speist sie automatisch in die Auto-Post-Pipeline ein" },
+  { name: "Subscription & Revenue Agent", typ: "subscription", beschreibung: "AUTONOM: Verwalte Abo-Pläne, wiederkehrende Zahlungen via Stripe, Dunning bei fehlgeschlagenen Zahlungen, Revenue-Forecasts" },
 ];
 
 // ─── Sub-Agenten Instanzen ───────────────────────────────────────────────────
@@ -145,6 +168,7 @@ const subAgenten: AgentBase[] = [
   new LoyaltyAgent(),
   new AffiliateAutomationAgent(),
   new SalesChatAgent(),
+  new SubscriptionAgent(),
 ];
 
 let mainLoopTimer: NodeJS.Timeout | null = null;
@@ -547,6 +571,27 @@ function registriereQueueHandler(): void {
     if (!agent) throw new Error("SalesChatAgent nicht gefunden");
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "followup" } });
   });
+  // ── Subscription & Revenue Agent ──
+  globalQueue.registriereHandler("subscription_full_check", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof SubscriptionAgent);
+    if (!agent) throw new Error("SubscriptionAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: aufgabe.payload?.["aktion"] ?? "full_check" } });
+  });
+  globalQueue.registriereHandler("subscription_sync", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof SubscriptionAgent);
+    if (!agent) throw new Error("SubscriptionAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "sync_subs" } });
+  });
+  globalQueue.registriereHandler("subscription_dunning", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof SubscriptionAgent);
+    if (!agent) throw new Error("SubscriptionAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "dunning" } });
+  });
+  globalQueue.registriereHandler("subscription_forecast", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof SubscriptionAgent);
+    if (!agent) throw new Error("SubscriptionAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "forecast" } });
+  });
   // ── Affiliate Automation Agent ──
   globalQueue.registriereHandler("affiliate_full_sync", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof AffiliateAutomationAgent);
@@ -616,6 +661,10 @@ function registriereQueueHandler(): void {
   // ── Loyalty & Referral: Karten-Check alle 30 Min, Empfehlungen alle 2h, Geburtstage täglich 08:00 ──
   cron.schedule("*/30 * * * *", () => {
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
+
+    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
+    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
   });
   cron.schedule("0 */2 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "process_referrals" }, { prioritaet: 2 });
@@ -635,6 +684,10 @@ function registriereQueueHandler(): void {
     // ── Loyalty & Referral: Programm init + erster Check ──
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
+
+    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
+    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     const agent = subAgenten.find(a => a instanceof AbandonedCartRecoveryAgent);
     if (!agent) throw new Error("AbandonedCartRecoveryAgent nicht gefunden");
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "check_stripe" } });
@@ -714,6 +767,10 @@ async function mainLoop(): Promise<void> {
     // ── Loyalty & Referral: Programm init + erster Check ──
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
+
+    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
+    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
     }
     // Alle 20 Min: Community Management
     if (mainLoopZyklus % 20 === 0) {
@@ -1016,6 +1073,10 @@ export function starteOrchestrator(): void {
     // ── Loyalty & Referral: Programm init + erster Check ──
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
+
+    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
+    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
   });
 
   // Newsletter-Agent: Jeden Freitag um 08:00 Uhr
@@ -1047,6 +1108,10 @@ export function starteOrchestrator(): void {
     // ── Loyalty & Referral: Programm init + erster Check ──
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
+
+    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
+    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
   });
   cron.schedule("*/5 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_check", { aktion: "check_carts" }, { prioritaet: 1 });
@@ -1074,6 +1139,10 @@ export function starteOrchestrator(): void {
   // ── Loyalty & Referral: Karten-Check alle 30 Min, Empfehlungen alle 2h, Geburtstage täglich 08:00 ──
   cron.schedule("*/30 * * * *", () => {
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
+
+    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
+    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
   });
   cron.schedule("0 */2 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "process_referrals" }, { prioritaet: 2 });
@@ -1140,6 +1209,10 @@ export function starteOrchestrator(): void {
     // ── Loyalty & Referral: Programm init + erster Check ──
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
+
+    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
+    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
 
     // ─── Auto-Recovery: Wenn System vorher aktiv war → sofort alle Agenten neu starten ──
     try {
@@ -1301,6 +1374,10 @@ export async function fuehreAlleAgentanAus(): Promise<{ gestartet: number; jobId
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
 
+    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
+    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+
   // Priorität 3: Content + Sales + Community
   const marken = ["CyberSarah", "GeldPilot AI", "UnternehmerGPT"] as const;
   const typen = ["tiktok", "reel", "blogartikel"] as const;
@@ -1435,6 +1512,10 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
     // ── Loyalty & Referral: Programm init + erster Check ──
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
+
+    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
+    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
         return { success: true, message: `Monetization Agent: 3 Jobs gestartet (Funnel ${j1}, Upsell ${j2}, Preis ${j3})` };
       }
 
@@ -1477,6 +1558,12 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
       case "finance_team": {
         const jobId = globalQueue.fuegeHinzu("finance_team_analyse", {}, { prioritaet: 1 });
         return { success: true, message: `Finance-Optimierungs-Team: Analyse ${jobId} gestartet` };
+      }
+
+      case "subscription": {
+        const j1 = globalQueue.fuegeHinzu("subscription_full_check", { aktion: "full_check" }, { prioritaet: 1 });
+        const j2 = globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+        return { success: true, message: `Subscription & Revenue Agent: 2 Jobs gestartet (Full-Check ${j1}, Sync ${j2})` };
       }
 
       case "hara": {

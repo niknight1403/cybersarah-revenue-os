@@ -25,3 +25,4 @@ export * from "./abandonedCarts";
 export * from "./loyaltyPrograms";
 export * from "./affiliates";
 export * from "./salesChat";
+export * from "./subscriptions";
