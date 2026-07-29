@@ -136,6 +136,8 @@ app.use("/app", express.static(dashboardPath, { index: "index.html" }));
 app.get("/app", (_req, res) => res.redirect("/app/"));
 
 // ─── Public Routes (vor statischen Dateien) ──
+const apkPath = path.resolve(__dirname, "../../../apk");
+app.use("/apk", express.static(apkPath));
 app.use("/", publicSiteRouter);
 app.use("/", seoBlogRouter);
 
