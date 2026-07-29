@@ -78,7 +78,7 @@ async function checkServerHealth(): Promise<HealthStatus> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_HEALTH);
 
-    const resp = await fetch(`${getEffectiveApiUrl().replace(/\/api$/, '')}${HEALTH_ENDPOINT}`, {
+    const resp = await fetch(`${getEffectiveApiUrl()}${HEALTH_ENDPOINT}`, {
       method: 'GET',
       signal: controller.signal,
     });

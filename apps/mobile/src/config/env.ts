@@ -30,7 +30,7 @@ export const WS_BASE_URL: string = __DEV__
   : `wss://${PROD_DOMAIN}/ws`;
 
 // ─── Health-Check Endpoint ──────────────────────────────────────────
-export const HEALTH_ENDPOINT = '/health' as const;
+export const HEALTH_ENDPOINT = '/healthz' as const;
 
 // ─── API Timeouts (in Millisekunden) ────────────────────────────────
 export const API_TIMEOUT = 30_000 as const;       // Standard-Timeout
