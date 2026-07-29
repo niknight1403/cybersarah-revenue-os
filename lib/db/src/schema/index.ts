@@ -22,3 +22,4 @@ export * from "./webhookEvents";
 
 export * from "./coupons";
 export * from "./abandonedCarts";
+export * from "./loyaltyPrograms";

@@ -16,27 +16,9 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
   // ── Abandoned Cart Recovery: Stripe-Scan alle 15 Min, Erinnerungen alle 5 Min ──
   cron.schedule("*/15 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_stripe", { aktion: "check_stripe" }, { prioritaet: 1 });
-
-    // ── Loyalty & Referral: Programm init + erster Check ──
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
   });
   cron.schedule("*/5 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_check", { aktion: "check_carts" }, { prioritaet: 1 });
-
-  // ── Loyalty & Referral: Karten-Check alle 30 Min, Empfehlungen alle 2h, Geburtstage täglich 08:00 ──
-  cron.schedule("*/30 * * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
-  });
-  cron.schedule("0 */2 * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "process_referrals" }, { prioritaet: 2 });
-  });
-  cron.schedule("0 8 * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_birthday", { aktion: "birthday_bonus" }, { prioritaet: 2 });
-  });
-  cron.schedule("0 3 * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "full_check" }, { prioritaet: 3 });
-  });
   });
 import { db } from "@workspace/db";
 import { agentsTable, agentLogsTable } from "@workspace/db";
@@ -55,7 +37,6 @@ import { FinanceTeamAgent } from "./FinanceTeamAgent";
 import { HaraAgent } from "./HaraAgent";
 import { SmartCouponAgent } from "./SmartCouponAgent";
 import { AbandonedCartRecoveryAgent } from "./AbandonedCartRecoveryAgent";
-import { LoyaltyAgent } from "./LoyaltyAgent";
 import { scanneNeueProdukte, synchronisiereVerkaeufe, optimierePreiseUndPausiereFlops } from "./digitalproduktAgent";
 import { generiereSeoArtikel } from "./seoContentAgent";
 import { erstelleFehlendeSequenzen, versendeFaelligeEmails } from "./emailListenAgent";
@@ -120,7 +101,6 @@ const subAgenten: AgentBase[] = [
   new HaraAgent(),
   new SmartCouponAgent(),
   new AbandonedCartRecoveryAgent(),
-  new LoyaltyAgent(),
 ];
 
 let mainLoopTimer: NodeJS.Timeout | null = null;
@@ -512,53 +492,13 @@ function registriereQueueHandler(): void {
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "flash_sale" } });
   });
 
-  // ── Loyalty & Referral Agent ──
-  globalQueue.registriereHandler("loyalty_full_check", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
-    const agent = subAgenten.find(a => a instanceof LoyaltyAgent);
-    if (!agent) throw new Error("LoyaltyAgent nicht gefunden");
-    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "full_check" } });
-  });
-  globalQueue.registriereHandler("loyalty_cards", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
-    const agent = subAgenten.find(a => a instanceof LoyaltyAgent);
-    if (!agent) throw new Error("LoyaltyAgent nicht gefunden");
-    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "check_cards" } });
-  });
-  globalQueue.registriereHandler("loyalty_referrals", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
-    const agent = subAgenten.find(a => a instanceof LoyaltyAgent);
-    if (!agent) throw new Error("LoyaltyAgent nicht gefunden");
-    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "process_referrals" } });
-  });
-  globalQueue.registriereHandler("loyalty_birthday", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
-    const agent = subAgenten.find(a => a instanceof LoyaltyAgent);
-    if (!agent) throw new Error("LoyaltyAgent nicht gefunden");
-    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "birthday_bonus" } });
-  });
-
   // ── Abandoned Cart Recovery Agent ──
   globalQueue.registriereHandler("cart_recovery_check", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
-
-  // ── Loyalty & Referral: Karten-Check alle 30 Min, Empfehlungen alle 2h, Geburtstage täglich 08:00 ──
-  cron.schedule("*/30 * * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
-  });
-  cron.schedule("0 */2 * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "process_referrals" }, { prioritaet: 2 });
-  });
-  cron.schedule("0 8 * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_birthday", { aktion: "birthday_bonus" }, { prioritaet: 2 });
-  });
-  cron.schedule("0 3 * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "full_check" }, { prioritaet: 3 });
-  });
     const agent = subAgenten.find(a => a instanceof AbandonedCartRecoveryAgent);
     if (!agent) throw new Error("AbandonedCartRecoveryAgent nicht gefunden");
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "check_carts" } });
   });
   globalQueue.registriereHandler("cart_recovery_stripe", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
-
-    // ── Loyalty & Referral: Programm init + erster Check ──
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
     const agent = subAgenten.find(a => a instanceof AbandonedCartRecoveryAgent);
     if (!agent) throw new Error("AbandonedCartRecoveryAgent nicht gefunden");
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "check_stripe" } });
@@ -634,10 +574,6 @@ async function mainLoop(): Promise<void> {
 
     // ── Abandoned Cart Recovery: Stripe-Sessions scannen ──
     globalQueue.fuegeHinzu("cart_recovery_stripe", { aktion: "check_stripe" }, { prioritaet: 1 });
-
-    // ── Loyalty & Referral: Programm init + erster Check ──
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
     }
     // Alle 20 Min: Community Management
     if (mainLoopZyklus % 20 === 0) {
@@ -936,10 +872,6 @@ export function starteOrchestrator(): void {
 
     // ── Abandoned Cart Recovery: Stripe-Sessions scannen ──
     globalQueue.fuegeHinzu("cart_recovery_stripe", { aktion: "check_stripe" }, { prioritaet: 1 });
-
-    // ── Loyalty & Referral: Programm init + erster Check ──
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
   });
 
   // Newsletter-Agent: Jeden Freitag um 08:00 Uhr
@@ -967,27 +899,9 @@ export function starteOrchestrator(): void {
   // ── Abandoned Cart Recovery: Stripe-Scan alle 15 Min, Erinnerungen alle 5 Min ──
   cron.schedule("*/15 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_stripe", { aktion: "check_stripe" }, { prioritaet: 1 });
-
-    // ── Loyalty & Referral: Programm init + erster Check ──
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
   });
   cron.schedule("*/5 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_check", { aktion: "check_carts" }, { prioritaet: 1 });
-
-  // ── Loyalty & Referral: Karten-Check alle 30 Min, Empfehlungen alle 2h, Geburtstage täglich 08:00 ──
-  cron.schedule("*/30 * * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
-  });
-  cron.schedule("0 */2 * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "process_referrals" }, { prioritaet: 2 });
-  });
-  cron.schedule("0 8 * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_birthday", { aktion: "birthday_bonus" }, { prioritaet: 2 });
-  });
-  cron.schedule("0 3 * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "full_check" }, { prioritaet: 3 });
-  });
   });
   });
 
@@ -1040,10 +954,6 @@ export function starteOrchestrator(): void {
 
     // ── Abandoned Cart Recovery: Stripe-Sessions scannen ──
     globalQueue.fuegeHinzu("cart_recovery_stripe", { aktion: "check_stripe" }, { prioritaet: 1 });
-
-    // ── Loyalty & Referral: Programm init + erster Check ──
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
 
     // ─── Auto-Recovery: Wenn System vorher aktiv war → sofort alle Agenten neu starten ──
     try {
@@ -1201,10 +1111,6 @@ export async function fuehreAlleAgentanAus(): Promise<{ gestartet: number; jobId
     // ── Abandoned Cart Recovery: Stripe-Sessions scannen ──
     globalQueue.fuegeHinzu("cart_recovery_stripe", { aktion: "check_stripe" }, { prioritaet: 1 });
 
-    // ── Loyalty & Referral: Programm init + erster Check ──
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
-
   // Priorität 3: Content + Sales + Community
   const marken = ["CyberSarah", "GeldPilot AI", "UnternehmerGPT"] as const;
   const typen = ["tiktok", "reel", "blogartikel"] as const;
@@ -1335,10 +1241,6 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
 
     // ── Abandoned Cart Recovery: Stripe-Sessions scannen ──
     globalQueue.fuegeHinzu("cart_recovery_stripe", { aktion: "check_stripe" }, { prioritaet: 1 });
-
-    // ── Loyalty & Referral: Programm init + erster Check ──
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
         return { success: true, message: `Monetization Agent: 3 Jobs gestartet (Funnel ${j1}, Upsell ${j2}, Preis ${j3})` };
       }
 
