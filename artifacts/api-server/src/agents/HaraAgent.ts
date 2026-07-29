@@ -73,6 +73,9 @@ export class HaraAgent extends AgentBase {
     if (aktion === "auto_ausfuehrung") {
       return this.fuehreAlleAutonomAus();
     }
+    if (aktion === "fast_revenue_scan") {
+      return this.fastRevenueScan();
+    }
     if (aktion === "pausiere_flops") {
       return this.pausiereFlops();
     }
@@ -776,4 +779,73 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
       metadaten: { pausiert },
     };
   }
+  // ═════════════════════════════════════════════════════════════════════════════
+  // FAST-REVENUE-SCAN: Leichtgewichtiger Schnellscan für häufige Ausführung
+  // Fokussiert auf schnelle Umsatzchancen ohne volle KI-Analyse
+  // ═════════════════════════════════════════════════════════════════════════════
+  async fastRevenueScan(): Promise<AufgabeErgebnis> {
+    logger.info("⚡ HARA: Fast-Revenue-Scan gestartet");
+    const aktionen: string[] = [];
+    const vor24h = new Date(Date.now() - 86400000);
+
+    // 1. Prüfe ob es offene Stripe-Zahlungen ohne Tracking gibt
+    try {
+      const { pendingAttributionTable } = await import("@workspace/db");
+      const pending = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(pendingAttributionTable)
+        .where(eq(pendingAttributionTable.status, "pending"));
+      if (Number(pending[0]?.count ?? 0) > 5) {
+        aktionen.push(`⚡ ${pending[0].count} offene Attributionen`);
+      }
+    } catch {}
+
+    // 2. Prüfe ob es inaktive Produkte gibt die reaktiviert werden könnten
+    try {
+      const inaktiveMitHistorie = await db
+        .select({ name: transactionsTable.produktName, letzterKauf: sql<Date>`MAX(created_at)` })
+        .from(transactionsTable)
+        .groupBy(transactionsTable.produktName)
+        .having(sql`MAX(created_at) < ${vor24h}`)
+        .limit(5);
+      for (const p of inaktiveMitHistorie) {
+        if (!p.name) continue;
+        // Prüfe ob Produkt noch aktiv ist
+        const aktiv = await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(revenueOpportunitiesTable)
+          .where(and(eq(revenueOpportunitiesTable.titel, p.name), eq(revenueOpportunitiesTable.status, "aktiv")));
+        if (Number(aktiv[0]?.count ?? 0) === 0) {
+          // Reaktivieren!
+          await db.insert(agentLogsTable).values({
+            agentId: this.agentId ?? 0, agentName: "HARA",
+            aktion: "fast_revenue_scan", status: "info",
+            nachricht: `Produkt ${p.name} inaktiv obwohl letzter Kauf: ${p.letzterKauf}`,
+          });
+          aktionen.push(`🔄 ${p.name} — Reaktivierung vorgeschlagen`);
+        }
+      }
+    } catch {}
+
+    // 3. Prüfe aktuelle Stripe-Transaktionen (letzte Stunde)
+    try {
+      const vor1h = new Date(Date.now() - 3600000);
+      const letzteTransaktionen = await db
+        .select({ count: sql<number>`COUNT(*)`, summe: sql<number>`COALESCE(SUM(betrag),0)` })
+        .from(transactionsTable)
+        .where(gte(transactionsTable.createdAt, vor1h));
+      const transCount = Number(letzteTransaktionen[0]?.count ?? 0);
+      const transSumme = Number(letzteTransaktionen[0]?.summe ?? 0);
+      if (transCount > 0) {
+        aktionen.push(`💰 ${transCount} Transaktionen (€${transSumme.toFixed(2)}) in der letzten Stunde`);
+      }
+    } catch {}
+
+    return {
+      success: true,
+      message: `Fast-Revenue-Scan: ${aktionen.length} Aktionen — ${aktionen.join(" | ")}`,
+      metadaten: { aktionen },
+    };
+  }
+
 }

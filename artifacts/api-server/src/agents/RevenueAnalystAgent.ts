@@ -110,6 +110,10 @@ export class RevenueAnalystAgent extends AgentBase {
       case "flops_pausieren":
         return this.pausiereFlops();
       case "preise_optimieren":
+      case "auto_cross_sell":
+        return this.autoCrossSell();
+      case "revenue_anomaly":
+        return this.revenueAnomalyDetection();
         return this.optimierePreise();
       default:
         return this.fuehreVollScanAus();
@@ -126,6 +130,8 @@ export class RevenueAnalystAgent extends AgentBase {
     const performanceResult = await this.pruefePerformance();
     const flopResult = await this.pausiereFlops();
     const preisResult = await this.optimierePreise();
+    const crossSellResult = await this.autoCrossSell();
+    const anomalyResult = await this.revenueAnomalyDetection();
 
     if (this.agentId) {
       await db.insert(agentLogsTable).values({
@@ -375,6 +381,120 @@ export class RevenueAnalystAgent extends AgentBase {
       success: true,
       message: `Preis-Optimierung: ${produkteMitUmsatz.length} Produkte analysiert, ${empfehlungen.length} A/B-Empfehlungen`,
       metadaten: { produkteMitUmsatz, empfehlungen },
+    };
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // AUTO CROSS-SELL: Erkennt Produkte mit Umsatz + erstellt automatisch
+  // Cross-Sell Stripe-Produkte mit 30% Rabatt auf das Zweitprodukt
+  // ═════════════════════════════════════════════════════════════════════════════
+  private async autoCrossSell(): Promise<AufgabeErgebnis> {
+    const vor7Tagen = new Date();
+    vor7Tagen.setDate(vor7Tagen.getDate() - 7);
+
+    const produkteMitKaeufen = await db
+      .select({
+        name: transactionsTable.produktName,
+        kaeufer: sql<number>`COUNT(DISTINCT transactionsTable.kundenEmail)`,
+        umsatz: sql<number>`SUM(transactionsTable.betrag)`,
+      })
+      .from(transactionsTable)
+      .where(gte(transactionsTable.createdAt, vor7Tagen))
+      .groupBy(transactionsTable.produktName)
+      .having((t) => sql`COUNT(DISTINCT transactionsTable.kundenEmail) > 2`);
+
+    let crossSellsErstellt = 0;
+    for (const p of produkteMitKaeufen) {
+      if (!p.name || p.name.length < 3) continue;
+      try {
+        const stripe = getStripeClient();
+        const crossName = `${p.name} - Premium-Bundle`;
+        const prod = await stripe.products.create({
+          name: crossName.slice(0, 100),
+          description: `Cross-Sell Bundle: ${p.name} + Bonus-Material — nur für bestehende Kunden`,
+          metadata: { quelle: "revenue_analyst_cross_sell", originalProdukt: p.name },
+        });
+        const basisPreis = Math.max(Math.round((p.umsatz ?? 0) / (p.kaeufer ?? 1) * 0.7), 500);
+        const preis = await stripe.prices.create({
+          product: prod.id, unit_amount: basisPreis, currency: "eur",
+        });
+        const link = await stripe.paymentLinks.create({
+          line_items: [{ price: preis.id, quantity: 1 }],
+          after_completion: { type: "redirect", redirect: { url: "https://cybersarah.de/danke" } },
+        });
+
+        await db.insert(revenueOpportunitiesTable).values({
+          titel: crossName, typ: "cross_sell", kanal: "eigenes_produkt",
+          status: "aktiv", geschaetzterMonatsumsatz: (basisPreis * 0.1).toString(),
+          stripePaymentLink: link.url, beschreibung: `Auto-Cross-Sell für ${p.name}`,
+          quelle: "RevenueAnalyst-CrossSell",
+        }).onConflictDoNothing();
+        crossSellsErstellt++;
+        logger.info({ produkt: p.name, link: link.url }, "💰 Cross-Sell Produkt erstellt");
+      } catch (err) {
+        logger.warn({ err, produkt: p.name }, "Cross-Sell Erstellung fehlgeschlagen");
+      }
+    }
+
+    return {
+      success: true,
+      message: `${crossSellsErstellt} Cross-Sell Produkte automatisch erstellt`,
+      metadaten: { crossSellsErstellt, analysiert: produkteMitKaeufen.length },
+    };
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // REVENUE ANOMALY DETECTION: Erkennt Umsatz-Einbrüche/-Spitzen und löst Aktionen aus
+  // ═════════════════════════════════════════════════════════════════════════════
+  private async revenueAnomalyDetection(): Promise<AufgabeErgebnis> {
+    const heute = new Date();
+    const gestern = new Date(heute.getTime() - 86400000);
+    const letzteWoche = new Date(heute.getTime() - 7 * 86400000);
+
+    const [umsatzHeute, umsatzGestern, umsatzLetzteWoche] = await Promise.all([
+      db.select({ summe: sql<number>`COALESCE(SUM(betrag),0)` }).from(transactionsTable)
+        .where(gte(transactionsTable.createdAt, new Date(heute.getTime() - 86400000))),
+      db.select({ summe: sql<number>`COALESCE(SUM(betrag),0)` }).from(transactionsTable)
+        .where(and(gte(transactionsTable.createdAt, gestern), lt(transactionsTable.createdAt, heute))),
+      db.select({ summe: sql<number>`COALESCE(SUM(betrag),0)` }).from(transactionsTable)
+        .where(and(gte(transactionsTable.createdAt, letzteWoche), lt(transactionsTable.createdAt, heute))),
+    ]);
+
+    const heuteSumme = Number(umsatzHeute[0]?.summe ?? 0);
+    const gesternSumme = Number(umsatzGestern[0]?.summe ?? 0);
+    const wochenSumme = Number(umsatzLetzteWoche[0]?.summe ?? 0);
+
+    const anzahlTransaktionenHeute = await db
+      .select({ count: sql<number>`COUNT(*)` }).from(transactionsTable)
+      .where(gte(transactionsTable.createdAt, new Date(heute.getTime() - 86400000)));
+
+    const anomalien: string[] = [];
+    let aktionAusgeloest = false;
+
+    if (gesternSumme > 0 && heuteSumme < gesternSumme * 0.3) {
+      anomalien.push(`⚠️ Umsatz-Einbruch: Heute €${heuteSumme.toFixed(2)} vs gestern €${gesternSumme.toFixed(2)} (-70%)`);
+    }
+    if (heuteSumme > gesternSumme * 3 && gesternSumme > 0) {
+      anomalien.push(`🚀 Umsatz-Spitze: Heute €${heuteSumme.toFixed(2)} vs gestern €${gesternSumme.toFixed(2)} (+200%)`);
+    }
+    if (wochenSumme > 0 && heuteSumme > wochenSumme * 0.3) {
+      anomalien.push(`📊 Heute bereits €${heuteSumme.toFixed(2)} = ${(heuteSumme/wochenSumme*100).toFixed(0)}% der Wochensumme`);
+      aktionAusgeloest = true;
+    }
+
+    if (this.agentId) {
+      await db.insert(agentLogsTable).values({
+        agentId: this.agentId, agentName: "Revenue Analyst Agent",
+        aktion: "revenue_anomaly", status: anomalien.length > 0 ? "warning" : "ok",
+        nachricht: anomalien.length > 0 ? anomalien.join(" | ") : "Keine Anomalien erkannt",
+        details: { heuteSumme, gesternSumme, wochenSumme, anzahl: Number(anzahlTransaktionenHeute[0]?.count ?? 0) },
+      });
+    }
+
+    return {
+      success: true,
+      message: anomalien.length > 0 ? anomalien[0] : "✅ Keine Umsatz-Anomalien",
+      metadaten: { heuteSumme, gesternSumme, wochenSumme, anomalien, aktionAusgeloest },
     };
   }
 }

@@ -70,6 +70,10 @@ export class MonetizationAgent extends AgentBase {
         return this.erstelleUpsellProdukte(payload.marke);
       case "tracking_fix":
         return this.pruefeUndFixTracking();
+      case "dynamic_pricing":
+        return this.dynamicPricing();
+      case "auto_bundle":
+        return this.autoBundle();
       case "auto_optimize_all":
         return this.autoOptimizeAll();
       default:
@@ -90,6 +94,8 @@ export class MonetizationAgent extends AgentBase {
     // Upsell-Produkte via Stripe erstellen
     const upsellProdukteResult = await this.erstelleUpsellProdukte();
     await this.pruefeUndFixTracking();
+    const dynamicResult = await this.dynamicPricing();
+    const bundleResult = await this.autoBundle();
 
     if (this.agentId) {
       await db.insert(agentLogsTable).values({
@@ -97,7 +103,7 @@ export class MonetizationAgent extends AgentBase {
         agentName: "Monetization Agent",
         aktion: "Auto-Optimize-All",
         status: "erfolgreich",
-        nachricht: `Auto: ${upsellProdukteResult.metadaten?.erstellt ?? 0} Upsells erstellt | ${funnelResult.metadaten?.kampagnenErstellt ?? 0} Kampagnen | ${affiliateResult.metadaten?.gesamteKampagnen ?? 0} Affiliates`,
+        nachricht: `Auto: ${upsellProdukteResult.metadaten?.erstellt ?? 0} Upsells | ${dynamicResult.metadaten?.preiseAngepasst ?? 0} Preise optimiert | ${bundleResult.metadaten?.bundlesErstellt ?? 0} Bundles`,
       });
     }
 
@@ -382,4 +388,121 @@ export class MonetizationAgent extends AgentBase {
       metadaten: { geprueft: problemKampagnen.length, probleme: problemKampagnen.length },
     };
   }
+  // ═════════════════════════════════════════════════════════════════════════════
+  // DYNAMIC PRICING: Passt Preise automatisch an Nachfrage an
+  // Senkt Preise bei niedriger Nachfrage, erhöht bei hoher Nachfrage
+  // ═════════════════════════════════════════════════════════════════════════════
+  private async dynamicPricing(): Promise<AufgabeErgebnis> {
+    logger.info("💰 Monetization: Dynamic Pricing gestartet");
+    const vor30Tagen = new Date();
+    vor30Tagen.setDate(vor30Tagen.getDate() - 30);
+    let preiseAngepasst = 0;
+    let einnahmenExtra = 0;
+    const produkte = await db
+      .select({ name: transactionsTable.produktName, anzahl: sql<number>`COUNT(*)`, avgPreis: sql<number>`AVG(betrag)` })
+      .from(transactionsTable)
+      .where(gte(transactionsTable.createdAt, vor30Tagen))
+      .groupBy(transactionsTable.produktName);
+    const stripe = getStripeClient();
+    for (const p of produkte) {
+      if (!p.name || p.name.length < 3) continue;
+      try {
+        const existing = await db.select().from(revenueOpportunitiesTable)
+          .where(eq(revenueOpportunitiesTable.titel, p.name)).limit(1);
+        if (existing.length === 0) continue;
+        const avgPreis = Number(p.avgPreis ?? 0);
+        const anzahl = Number(p.anzahl ?? 0);
+        if (avgPreis < 1) continue;
+        let neuerPreis = Math.round(avgPreis);
+        let preisGeaendert = false;
+        if (anzahl > 10 && existing[0].status === "aktiv") {
+          neuerPreis = Math.round(avgPreis * 1.25);
+          preisGeaendert = true;
+        } else if (anzahl === 0 && existing[0].status === "aktiv") {
+          neuerPreis = Math.round(avgPreis * 0.75);
+          preisGeaendert = true;
+        }
+        if (preisGeaendert) {
+          const price = await stripe.prices.create({
+            product: existing[0].stripePaymentLink ? "prod_default" : "prod_default",
+            unit_amount: neuerPreis, currency: "eur",
+            metadata: { angepasstVon: "monetization_dynamic_pricing", vorher: String(avgPreis) },
+          });
+          const link = await stripe.paymentLinks.create({
+            line_items: [{ price: price.id, quantity: 1 }],
+            after_completion: { type: "redirect", redirect: { url: "https://cybersarah.de/danke" } },
+          });
+          await db.update(revenueOpportunitiesTable)
+            .set({ stripePaymentLink: link.url, updatedAt: new Date() })
+            .where(eq(revenueOpportunitiesTable.id, existing[0].id));
+          preiseAngepasst++;
+          einnahmenExtra += (neuerPreis - avgPreis) * Math.max(anzahl, 1);
+          logger.info({ produkt: p.name, von: avgPreis, auf: neuerPreis, grund: anzahl > 10 ? "hoheNachfrage" : "nachfrageEinbruch" }, "💰 Dynamic Pricing: Preis angepasst");
+        }
+      } catch (err) {
+        logger.warn({ err, produkt: p.name }, "Dynamic Pricing fehlgeschlagen");
+      }
+    }
+    return {
+      success: true,
+      message: `${preiseAngepasst} Preise dynamisch angepasst, €${einnahmenExtra.toFixed(2)} Extra-Einnahmen erwartet`,
+      metadaten: { preiseAngepasst, einnahmenExtra, analysiert: produkte.length },
+    };
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // AUTO BUNDLE: Erstellt Produkt-Bundles aus meistgekauften Kombinationen
+  // ═════════════════════════════════════════════════════════════════════════════
+  private async autoBundle(): Promise<AufgabeErgebnis> {
+    logger.info("📦 Monetization: Auto-Bundle gestartet");
+    const vor14Tagen = new Date();
+    vor14Tagen.setDate(vor14Tagen.getDate() - 14);
+    const topProdukte = await db
+      .select({ name: transactionsTable.produktName, anzahl: sql<number>`COUNT(*)`, umsatz: sql<number>`SUM(betrag)` })
+      .from(transactionsTable)
+      .where(gte(transactionsTable.createdAt, vor14Tagen))
+      .groupBy(transactionsTable.produktName)
+      .orderBy(desc(sql`COUNT(*)`))
+      .limit(5);
+    let bundlesErstellt = 0;
+    if (topProdukte.length >= 2) {
+      const top2 = topProdukte.slice(0, 2);
+      const bundleName = `${top2[0].name} + ${top2[1].name} Bundle`;
+      const bundlePreis = Math.round(
+        (Number(top2[0].umsatz ?? 0) / Math.max(Number(top2[0].anzahl), 1)
+        + Number(top2[1].umsatz ?? 0) / Math.max(Number(top2[1].anzahl), 1)) * 0.8
+      );
+      try {
+        const stripe = getStripeClient();
+        const prod = await stripe.products.create({
+          name: bundleName.slice(0, 100),
+          description: `Premium Bundle: ${top2[0].name} + ${top2[1].name} zum Sonderpreis`,
+          metadata: { quelle: "monetization_auto_bundle", produkte: `${top2[0].name},${top2[1].name}` },
+        });
+        const price = await stripe.prices.create({
+          product: prod.id, unit_amount: Math.max(bundlePreis, 1000), currency: "eur",
+        });
+        const link = await stripe.paymentLinks.create({
+          line_items: [{ price: price.id, quantity: 1 }],
+          after_completion: { type: "redirect", redirect: { url: "https://cybersarah.de/danke" } },
+        });
+        await db.insert(revenueOpportunitiesTable).values({
+          titel: bundleName, typ: "bundle", kanal: "eigenes_produkt",
+          status: "aktiv", geschaetzterMonatsumsatz: (bundlePreis * 5).toString(),
+          stripePaymentLink: link.url, beschreibung: `Auto-Bundle aus Top-Produkten`,
+          quelle: "Monetization-AutoBundle",
+        }).onConflictDoNothing();
+        bundlesErstellt++;
+        logger.info({ bundle: bundleName, preis: bundlePreis }, "📦 Auto-Bundle erstellt");
+      } catch (err) {
+        logger.warn({ err }, "Auto-Bundle Erstellung fehlgeschlagen");
+      }
+    }
+    return {
+      success: true,
+      message: `${bundlesErstellt} Bundle(s) automatisch erstellt`,
+      metadaten: { bundlesErstellt, topProdukte: topProdukte.map(p => p.name) },
+    };
+  }
+
 }

@@ -38,6 +38,9 @@ export class MasterAgent extends AgentBase {
         return this.optimiereSystemDeep();
       case "chancen_priorisierung":
         return this.priorisierChancen();
+      case "revenue_priorisierung":
+        return this.revenuePriorisierung();
+        return this.priorisierChancen();
       default:
         return this.systemAnalyse();
     }
@@ -297,4 +300,101 @@ export class MasterAgent extends AgentBase {
       metadaten: { gepruefte: chancen.length, aktiviert },
     };
   }
+  // ═════════════════════════════════════════════════════════════════════════════
+  // REVENUE-PRIORISIERUNG: Weist Aufgaben basierend auf Umsatzpotenzial zu
+  // Priorisiert Aktionen mit höchstem ROI und löst sie automatisch aus
+  // ═════════════════════════════════════════════════════════════════════════════
+  private async revenuePriorisierung(): Promise<AufgabeErgebnis> {
+    logger.info("🎯 MasterAgent: Revenue-Priorisierung gestartet");
+    const aktionen: string[] = [];
+    let ausgeloest = 0;
+
+    // 1. Höchste Priorität: Transaktionen ohne Affiliate-Tracking in den letzten 24h
+    try {
+      const { pendingAttributionTable } = await import("@workspace/db");
+      const offeneAttributionen = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(pendingAttributionTable)
+        .where(eq(pendingAttributionTable.status, "pending"));
+      if (Number(offeneAttributionen[0]?.count ?? 0) > 0) {
+        aktionen.push(`${offeneAttributionen[0].count} offene Attributionen → sofort verarbeiten`);
+      }
+    } catch {}
+
+    // 2. Hohe Priorität: Revenue-Opportunities ohne Stripe-Link
+    try {
+      const ohneLink = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(revenueOpportunitiesTable)
+        .where(and(
+          eq(revenueOpportunitiesTable.status, "aktiv"),
+          sql`stripe_payment_link IS NULL`
+        ));
+      if (Number(ohneLink[0]?.count ?? 0) > 0) {
+        aktionen.push(`${ohneLink[0].count} Opportunities ohne Stripe-Link → RevenueAnalyst`);
+        const { globalQueue } = await import("./JobQueue");
+        globalQueue.fuegeHinzu("revenue_analyst_stripe", { aktion: "stripe_link_erstellen" }, { prioritaet: 1 });
+        ausgeloest++;
+      }
+    } catch {}
+
+    // 3. Produkte mit hohem Umsatz aber ohne Upsell
+    try {
+      const topProdukte = await db
+        .select({ name: transactionsTable.produktName, anzahl: sql<number>`COUNT(*)` })
+        .from(transactionsTable)
+        .where(gte(transactionsTable.createdAt, new Date(Date.now() - 7 * 86400000)))
+        .groupBy(transactionsTable.produktName)
+        .orderBy(desc(sql`COUNT(*)`))
+        .limit(3);
+      for (const p of topProdukte) {
+        if (!p.name) continue;
+        const existingBundle = await db.select({ count: sql<number>`COUNT(*)` })
+          .from(revenueOpportunitiesTable)
+          .where(sql`titel LIKE ${`%${p.name}%Bundle%`}`);
+        if (Number(existingBundle[0]?.count ?? 0) === 0 && Number(p.anzahl) > 3) {
+          aktionen.push(`${p.name}: ${p.anzahl} Verkäufe → Bundle erstellen`);
+          const { globalQueue } = await import("./JobQueue");
+          globalQueue.fuegeHinzu("monetization_upsell", { aktion: "upsell_produkte_erstellen", marke: "all" }, { prioritaet: 2 });
+          ausgeloest++;
+          break;
+        }
+      }
+    } catch {}
+
+    // 4. Prüfe ob Abo-Pläne initialisiert sind
+    try {
+      const { subscriptionPlansTable } = await import("@workspace/db");
+      const plans = await db.select({ count: sql<number>`COUNT(*)` }).from(subscriptionPlansTable);
+      if (Number(plans[0]?.count ?? 0) === 0) {
+        aktionen.push("Keine Abo-Pläne → SubscriptionAgent init");
+        const { globalQueue } = await import("./JobQueue");
+        globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
+        ausgeloest++;
+      }
+    } catch {}
+
+    // 5. Prüfe Coupon-Statistiken und optimiere
+    try {
+      const { couponsTable } = await import("@workspace/db");
+      const aktiveCoupons = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(couponsTable)
+        .where(eq(couponsTable.aktiv, true));
+      if (Number(aktiveCoupons[0]?.count ?? 0) < 3) {
+        aktionen.push("Weniger als 3 aktive Coupons → SmartCouponAgent");
+        const { globalQueue } = await import("./JobQueue");
+        globalQueue.fuegeHinzu("smart_coupon_ki", { aktion: "ki_coupons" }, { prioritaet: 2 });
+        ausgeloest++;
+      }
+    } catch {}
+
+    logger.info({ aktionen, ausgeloest }, "🎯 MasterAgent: Revenue-Priorisierung abgeschlossen");
+    return {
+      success: true,
+      message: `${ausgeloest} Aktionen automatisch ausgelöst: ${aktionen.join(" | ")}`,
+      metadaten: { aktionen, ausgeloest },
+    };
+  }
+
 }

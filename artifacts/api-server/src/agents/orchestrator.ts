@@ -24,6 +24,12 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
     // ── Subscription & Revenue Agent: Init + Sync beim Start ──
     globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
   });
   cron.schedule("*/5 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_check", { aktion: "check_carts" }, { prioritaet: 1 });
@@ -55,6 +61,12 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
     // ── Subscription & Revenue Agent: Init + Sync beim Start ──
     globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
   });
   cron.schedule("0 */2 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "process_referrals" }, { prioritaet: 2 });
@@ -65,9 +77,40 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
   cron.schedule("0 3 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "full_check" }, { prioritaet: 3 });
   });
+
+  // ── HARA Fast-Revenue-Scan alle 5 Minuten (Sprint 7.1 Optimierung) ──
+  cron.schedule("*/5 * * * *", () => {
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+  });
+  // ── RevenueAnomaly alle 15 Minuten (Sprint 7.1 Optimierung) ──
+  cron.schedule("*/15 * * * *", () => {
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+  });
+  // ── Auto Cross-Sell alle 30 Minuten (Sprint 7.1 Optimierung) ──
+  cron.schedule("*/30 * * * *", () => {
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+  });
+  // ── Dynamic Pricing alle 60 Minuten (Sprint 7.1 Optimierung) ──
+  cron.schedule("0 * * * *", () => {
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+  });
+  // ── Master Revenue-Priorisierung alle 10 Minuten (Sprint 7.1 Optimierung) ──
+  cron.schedule("*/10 * * * *", () => {
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
+  });
+  // ── Auto Bundle alle 2 Stunden (Sprint 7.1 Optimierung) ──
+  cron.schedule("0 */2 * * *", () => {
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "auto_bundle" }, { prioritaet: 3 });
+  });
   // ── Subscription & Revenue Agent: Sync alle 15 Min, Dunning alle 2h, Forecast täglich 07:00 ──
   cron.schedule("\*\/15 \* \* \* \*", () => {
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
   });
   cron.schedule("0 \*\/2 \* \* \*", () => {
     globalQueue.fuegeHinzu("subscription_dunning", { aktion: "dunning" }, { prioritaet: 1 });
@@ -268,7 +311,8 @@ function registriereQueueHandler(): void {
   globalQueue.registriereHandler("master_optimierung", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof MasterAgent);
     if (!agent) throw new Error("MasterAgent nicht gefunden");
-    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "optimierung" } });
+    const aktion = aufgabe.payload?.["aktion"] ?? "optimierung";
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion } });
   });
 
   globalQueue.registriereHandler("master_deep_optimierung", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
@@ -291,7 +335,8 @@ function registriereQueueHandler(): void {
     } catch {}
     const agent = subAgenten.find(a => a instanceof RevenueAnalystAgent);
     if (!agent) throw new Error("RevenueAnalystAgent nicht gefunden");
-    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "chancen_scannen" } });
+    const aktion = aufgabe.payload?.["aktion"] ?? "chancen_scannen";
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion } });
   });
 
   globalQueue.registriereHandler("revenue_analyst_stripe", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
@@ -319,7 +364,8 @@ function registriereQueueHandler(): void {
   globalQueue.registriereHandler("monetization_auto_optimize", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof MonetizationAgent);
     if (!agent) throw new Error("MonetizationAgent nicht gefunden");
-    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "auto_optimize_all" } });
+    const aktion = aufgabe.payload?.["aktion"] ?? "auto_optimize_all";
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion } });
   });
 
   // ── Monetization: Upsell-Strategie ──
@@ -358,7 +404,8 @@ function registriereQueueHandler(): void {
   globalQueue.registriereHandler("hara_scan", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof HaraAgent);
     if (!agent) throw new Error("HaraAgent nicht gefunden");
-    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { ...aufgabe.payload, aktion: "scan" } });
+    const aktion = aufgabe.payload?.["aktion"] ?? "scan";
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { ...aufgabe.payload, aktion } });
   });
 
   globalQueue.registriereHandler("hara_ausfuehrung", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
@@ -665,6 +712,12 @@ function registriereQueueHandler(): void {
     // ── Subscription & Revenue Agent: Init + Sync beim Start ──
     globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
   });
   cron.schedule("0 */2 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "process_referrals" }, { prioritaet: 2 });
@@ -688,6 +741,12 @@ function registriereQueueHandler(): void {
     // ── Subscription & Revenue Agent: Init + Sync beim Start ──
     globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
     const agent = subAgenten.find(a => a instanceof AbandonedCartRecoveryAgent);
     if (!agent) throw new Error("AbandonedCartRecoveryAgent nicht gefunden");
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "check_stripe" } });
@@ -771,6 +830,12 @@ async function mainLoop(): Promise<void> {
     // ── Subscription & Revenue Agent: Init + Sync beim Start ──
     globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
     }
     // Alle 20 Min: Community Management
     if (mainLoopZyklus % 20 === 0) {
@@ -1077,6 +1142,12 @@ export function starteOrchestrator(): void {
     // ── Subscription & Revenue Agent: Init + Sync beim Start ──
     globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
   });
 
   // Newsletter-Agent: Jeden Freitag um 08:00 Uhr
@@ -1112,6 +1183,12 @@ export function starteOrchestrator(): void {
     // ── Subscription & Revenue Agent: Init + Sync beim Start ──
     globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
   });
   cron.schedule("*/5 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_check", { aktion: "check_carts" }, { prioritaet: 1 });
@@ -1143,6 +1220,12 @@ export function starteOrchestrator(): void {
     // ── Subscription & Revenue Agent: Init + Sync beim Start ──
     globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
   });
   cron.schedule("0 */2 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "process_referrals" }, { prioritaet: 2 });
@@ -1213,6 +1296,12 @@ export function starteOrchestrator(): void {
     // ── Subscription & Revenue Agent: Init + Sync beim Start ──
     globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
 
     // ─── Auto-Recovery: Wenn System vorher aktiv war → sofort alle Agenten neu starten ──
     try {
@@ -1377,6 +1466,12 @@ export async function fuehreAlleAgentanAus(): Promise<{ gestartet: number; jobId
     // ── Subscription & Revenue Agent: Init + Sync beim Start ──
     globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
 
   // Priorität 3: Content + Sales + Community
   const marken = ["CyberSarah", "GeldPilot AI", "UnternehmerGPT"] as const;
@@ -1516,6 +1611,12 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
     // ── Subscription & Revenue Agent: Init + Sync beim Start ──
     globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
         return { success: true, message: `Monetization Agent: 3 Jobs gestartet (Funnel ${j1}, Upsell ${j2}, Preis ${j3})` };
       }
 
@@ -1563,6 +1664,12 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
       case "subscription": {
         const j1 = globalQueue.fuegeHinzu("subscription_full_check", { aktion: "full_check" }, { prioritaet: 1 });
         const j2 = globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
+    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
         return { success: true, message: `Subscription & Revenue Agent: 2 Jobs gestartet (Full-Check ${j1}, Sync ${j2})` };
       }
 
