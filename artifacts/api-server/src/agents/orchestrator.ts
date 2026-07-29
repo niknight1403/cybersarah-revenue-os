@@ -24,6 +24,13 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
   cron.schedule("*/5 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_check", { aktion: "check_carts" }, { prioritaet: 1 });
 
+  // ── Sales Chat: Analyse stündlich, Follow-ups alle 30 Min ──
+  cron.schedule("5 * * * *", () => {
+    globalQueue.fuegeHinzu("sales_chat_analyze", { aktion: "analyze" }, { prioritaet: 3 });
+  });
+  cron.schedule("*/30 * * * *", () => {
+    globalQueue.fuegeHinzu("sales_chat_followup", { aktion: "followup" }, { prioritaet: 2 });
+  });
   // ── Affiliate: Provisionen stündlich, Tiers täglich, Payouts monatlich (1. Tag) ──
   cron.schedule("0 * * * *", () => {
     globalQueue.fuegeHinzu("affiliate_commissions", { aktion: "calculate_commissions" }, { prioritaet: 2 });
@@ -70,6 +77,7 @@ import { SmartCouponAgent } from "./SmartCouponAgent";
 import { AbandonedCartRecoveryAgent } from "./AbandonedCartRecoveryAgent";
 import { LoyaltyAgent } from "./LoyaltyAgent";
 import { AffiliateAutomationAgent } from "./AffiliateAutomationAgent";
+import { SalesChatAgent } from "./SalesChatAgent";
 import { scanneNeueProdukte, synchronisiereVerkaeufe, optimierePreiseUndPausiereFlops } from "./digitalproduktAgent";
 import { generiereSeoArtikel } from "./seoContentAgent";
 import { erstelleFehlendeSequenzen, versendeFaelligeEmails } from "./emailListenAgent";
@@ -136,6 +144,7 @@ const subAgenten: AgentBase[] = [
   new AbandonedCartRecoveryAgent(),
   new LoyaltyAgent(),
   new AffiliateAutomationAgent(),
+  new SalesChatAgent(),
 ];
 
 let mainLoopTimer: NodeJS.Timeout | null = null;
@@ -527,6 +536,17 @@ function registriereQueueHandler(): void {
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "flash_sale" } });
   });
 
+  // ── AI Sales Chat Agent ──
+  globalQueue.registriereHandler("sales_chat_analyze", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof SalesChatAgent);
+    if (!agent) throw new Error("SalesChatAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "analyze" } });
+  });
+  globalQueue.registriereHandler("sales_chat_followup", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof SalesChatAgent);
+    if (!agent) throw new Error("SalesChatAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "followup" } });
+  });
   // ── Affiliate Automation Agent ──
   globalQueue.registriereHandler("affiliate_full_sync", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof AffiliateAutomationAgent);
@@ -573,6 +593,13 @@ function registriereQueueHandler(): void {
   // ── Abandoned Cart Recovery Agent ──
   globalQueue.registriereHandler("cart_recovery_check", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
 
+  // ── Sales Chat: Analyse stündlich, Follow-ups alle 30 Min ──
+  cron.schedule("5 * * * *", () => {
+    globalQueue.fuegeHinzu("sales_chat_analyze", { aktion: "analyze" }, { prioritaet: 3 });
+  });
+  cron.schedule("*/30 * * * *", () => {
+    globalQueue.fuegeHinzu("sales_chat_followup", { aktion: "followup" }, { prioritaet: 2 });
+  });
   // ── Affiliate: Provisionen stündlich, Tiers täglich, Payouts monatlich (1. Tag) ──
   cron.schedule("0 * * * *", () => {
     globalQueue.fuegeHinzu("affiliate_commissions", { aktion: "calculate_commissions" }, { prioritaet: 2 });
@@ -1024,6 +1051,13 @@ export function starteOrchestrator(): void {
   cron.schedule("*/5 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_check", { aktion: "check_carts" }, { prioritaet: 1 });
 
+  // ── Sales Chat: Analyse stündlich, Follow-ups alle 30 Min ──
+  cron.schedule("5 * * * *", () => {
+    globalQueue.fuegeHinzu("sales_chat_analyze", { aktion: "analyze" }, { prioritaet: 3 });
+  });
+  cron.schedule("*/30 * * * *", () => {
+    globalQueue.fuegeHinzu("sales_chat_followup", { aktion: "followup" }, { prioritaet: 2 });
+  });
   // ── Affiliate: Provisionen stündlich, Tiers täglich, Payouts monatlich (1. Tag) ──
   cron.schedule("0 * * * *", () => {
     globalQueue.fuegeHinzu("affiliate_commissions", { aktion: "calculate_commissions" }, { prioritaet: 2 });

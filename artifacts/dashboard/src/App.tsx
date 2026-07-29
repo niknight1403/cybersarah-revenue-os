@@ -31,6 +31,7 @@ import WhatsApp from "@/pages/whatsapp";
 import CouponDashboard from "@/pages/couponDashboard";
 import LoyaltyDashboard from "@/pages/loyaltyDashboard";
 import AffiliateDashboard from "@/pages/affiliateDashboard";
+import SalesChatDashboard from "@/pages/salesChatDashboard";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ function Router() {
         <Route path="/coupons" component={() => <ErrorBoundary name="CouponDashboard"><CouponDashboard /></ErrorBoundary>} />
         <Route path="/loyalty" component={() => <ErrorBoundary name="LoyaltyDashboard"><LoyaltyDashboard /></ErrorBoundary>} />
         <Route path="/affiliates" component={() => <ErrorBoundary name="AffiliateDashboard"><AffiliateDashboard /></ErrorBoundary>} />
+        <Route path="/sales-chat" component={() => <ErrorBoundary name="SalesChatDashboard"><SalesChatDashboard /></ErrorBoundary>} />
         <Route path="/email" component={() => <ErrorBoundary name="EmailAutomation"><EmailAutomation /></ErrorBoundary>} />
         <Route path="/social-media" component={() => <ErrorBoundary name="SocialMedia"><SocialMedia /></ErrorBoundary>} />
         <Route path="/push" component={() => <ErrorBoundary name="PushNotifications"><PushNotifications /></ErrorBoundary>} />

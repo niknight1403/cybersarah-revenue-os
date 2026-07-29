@@ -24,3 +24,4 @@ export * from "./coupons";
 export * from "./abandonedCarts";
 export * from "./loyaltyPrograms";
 export * from "./affiliates";
+export * from "./salesChat";

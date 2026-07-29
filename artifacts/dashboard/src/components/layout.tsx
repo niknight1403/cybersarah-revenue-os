@@ -25,6 +25,7 @@ const navigation = [
   { name: "🎫 Coupons", href: "/coupons", icon: Tag, badge: "NEU", gruppe: "umsatz" },
   { name: "⭐ Treue", href: "/loyalty", icon: Sparkles, badge: "NEU", gruppe: "umsatz" },
   { name: "🤝 Affiliates", href: "/affiliates", icon: Users, badge: "NEU", gruppe: "umsatz" },
+  { name: "💬 Sales Chat", href: "/sales-chat", icon: MessageCircle, badge: "NEU", gruppe: "umsatz" },
   { name: "📧 E-Mail-Auto", href: "/email", icon: Mail, badge: "NEU", gruppe: "umsatz" },
   { name: "Content", href: "/content", icon: FileText, gruppe: "content" },
   { name: "SEO-Empire", href: "/seo-content", icon: Search, badge: "AUTO", gruppe: "content" },
