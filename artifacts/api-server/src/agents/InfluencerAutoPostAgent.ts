@@ -42,7 +42,7 @@ async function optimiereInhaltFuerPlattform(
   }
 }
 
-async function posteAufPlatform(
+export async function posteAufPlatform(
   content: { id: number; titel: string; inhalt: string | null; marke: string },
   plattform: { id: number; name: string; webhookUrl: string | null; anzeigeName: string; symbol: string },
 ): Promise<{ erfolg: boolean; plattform: string }> {
