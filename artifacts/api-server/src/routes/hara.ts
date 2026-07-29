@@ -80,19 +80,19 @@ router.get("/hara/overview", async (req, res) => {
   }
 });
 
-// POST /hara/scan — Phase 1 manuell anstoßen
+// POST /hara/scan — Phase 1 manuell anstoßen (ASYNCHRON — keine Blockade)
 router.post("/hara/scan", async (req, res) => {
   if (!db) {
-    res.status(503).json({ success: false, message: "Keine Datenbank konfiguriert — HARA-Scan nicht möglich. Bitte DATABASE_URL setzen." });
+    res.status(503).json({ success: false, message: "Keine Datenbank konfiguriert — HARA-Scan nicht möglich" });
     return;
   }
-  try {
-    const ergebnis = await starteHaraScan();
-    res.json(ergebnis);
-  } catch (err) {
-    req.log.error({ err }, "Fehler beim HARA-Scan");
-    res.status(500).json({ error: "Scan fehlgeschlagen" });
-  }
+  // Sofort antworten, Scan läuft im Hintergrund
+  res.json({ success: true, message: "🔍 HARA-Scan gestartet — läuft im Hintergrund (OpenAI)", background: true });
+  
+  // Asynchron ausführen (Fehler werden intern geloggt)
+  starteHaraScan().catch((err) => {
+    req.log?.error?.({ err }, "Hintergrund-HARA-Scan fehlgeschlagen");
+  });
 });
 
 // POST /hara/proposals/:id/bestaetigen — CONFIRM-Signal (Phase 2 → 3)

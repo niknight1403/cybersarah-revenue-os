@@ -1,11 +1,11 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Activity, LayoutDashboard, Zap, Bot, TrendingUp, Rocket,
   Users, FileText, Search, Globe, Clapperboard, Recycle,
   Mail, Megaphone, Brain, DollarSign, Target, Cpu, CreditCard, Package, Repeat,
   Newspaper, MessageCircle, Tag, Key, TerminalSquare,
-  Menu, X, Smartphone, Sparkles, Circle,
+  Menu, X, Smartphone, Sparkles, Circle, Percent, Share2, Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +78,22 @@ const gruppenLabel: Record<string, string> = {
 export function Layout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const [sidebarOffen, setSidebarOffen] = useState(false);
+  const [serverOnline, setServerOnline] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const apiBase2 = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
+        const healthUrl2 = apiBase2 ? `${apiBase2}/api/healthz` : "/api/healthz";
+        const res = await fetch(healthUrl2, { signal: AbortSignal.timeout(5000) });
+        if (!cancelled) setServerOnline(res.ok);
+      } catch { if (!cancelled) setServerOnline(false); }
+    };
+    check();
+    const interval = setInterval(check, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
 
   const gruppen = ["umsatz", "content", "system"] as const;
 
@@ -226,12 +242,23 @@ export function Layout({ children }: { children: ReactNode }) {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 text-[10px] md:text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
+            <NotificationBell />
+            <span className={cn(
+              "flex items-center gap-1.5 text-[10px] md:text-xs font-mono px-2 py-1 rounded-full border transition-colors duration-500",
+              serverOnline
+                ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                : "text-red-400 bg-red-500/10 border-red-500/20"
+            )}>
               <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+                {serverOnline && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                )}
+                <span className={cn(
+                  "relative inline-flex rounded-full h-1.5 w-1.5",
+                  serverOnline ? "bg-emerald-400" : "bg-red-400"
+                )} />
               </span>
-              LIVE
+              {serverOnline ? "LIVE" : "OFFLINE"}
             </span>
           </div>
         </header>
