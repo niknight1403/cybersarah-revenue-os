@@ -120,7 +120,8 @@ export class LoyaltyAgent extends AgentBase {
     const [program] = await db.select().from(loyaltyProgramsTable).limit(1);
     if (!program) return { success: false, message: "Kein Programm aktiv" };
 
-    const stufen = (program.stufen as any[]) ?? LOYALTY_STUFEN;
+    let stufen: any[] = LOYALTY_STUFEN;
+    try { stufen = typeof program.stufen === "string" ? JSON.parse(program.stufen) : (program.stufen as any[]) ?? LOYALTY_STUFEN; } catch { stufen = LOYALTY_STUFEN; }
 
     // Neue Kunden aus leads + transactions finden
     const kundenEmails = await db
@@ -452,6 +453,7 @@ export class LoyaltyAgent extends AgentBase {
 
     const stufen: Record<string, number> = {};
     for (const k of karten) {
+    if (!k.stufe) continue;
       stufen[k.stufe] = (stufen[k.stufe] ?? 0) + 1;
     }
 

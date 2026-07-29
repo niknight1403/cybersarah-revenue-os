@@ -516,7 +516,7 @@ function registriereQueueHandler(): void {
   globalQueue.registriereHandler("loyalty_full_check", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof LoyaltyAgent);
     if (!agent) throw new Error("LoyaltyAgent nicht gefunden");
-    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "full_check" } });
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: aufgabe.payload?.["aktion"] ?? "full_check" } });
   });
   globalQueue.registriereHandler("loyalty_cards", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof LoyaltyAgent);
