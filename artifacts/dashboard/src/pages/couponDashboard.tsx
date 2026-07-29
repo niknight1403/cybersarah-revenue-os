@@ -1,5 +1,5 @@
-import { h, Fragment } from "preact";
-import { useState, useEffect } from "preact/hooks";
+import { Fragment } from "react";
+import { useState, useEffect } from "react";
 
 interface Coupon {
   id: number;

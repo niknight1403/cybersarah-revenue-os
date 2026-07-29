@@ -1,5 +1,5 @@
-import { h } from "preact";
-import { useState, useEffect } from "preact/hooks";
+// preact import removed - using automatic JSX
+import { useState, useEffect } from "react";
 
 export function SalesChatDashboard() {
   const [conversations, setConversations] = useState<any[]>([]);
