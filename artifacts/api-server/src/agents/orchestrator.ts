@@ -24,6 +24,19 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
   cron.schedule("*/5 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_check", { aktion: "check_carts" }, { prioritaet: 1 });
 
+  // ── Affiliate: Provisionen stündlich, Tiers täglich, Payouts monatlich (1. Tag) ──
+  cron.schedule("0 * * * *", () => {
+    globalQueue.fuegeHinzu("affiliate_commissions", { aktion: "calculate_commissions" }, { prioritaet: 2 });
+  });
+  cron.schedule("0 2 * * *", () => {
+    globalQueue.fuegeHinzu("affiliate_tiers", { aktion: "upgrade_tiers" }, { prioritaet: 2 });
+  });
+  cron.schedule("0 6 1 * *", () => {
+    globalQueue.fuegeHinzu("affiliate_payouts", { aktion: "process_payouts" }, { prioritaet: 1 });
+  });
+  cron.schedule("0 */4 * * *", () => {
+    globalQueue.fuegeHinzu("affiliate_full_sync", { aktion: "full_sync" }, { prioritaet: 3 });
+  });
   // ── Loyalty & Referral: Karten-Check alle 30 Min, Empfehlungen alle 2h, Geburtstage täglich 08:00 ──
   cron.schedule("*/30 * * * *", () => {
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
@@ -56,6 +69,7 @@ import { HaraAgent } from "./HaraAgent";
 import { SmartCouponAgent } from "./SmartCouponAgent";
 import { AbandonedCartRecoveryAgent } from "./AbandonedCartRecoveryAgent";
 import { LoyaltyAgent } from "./LoyaltyAgent";
+import { AffiliateAutomationAgent } from "./AffiliateAutomationAgent";
 import { scanneNeueProdukte, synchronisiereVerkaeufe, optimierePreiseUndPausiereFlops } from "./digitalproduktAgent";
 import { generiereSeoArtikel } from "./seoContentAgent";
 import { erstelleFehlendeSequenzen, versendeFaelligeEmails } from "./emailListenAgent";
@@ -121,6 +135,7 @@ const subAgenten: AgentBase[] = [
   new SmartCouponAgent(),
   new AbandonedCartRecoveryAgent(),
   new LoyaltyAgent(),
+  new AffiliateAutomationAgent(),
 ];
 
 let mainLoopTimer: NodeJS.Timeout | null = null;
@@ -512,6 +527,27 @@ function registriereQueueHandler(): void {
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "flash_sale" } });
   });
 
+  // ── Affiliate Automation Agent ──
+  globalQueue.registriereHandler("affiliate_full_sync", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof AffiliateAutomationAgent);
+    if (!agent) throw new Error("AffiliateAutomationAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: aufgabe.payload?.["aktion"] ?? "full_sync" } });
+  });
+  globalQueue.registriereHandler("affiliate_commissions", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof AffiliateAutomationAgent);
+    if (!agent) throw new Error("AffiliateAutomationAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "calculate_commissions" } });
+  });
+  globalQueue.registriereHandler("affiliate_payouts", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof AffiliateAutomationAgent);
+    if (!agent) throw new Error("AffiliateAutomationAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "process_payouts" } });
+  });
+  globalQueue.registriereHandler("affiliate_tiers", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof AffiliateAutomationAgent);
+    if (!agent) throw new Error("AffiliateAutomationAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "upgrade_tiers" } });
+  });
   // ── Loyalty & Referral Agent ──
   globalQueue.registriereHandler("loyalty_full_check", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof LoyaltyAgent);
@@ -537,6 +573,19 @@ function registriereQueueHandler(): void {
   // ── Abandoned Cart Recovery Agent ──
   globalQueue.registriereHandler("cart_recovery_check", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
 
+  // ── Affiliate: Provisionen stündlich, Tiers täglich, Payouts monatlich (1. Tag) ──
+  cron.schedule("0 * * * *", () => {
+    globalQueue.fuegeHinzu("affiliate_commissions", { aktion: "calculate_commissions" }, { prioritaet: 2 });
+  });
+  cron.schedule("0 2 * * *", () => {
+    globalQueue.fuegeHinzu("affiliate_tiers", { aktion: "upgrade_tiers" }, { prioritaet: 2 });
+  });
+  cron.schedule("0 6 1 * *", () => {
+    globalQueue.fuegeHinzu("affiliate_payouts", { aktion: "process_payouts" }, { prioritaet: 1 });
+  });
+  cron.schedule("0 */4 * * *", () => {
+    globalQueue.fuegeHinzu("affiliate_full_sync", { aktion: "full_sync" }, { prioritaet: 3 });
+  });
   // ── Loyalty & Referral: Karten-Check alle 30 Min, Empfehlungen alle 2h, Geburtstage täglich 08:00 ──
   cron.schedule("*/30 * * * *", () => {
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
@@ -975,6 +1024,19 @@ export function starteOrchestrator(): void {
   cron.schedule("*/5 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_check", { aktion: "check_carts" }, { prioritaet: 1 });
 
+  // ── Affiliate: Provisionen stündlich, Tiers täglich, Payouts monatlich (1. Tag) ──
+  cron.schedule("0 * * * *", () => {
+    globalQueue.fuegeHinzu("affiliate_commissions", { aktion: "calculate_commissions" }, { prioritaet: 2 });
+  });
+  cron.schedule("0 2 * * *", () => {
+    globalQueue.fuegeHinzu("affiliate_tiers", { aktion: "upgrade_tiers" }, { prioritaet: 2 });
+  });
+  cron.schedule("0 6 1 * *", () => {
+    globalQueue.fuegeHinzu("affiliate_payouts", { aktion: "process_payouts" }, { prioritaet: 1 });
+  });
+  cron.schedule("0 */4 * * *", () => {
+    globalQueue.fuegeHinzu("affiliate_full_sync", { aktion: "full_sync" }, { prioritaet: 3 });
+  });
   // ── Loyalty & Referral: Karten-Check alle 30 Min, Empfehlungen alle 2h, Geburtstage täglich 08:00 ──
   cron.schedule("*/30 * * * *", () => {
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
