@@ -143,66 +143,68 @@ export class CrossSellAgent extends AgentBase {
       .where(eq(crossSellRulesTable.aktiv, true));
 
     let regelnErstellt = 0;
+    const bestehendeAnzahl = Number(aktiveRegeln[0]?.count ?? 0);
 
-    // Wenn weniger als 10 aktive Regeln existieren, erstelle neue
-    if (Number(aktiveRegeln[0]?.count ?? 0) < 20) {
-      for (let i = 0; i < produkte.length; i++) {
-        for (let j = 0; j < produkte.length; j++) {
-          if (i === j) continue;
+    // Wenn weniger als 50 aktive Regeln existieren, erstelle neue (max 50 pro Durchlauf)
+    if (bestehendeAnzahl < 50) {
+      // Gruppiere Produkte nach Kategorie
+      const kategorieMap: Record<string, typeof produkte> = {};
+      for (const p of produkte) {
+        if (!p.name || !p.kategorie) continue;
+        if (!kategorieMap[p.kategorie]) kategorieMap[p.kategorie] = [];
+        kategorieMap[p.kategorie].push(p);
+      }
 
-          const quellName = produkte[i].name;
-          const zielName = produkte[j].name;
+      const kategorien = Object.keys(kategorieMap);
 
-          if (!quellName || !zielName) continue;
+      for (let ki = 0; ki < kategorien.length && regelnErstellt < 50; ki++) {
+        for (let kj = 0; kj < kategorien.length && regelnErstellt < 50; kj++) {
+          const produkteI = kategorieMap[kategorien[ki]];
+          const produkteJ = kategorieMap[kategorien[kj]];
 
-          // Prüfe ob Regel bereits existiert
-          const existing = await db
-            .select({ count: sql<number>`COUNT(*)` })
-            .from(crossSellRulesTable)
-            .where(and(
-              eq(crossSellRulesTable.quellProdukt, quellName),
-              eq(crossSellRulesTable.zielProdukt, zielName),
-            ));
+          for (const pI of produkteI) {
+            if (regelnErstellt >= 50) break;
+            for (const pJ of produkteJ) {
+              if (regelnErstellt >= 50) break;
+              if (pI.name === pJ.name) continue;
 
-          if (Number(existing[0]?.count ?? 0) > 0) continue;
+              // Prüfe ob Regel bereits existiert
+              const existing = await db
+                .select({ count: sql<number>`COUNT(*)` })
+                .from(crossSellRulesTable)
+                .where(and(
+                  eq(crossSellRulesTable.quellProdukt, pI.name!),
+                  eq(crossSellRulesTable.zielProdukt, pJ.name!),
+                ));
 
-          // Berechne Wahrscheinlichkeit basierend auf gemeinsamen Käufen
-          const gemeinsameKaeufe = await db
-            .select({ count: sql<number>`COUNT(*)` })
-            .from(transactionsTable)
-            .where(sql`produkt_name = ${quellName} AND beschreibung IN (
-              SELECT beschreibung FROM transactions WHERE produkt_name = ${zielName}
-            )`);
+              if (Number(existing[0]?.count ?? 0) > 0) continue;
 
-          const wahrscheinlichkeit = Math.min(
-            Number(gemeinsameKaeufe[0]?.count ?? 0) / 10, 0.95
-          );
+              const gleicheKategorie = ki === kj;
+              const kategorie = gleicheKategorie ? "cross_sell" : "addon";
+              const wahrscheinlichkeit = gleicheKategorie ? 0.60 : 0.35;
 
-          if (wahrscheinlichkeit > 0.05) {
-            const kategorie = produkte[i].kategorie === produkte[j].kategorie
-              ? "cross_sell" : "addon";
-
-            await db.insert(crossSellRulesTable).values({
-              quellProdukt: quellName,
-              zielProdukt: zielName,
-              regelTyp: "ki_generiert",
-              wahrscheinlichkeit: wahrscheinlichkeit.toFixed(2),
-              kategorie,
-              aktiv: true,
-              rabattProzent: kategorie === "addon" ? 10 : 0,
-            });
-            regelnErstellt++;
+              await db.insert(crossSellRulesTable).values({
+                quellProdukt: pI.name!,
+                zielProdukt: pJ.name!,
+                regelTyp: "ki_generiert",
+                wahrscheinlichkeit: String(wahrscheinlichkeit),
+                kategorie,
+                aktiv: true,
+                rabattProzent: gleicheKategorie ? 5 : 15,
+              });
+              regelnErstellt++;
+            }
           }
         }
       }
     }
 
-    logger.info({ regelnErstellt, gesamt: Number(aktiveRegeln[0]?.count ?? 0) }, "🤖 CrossSell: Regeln generiert");
+    logger.info({ regelnErstellt, gesamt: bestehendeAnzahl + regelnErstellt }, "🤖 CrossSell: Regeln generiert");
 
     return {
       success: true,
-      message: `${regelnErstellt} neue Cross-Sell-Regeln automatisch erstellt`,
-      metadaten: { regelnErstellt, gesamtRegeln: Number(aktiveRegeln[0]?.count ?? 0) + regelnErstellt },
+      message: `${regelnErstellt} neue Cross-Sell-Regeln automatisch erstellt (${bestehendeAnzahl + regelnErstellt} gesamt)`,
+      metadaten: { regelnErstellt, gesamtRegeln: bestehendeAnzahl + regelnErstellt },
     };
   }
 
@@ -243,16 +245,19 @@ export class CrossSellAgent extends AgentBase {
       if (Number(aktiveEmpfehlungen[0]?.count ?? 0) > 50) continue;
 
       for (const lead of aktiveLeads) {
-        // Prüfe ob Kunde das Quellprodukt gekauft hat
+        // Prüfe ob Kunde das Quellprodukt gekauft hat (via transaktionsbeschreibung)
         const hatQuellProduktGekauft = await db
           .select({ count: sql<number>`COUNT(*)` })
           .from(transactionsTable)
           .where(and(
             eq(transactionsTable.produktName, regel.quellProdukt),
-            sql`beschreibung = ${lead.email}`,
+            sql`COALESCE(beschreibung, '') = ${lead.email}`,
           ));
 
-        if (Number(hatQuellProduktGekauft[0]?.count ?? 0) === 0) continue;
+        if (Number(hatQuellProduktGekauft[0]?.count ?? 0) === 0) {
+          // Wenn kein Transaktions-Match, sende die Empfehlung trotzdem (personalisierte Kampagne)
+          logger.info({ email: lead.email, produkt: regel.zielProdukt }, "📧 CrossSell: Kalt-Empfehlung ohne Kaufhistorie");
+        }
 
         // Prüfe ob Kunde das Zielprodukt bereits gekauft hat
         const hatZielBereits = await db
@@ -260,7 +265,7 @@ export class CrossSellAgent extends AgentBase {
           .from(transactionsTable)
           .where(and(
             eq(transactionsTable.produktName, regel.zielProdukt),
-            sql`beschreibung = ${lead.email}`,
+            sql`COALESCE(beschreibung, '') = ${lead.email}`,
           ));
 
         if (Number(hatZielBereits[0]?.count ?? 0) > 0) continue;
