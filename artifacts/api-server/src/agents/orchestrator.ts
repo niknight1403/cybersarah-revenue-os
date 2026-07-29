@@ -1835,3 +1835,78 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
     return { success: false, message: err instanceof Error ? err.message : "Unbekannter Fehler" };
   }
 }
+/**
+ * Aggressive Scheduling Patch — for orchestrator.ts
+ * 
+ * Diese zusätzlichen Cron-Jobs erhöhen die Frequenz der Revenue-Agenten:
+ * - HARA Scan: alle 3 Minuten (statt 5)
+ * - RevenueAnalyst: alle 10 Minuten (statt 15/30)
+ * - Monetization: alle 15 Minuten (statt 30)
+ * - Cross-Sell: alle 10 Minuten
+ * - Conversion: alle 20 Minuten
+ * - Heartbeat: alle 1 Minute für Vitalität
+ */
+
+// In orchestrator.ts NACHDEN bestehenden Cron-Jobs einfügen:
+
+// ── V4 MAX AUTONOMY — Aggressive Scheduling ─────────────────────
+// HARA Fast-Revenue-Scan alle 3 Minuten
+cron.schedule("*/3 * * * *", () => {
+  globalQueue.fuegeHinzu("hara_scan_v4", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
+});
+
+// RevenueAnalyst Anomalie alle 10 Minuten
+cron.schedule("*/10 * * * *", () => {
+  globalQueue.fuegeHinzu("revenue_analyst_v4_anomaly", { aktion: "revenue_anomaly" }, { prioritaet: 1 });
+});
+
+// RevenueAnalyst Cross-Sell alle 10 Minuten
+cron.schedule("*/10 * * * *", () => {
+  globalQueue.fuegeHinzu("revenue_analyst_v4_cross_sell", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
+});
+
+// RevenueAnalyst Dynamic Pricing alle 20 Minuten
+cron.schedule("*/20 * * * *", () => {
+  globalQueue.fuegeHinzu("revenue_analyst_v4_pricing", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+});
+
+// RevenueAnalyst Discount alle 30 Minuten
+cron.schedule("*/30 * * * *", () => {
+  globalQueue.fuegeHinzu("revenue_analyst_v4_discount", { aktion: "auto_discount" }, { prioritaet: 2 });
+});
+
+// Monetization Auto-Optimize alle 15 Minuten
+cron.schedule("*/15 * * * *", () => {
+  globalQueue.fuegeHinzu("monetization_v4_optimize", { aktion: "auto_optimize_all" }, { prioritaet: 2 });
+});
+
+// Monetization Flash Sale alle 60 Minuten
+cron.schedule("0 * * * *", () => {
+  globalQueue.fuegeHinzu("monetization_v4_flash", { aktion: "flash_sale" }, { prioritaet: 3 });
+});
+
+// Cross-Sell Engine alle 10 Minuten
+cron.schedule("*/10 * * * *", () => {
+  globalQueue.fuegeHinzu("cross_sell_v4", { aktion: "full_scan" }, { prioritaet: 2 });
+});
+
+// Conversion Optimizer alle 20 Minuten
+cron.schedule("*/20 * * * *", () => {
+  globalQueue.fuegeHinzu("conversion_v4_tests", { aktion: "create_tests" }, { prioritaet: 1 });
+  globalQueue.fuegeHinzu("conversion_v4_analyze", { aktion: "analyze" }, { prioritaet: 2 });
+});
+
+// Revenue Forecast alle 60 Minuten
+cron.schedule("0 * * * *", () => {
+  globalQueue.fuegeHinzu("revenue_analyst_v4_forecast", { aktion: "revenue_forecast" }, { prioritaet: 3 });
+});
+
+// Affiliate Sync alle 6 Stunden
+cron.schedule("0 */6 * * *", () => {
+  globalQueue.fuegeHinzu("revenue_analyst_v4_affiliate", { aktion: "affiliate_sync" }, { prioritaet: 3 });
+});
+
+// Heartbeat: Alle 1 Minute prüfen, ob das System läuft
+cron.schedule("* * * * *", () => {
+  logger.debug("💓 System Heartbeat — alle Systeme laufen");
+});

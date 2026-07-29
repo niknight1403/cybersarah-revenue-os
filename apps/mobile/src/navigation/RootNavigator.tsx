@@ -6,9 +6,6 @@ import { useAuth } from '../store/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { RootStackParamList, MainTabParamList } from '../types/navigation';
 
-// ══════════════════════════════════════════════════════════════════════
-// Screen Imports (werden in Sprint 2 erstellt)
-// ══════════════════════════════════════════════════════════════════════
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
@@ -16,13 +13,11 @@ import { RevenueScreen } from '../screens/RevenueScreen';
 import { HarasScreen } from '../screens/HaraScreen';
 import { ContentScreen } from '../screens/ContentScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// ══════════════════════════════════════════════════════════════════════
-// Tab-Icon
-// ══════════════════════════════════════════════════════════════════════
 function TabIcon({ name, focused }: { name: string; focused: boolean }): React.JSX.Element {
   const icons: Record<string, string> = {
     Dashboard: '📊',
@@ -33,17 +28,14 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }): React.J
   };
 
   return (
-    <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
-      <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>
+    <View style={[tabStyles.tabIcon, focused && tabStyles.tabIconActive]}>
+      <Text style={[tabStyles.tabEmoji, focused && tabStyles.tabEmojiActive]}>
         {icons[name] ?? '📄'}
       </Text>
     </View>
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// Main Tabs
-// ══════════════════════════════════════════════════════════════════════
 function MainTabs(): React.JSX.Element {
   const { colors } = useTheme();
 
@@ -55,8 +47,8 @@ function MainTabs(): React.JSX.Element {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.tabBarBorder,
           borderTopWidth: 1,
-          height: 72,
-          paddingBottom: 8,
+          height: 80,
+          paddingBottom: 12,
           paddingTop: 8,
           position: 'absolute',
           bottom: 0,
@@ -64,6 +56,7 @@ function MainTabs(): React.JSX.Element {
           right: 0,
           elevation: 0,
           shadowOpacity: 0,
+          backdropFilter: 'blur(24px)',
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
@@ -86,9 +79,6 @@ function MainTabs(): React.JSX.Element {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// Root Navigator
-// ══════════════════════════════════════════════════════════════════════
 export function RootNavigator(): React.JSX.Element {
   const { isAuthenticated } = useAuth();
   const { colors } = useTheme();
@@ -106,94 +96,37 @@ export function RootNavigator(): React.JSX.Element {
       {isAuthenticated ? (
         <>
           <Stack.Screen name="MainTabs" component={MainTabs} />
-          <Stack.Screen
-            name="WebView"
-            component={WebViewScreen}
-            options={{ headerShown: true, headerTitle: 'WebView' }}
-          />
-          <Stack.Screen
-            name="Payment"
-            component={PaymentScreen}
-            options={{ presentation: 'modal', headerShown: true, headerTitle: 'Zahlung' }}
-          />
+          <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="Register" component={RegisterScreen} options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ animation: 'slide_from_bottom' }} />
         </>
       ) : (
         <>
-          <Stack.Screen name="Auth" component={AuthScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         </>
       )}
     </Stack.Navigator>
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════
-// Platzhalter-Screens (werden in Sprint 2 vollständig implementiert)
-// ══════════════════════════════════════════════════════════════════════
-
-function AuthScreen(): React.JSX.Element {
-  const { colors } = useTheme();
-  return (
-    <View style={[styles.placeholder, { backgroundColor: colors.background }]}>
-      <Text style={[styles.placeholderTitle, { color: colors.text }]}>Willkommen bei CyberSarah</Text>
-      <Text style={[styles.placeholderSub, { color: colors.textMuted }]}>Bitte anmelden oder registrieren</Text>
-    </View>
-  );
-}
-
-function WebViewScreen(): React.JSX.Element {
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderTitle}>WebView</Text>
-    </View>
-  );
-}
-
-function PaymentScreen(): React.JSX.Element {
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderTitle}>Zahlung</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
+const tabStyles = StyleSheet.create({
   tabIcon: {
-    width: 48,
+    width: 44,
     height: 32,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
   tabIconActive: {
-    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
   },
   tabEmoji: {
-    fontSize: 22,
+    fontSize: 20,
     opacity: 0.6,
   },
   tabEmojiActive: {
     opacity: 1,
-  },
-  placeholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0c0c14',
-    padding: 24,
-  },
-  placeholderTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#e8e8ed',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  placeholderSub: {
-    fontSize: 15,
-    color: '#88889a',
-    textAlign: 'center',
-    lineHeight: 22,
   },
 });

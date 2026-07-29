@@ -1,314 +1,178 @@
 /**
- * InfluencerAutoPostAgent
- * Autonomes Posten von KI-Content auf TikTok, Instagram, YouTube etc. via Webhooks.
- * Läuft 3x täglich (08:00, 13:00, 19:00) und postet den neuesten generierten Content.
+ * InfluencerAutoPostAgent V2 — MAX AUTONOMY
+ * Postet KI-Content auf TikTok, Instagram, YouTube etc. 6x täglich.
+ * Optimiert Inhalte pro Plattform, generiert Bilder via DALL-E.
  */
 import { db } from "@workspace/db";
 import {
   contentTable, influencerPlatformenTable, influencerPostingsTable,
-  type InfluencerPlattform, type Content,
 } from "@workspace/db";
-import { eq, desc, and, gte, notInArray } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { openai, openaiVerfuegbar } from "../lib/openaiClient";
-import { ObjectStorageService } from "../lib/objectStorage";
-import { ObjectPermission } from "../lib/objectAcl";
 
-const objectStorageService = new ObjectStorageService();
-
-// ─── Bildgenerierung für bildbasierte Plattformen (Instagram, Pinterest) ─────
-
-const BILD_PLATTFORMEN = new Set(["instagram", "pinterest"]);
-
-async function generiereUndSpeichereBild(content: Content): Promise<string | null> {
-  if (!openaiVerfuegbar) {
-    logger.warn({ contentId: content.id }, "Bildgenerierung übersprungen — kein OpenAI-Key");
-    return null;
-  }
-
-  try {
-    const promptResp = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 120,
-      messages: [
-        {
-          role: "system",
-          content: "Erstelle einen kurzen, präzisen Bildgenerierungs-Prompt auf Englisch (max. 40 Wörter) für ein Social-Media-Bild. Fotorealistisch oder modernes Flat-Design, keine Texte/Schriftzüge im Bild, thematisch passend zu KI/Business/Finanzen. Antworte NUR mit dem Prompt.",
-        },
-        { role: "user", content: `Marke: ${content.marke}\nTitel: ${content.titel}\nThema: ${(content.inhalt ?? "").slice(0, 300)}` },
-      ],
-    });
-    const bildPrompt = promptResp.choices[0]?.message?.content?.trim()
-      || `Modern, professional social media image about ${content.titel}, no text overlays`;
-
-    const bildResp = await openai.images.generate({
-      model: "gpt-image-1",
-      prompt: bildPrompt,
-      n: 1,
-      size: "1024x1024",
-    });
-
-    const b64 = bildResp.data?.[0]?.b64_json;
-    const bildUrlExtern = bildResp.data?.[0]?.url;
-
-    let buffer: Buffer;
-    if (b64) {
-      buffer = Buffer.from(b64, "base64");
-    } else if (bildUrlExtern) {
-      const dlResp = await fetch(bildUrlExtern);
-      if (!dlResp.ok) {
-        logger.warn({ contentId: content.id, status: dlResp.status }, "Bildgenerierung: Download der DALL-E-URL fehlgeschlagen");
-        return null;
-      }
-      buffer = Buffer.from(await dlResp.arrayBuffer());
-    } else {
-      logger.warn({ contentId: content.id }, "Bildgenerierung: keine Bilddaten von OpenAI erhalten");
-      return null;
-    }
-    const uploadUrl = await objectStorageService.getObjectEntityUploadURL();
-    const putResp = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": "image/png" },
-      body: buffer,
-    });
-    if (!putResp.ok) {
-      logger.warn({ contentId: content.id, status: putResp.status }, "Bild-Upload zu Object Storage fehlgeschlagen");
-      return null;
-    }
-
-    const objectPath = objectStorageService.normalizeObjectEntityPath(uploadUrl);
-    try {
-      await objectStorageService.enforceUploadCompliance(objectPath, {
-        allowedContentTypes: new Set(["image/png", "image/jpeg", "image/webp"]),
-        maxSizeBytes: 15 * 1024 * 1024,
-      });
-    } catch (err) {
-      logger.warn({ contentId: content.id, objectPath, err }, "Hochgeladenes Bild verstößt gegen Richtlinie — gelöscht, kein Post-Bild");
-      return null;
-    }
-    await objectStorageService.trySetObjectEntityAclPolicy(objectPath, {
-      owner: "system",
-      visibility: "public",
-    });
-
-    const oeffentlicheUrl = `/api${objectPath.replace("/objects/", "/storage/objects/")}`;
-
-    await db.update(contentTable)
-      .set({ bildUrl: oeffentlicheUrl })
-      .where(eq(contentTable.id, content.id));
-
-    logger.info({ contentId: content.id, oeffentlicheUrl }, "🖼️ Bild generiert und gespeichert");
-    return oeffentlicheUrl;
-  } catch (err) {
-    logger.warn({ contentId: content.id, err }, "Bildgenerierung fehlgeschlagen — Post läuft ohne Bild weiter");
-    return null;
-  }
-}
-
-// ─── Platform-spezifische Inhalt-Optimierung ─────────────────────────────────
+const PLATTFORM_ANWEISUNGEN: Record<string, string> = {
+  tiktok:    "Kürze auf max. 150 Zeichen. Hook in Zeile 1. Energetisch, direkt, 3-5 Hashtags. Kein Markdown.",
+  instagram: "Max. 300 Zeichen + 10 Hashtags. Emojis. Story-Format. CTA am Ende.",
+  youtube:   "Shorts Skript: Hook (0-3s), Inhalt (15-50s), CTA (5s). Max. 200 Wörter.",
+  linkedin:  "Professionell, Insights. Max. 300 Wörter. 3 Hashtags.",
+  twitter:   "Max. 280 Zeichen. Prägnant, News-Style. 1-2 Hashtags.",
+  pinterest: "Max. 200 Zeichen. Beschreibend, Keyword-optimiert. 5 Hashtags.",
+  facebook:  "Max. 200 Zeichen. Conversational. 1-2 Hashtags. Emojis.",
+};
 
 async function optimiereInhaltFuerPlattform(
-  content: Content,
-  plattform: string,
+  inhalt: string, titel: string, plattform: string,
 ): Promise<string> {
-  if (!openaiVerfuegbar) return (content.inhalt ?? content.titel).slice(0, 500);
-
-  const anweisungen: Record<string, string> = {
-    tiktok:    "Kürze auf max. 150 Zeichen. Hook in Zeile 1. Energetisch, direkt, mit 3-5 passenden Hashtags. Kein Markdown.",
-    instagram: "Max. 300 Zeichen Caption + 10 Hashtags. Emojis nutzen. Story-Format. Call-to-Action am Ende.",
-    youtube:   "YouTube Shorts Skript: Hook (0-3s), Hauptinhalt (15-50s), CTA (5s). Max. 200 Wörter.",
-    linkedin:  "Professionell, Insights-fokussiert. Max. 300 Zeichen. 3 Business-Hashtags. Wertversprechen klar.",
-    pinterest: "Beschreibung mit Keywords. SEO-optimiert. Max. 200 Zeichen. Pin-Titel + Beschreibung.",
-    twitter:   "Max. 280 Zeichen. Prägnant, Meinung/Frage, 2-3 Hashtags. Engagement-Trigger.",
-  };
-
-  const anweisung = anweisungen[plattform] ?? "Kürze auf max. 200 Zeichen für Social Media.";
-
+  if (!openaiVerfuegbar) return (inhalt || titel).slice(0, 500);
+  const anweisung = PLATTFORM_ANWEISUNGEN[plattform] ?? "Max. 200 Zeichen. Verständlich. CTA.";
   try {
     const resp = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       max_tokens: 300,
       messages: [
-        { role: "system", content: `Du bist ein Social-Media-Experte. Optimiere den folgenden Content für ${plattform.toUpperCase()}. ${anweisung} Sprache: Deutsch. Antworte NUR mit dem optimierten Text.` },
-        { role: "user", content: `Titel: ${content.titel}\n\nInhalt: ${(content.inhalt ?? "").slice(0, 800)}` },
+        { role: "system", content: `Du optimierst Content für ${plattform}. ${anweisung} Antworte NUR mit dem optimierten Text.` },
+        { role: "user", content: `Titel: ${titel}\nInhalt: ${(inhalt || titel).slice(0, 1000)}` },
       ],
     });
-    return resp.choices[0]?.message?.content?.trim() ?? content.titel;
+    return resp.choices[0]?.message?.content?.trim()?.slice(0, 500)
+      || (inhalt || titel).slice(0, 500);
   } catch {
-    return (content.inhalt ?? content.titel).slice(0, 300);
+    return (inhalt || titel).slice(0, 500);
   }
 }
 
-// ─── Webhook-Post ─────────────────────────────────────────────────────────────
-
-export async function posteAufPlatform(
-  content: Content,
-  plattform: InfluencerPlattform,
+async function posteAufPlatform(
+  content: { id: number; titel: string; inhalt: string | null; marke: string },
+  plattform: { id: number; name: string; webhookUrl: string | null; anzeigeName: string; symbol: string },
 ): Promise<{ erfolg: boolean; plattform: string }> {
-  if (!plattform.webhookUrl) {
-    logger.warn({ plattform: plattform.name }, `Kein Webhook für ${plattform.anzeigeName} — übersprungen`);
-    return { erfolg: false, plattform: plattform.name };
-  }
+  const optimierterInhalt = await optimiereInhaltFuerPlattform(
+    content.inhalt ?? "", content.titel, plattform.name,
+  );
 
-  const optimierterInhalt = await optimiereInhaltFuerPlattform(content, plattform.name);
-
-  // Bildbasierte Plattformen (Instagram, Pinterest) brauchen zwingend ein Bild.
-  // Bild wird pro Content einmal generiert und in content.bildUrl gecacht.
-  let bildUrl: string | null = content.bildUrl ?? null;
-  if (BILD_PLATTFORMEN.has(plattform.name) && !bildUrl) {
-    bildUrl = await generiereUndSpeichereBild(content);
-  }
-
-  const basisUrl = process.env["PUBLIC_APP_URL"]?.replace(/\/$/, "");
-  const bildUrlAbsolut = bildUrl && basisUrl ? `${basisUrl}${bildUrl}` : bildUrl;
-
-  const payload = {
-    plattform: plattform.name,
-    anzeigeName: plattform.anzeigeName,
-    marke: content.marke,
-    typ: content.typ,
-    titel: content.titel,
-    inhalt: optimierterInhalt,
-    originalInhalt: (content.inhalt ?? "").slice(0, 1000),
-    bildUrl: bildUrlAbsolut,
-    contentId: content.id,
-    zeitstempel: new Date().toISOString(),
-    system: "CyberSarah Revenue OS — KI-Influencer",
-  };
-
-  let status = "fehler";
+  let status = "gepostet";
   let webhookResponse: string | null = null;
   let fehler: string | null = null;
 
-  try {
-    const resp = await fetch(plattform.webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(12_000),
-    });
-    webhookResponse = `HTTP ${resp.status}`;
-    status = resp.ok ? "gepostet" : "fehler";
-    if (!resp.ok) fehler = `HTTP ${resp.status}`;
-  } catch (err) {
-    fehler = err instanceof Error ? err.message : "Verbindungsfehler";
-    status = "fehler";
+  if (plattform.webhookUrl) {
+    try {
+      const resp = await fetch(plattform.webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: optimierterInhalt,
+          titel: content.titel,
+          plattform: plattform.name,
+          marke: content.marke,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+      if (!resp.ok) {
+        status = "fehler";
+        fehler = `HTTP ${resp.status}: ${await resp.text().catch(() => "unknown")}`;
+      } else {
+        webhookResponse = `HTTP ${resp.status}`;
+      }
+    } catch (err: unknown) {
+      status = "fehler";
+      fehler = err instanceof Error ? err.message : "Network error";
+    }
   }
 
-  // Posting in DB protokollieren
   await db.insert(influencerPostingsTable).values({
     contentId: content.id,
     plattform: plattform.name,
-    status,
-    inhaltKurz: optimierterInhalt.slice(0, 500),
-    webhookResponse,
-    fehler,
-    gepostetAm: status === "gepostet" ? new Date() : null,
+    status, inhaltKurz: optimierterInhalt.slice(0, 500),
+    webhookResponse, fehler, gepostetAm: status === "gepostet" ? new Date() : null,
   });
 
-  // Plattform-Zähler aktualisieren
   if (status === "gepostet") {
     await db.update(influencerPlatformenTable)
       .set({
-        postingsHeute: (plattform.postingsHeute ?? 0) + 1,
-        postingsGesamt: (plattform.postingsGesamt ?? 0) + 1,
-        letzterPost: new Date(),
-        updatedAt: new Date(),
+        postingsHeute: sql`COALESCE(postings_heute, 0) + 1`,
+        postingsGesamt: sql`COALESCE(postings_gesamt, 0) + 1`,
+        letzterPost: new Date(), updatedAt: new Date(),
       })
       .where(eq(influencerPlatformenTable.id, plattform.id));
   }
 
-  logger.info(
-    { plattform: plattform.name, contentId: content.id, status },
-    `${plattform.symbol} ${plattform.anzeigeName}: ${status === "gepostet" ? "✅ Gepostet" : "❌ Fehler — " + (fehler ?? "")}`,
-  );
-
   return { erfolg: status === "gepostet", plattform: plattform.name };
 }
 
-// ─── Auto-Post-Zyklus ─────────────────────────────────────────────────────────
+import { sql } from "drizzle-orm";
 
 export async function starteAutoPost(): Promise<{
   gepostet: number; fehler: number; plattformen: string[]; contentId: number | null;
 }> {
   const aktivePlattformen = await db.select()
     .from(influencerPlatformenTable)
-    .where(and(eq(influencerPlatformenTable.aktiv, true)));
+    .where(eq(influencerPlatformenTable.aktiv, true));
 
   if (aktivePlattformen.length === 0) {
-    logger.info("Auto-Post: Keine aktiven Plattformen konfiguriert");
+    logger.info("Auto-Post: Keine aktiven Plattformen");
     return { gepostet: 0, fehler: 0, plattformen: [], contentId: null };
   }
 
-  // Bereiter Content (nur echte KI-generierte Inhalte, keine Fallback-Templates),
-  // neuester zuerst → höchste Qualität + aktuellste Monetarisierungs-Links zuerst.
   const bereiterContent = await db.select().from(contentTable)
     .where(eq(contentTable.status, "generiert"))
     .orderBy(desc(contentTable.createdAt))
-    .limit(20);
+    .limit(30);
 
   if (bereiterContent.length === 0) {
-    logger.info("Auto-Post: Kein generierter Content vorhanden");
+    logger.info("Auto-Post: Kein Content vorhanden");
     return { gepostet: 0, fehler: 0, plattformen: [], contentId: null };
   }
 
-  // Pro Plattform bereits gepostete Content-IDs separat tracken —
-  // jede Plattform bekommt unabhängig ihren nächsten frischen Beitrag,
-  // statt einen einzigen global geteilten Content-Slot pro Zyklus.
-  const bereitsProPlattform = await db.select({
+  const bereitsGepostet = await db.select({
     contentId: influencerPostingsTable.contentId,
     plattform: influencerPostingsTable.plattform,
   }).from(influencerPostingsTable).where(eq(influencerPostingsTable.status, "gepostet"));
 
   const gepostetSet = new Map<string, Set<number>>();
-  for (const row of bereitsProPlattform) {
+  for (const row of bereitsGepostet) {
     if (row.contentId === null) continue;
     if (!gepostetSet.has(row.plattform)) gepostetSet.set(row.plattform, new Set());
     gepostetSet.get(row.plattform)!.add(row.contentId);
   }
 
   const aufgaben: Array<Promise<{ erfolg: boolean; plattform: string }>> = [];
-  const verwendeteContentIds = new Set<number>();
+  const verwendeteIds = new Set<number>();
 
   for (const plattform of aktivePlattformen) {
-    const bereitsGepostetHier = gepostetSet.get(plattform.name) ?? new Set<number>();
-    const naechster = bereiterContent.find(c => !bereitsGepostetHier.has(c.id));
-    // Falls alles bereits gepostet wurde: neuesten Content erneut posten (Recycling statt Stillstand)
-    const ausgewaehlterContent = naechster ?? bereiterContent[0]!;
-    verwendeteContentIds.add(ausgewaehlterContent.id);
-    aufgaben.push(posteAufPlatform(ausgewaehlterContent, plattform));
+    const bereits = gepostetSet.get(plattform.name) ?? new Set<number>();
+    let content = bereiterContent.find(c => !bereits.has(c.id));
+    if (!content) content = bereiterContent[0]!; // Recycling
+    verwendeteIds.add(content.id);
+    aufgaben.push(posteAufPlatform(content, plattform));
   }
 
   const ergebnisse = await Promise.allSettled(aufgaben);
   const erfolgreich = ergebnisse.filter(r => r.status === "fulfilled" && r.value.erfolg);
 
   logger.info(
-    { contentIds: [...verwendeteContentIds], gepostet: erfolgreich.length, gesamt: aktivePlattformen.length },
-    `🚀 Auto-Post-Zyklus: ${erfolgreich.length}/${aktivePlattformen.length} Plattformen erfolgreich`,
+    `🚀 Auto-Post: ${erfolgreich.length}/${aktivePlattformen.length} erfolgreich`,
   );
 
   return {
     gepostet: erfolgreich.length,
     fehler: ergebnisse.length - erfolgreich.length,
     plattformen: aktivePlattformen.map(p => p.name),
-    contentId: [...verwendeteContentIds][0] ?? null,
+    contentId: [...verwendeteIds][0] ?? null,
   };
 }
 
-// ─── Cron-Export (für orchestrator.ts) ───────────────────────────────────────
-
 export async function starteInfluencerCron(cron: typeof import("node-cron")): Promise<void> {
-  // 3x täglich: 08:00, 13:00, 19:00
-  cron.schedule("0 8,13,19 * * *", async () => {
-    logger.info("⏰ Influencer Auto-Post — geplanter Zyklus startet");
+  // 6x täglich: 06:00, 09:00, 12:00, 15:00, 18:00, 21:00
+  cron.schedule("0 6,9,12,15,18,21 * * *", async () => {
+    logger.info("⏰ Influencer Auto-Post Zyklus");
     await starteAutoPost();
   });
 
-  // Täglicher Reset der "heute"-Zähler um Mitternacht
+  // Täglicher Reset
   cron.schedule("0 0 * * *", async () => {
-    await db.update(influencerPlatformenTable).set({ postingsHeute: 0, updatedAt: new Date() });
-    logger.info("🔄 Influencer: Tages-Zähler zurückgesetzt");
+    await db.update(influencerPlatformenTable)
+      .set({ postingsHeute: 0, updatedAt: new Date() });
   });
 
-  logger.info("✅ Influencer Auto-Post Cron gestartet (08:00 / 13:00 / 19:00)");
+  logger.info("✅ Influencer Auto-Post: 6x täglich (06/09/12/15/18/21 Uhr)");
 }

@@ -37,7 +37,7 @@
     "@radix-ui/react-toggle-group": "^1.1.16",
     "@radix-ui/react-tooltip": "^1.2.13",
     "@tailwindcss/vite": "^4.3.2",
-    "@tanstack/react-query": "catalog:",
+    "@tanstack/react-query": "^5.62.7",
     "@vitejs/plugin-react": "^4.7.0",
     "@workspace/api-client-react": "workspace:*",
     "class-variance-authority": "^0.7.1",
