@@ -48,7 +48,7 @@ router.get("/cart-recovery/stats", async (_req, res) => {
 
   // Wiederhergestellter Umsatz
   const umsatz = await db
-    .select({ summe: sql<number>`COALESCE(SUM(gesamtabetrag::numeric), 0)` })
+    .select({ summe: sql<number>`COALESCE(SUM(gesamtbetrag::numeric), 0)` })
     .from(abandonedCartsTable)
     .where(
       and(
