@@ -4,7 +4,7 @@ import {
   Activity, LayoutDashboard, Zap, Bot, TrendingUp, Rocket,
   Users, FileText, Search, Globe, Clapperboard, Recycle,
   Mail, Megaphone, Brain, DollarSign, Target, Cpu, CreditCard, Package, Repeat,
-  Newspaper, MessageCircle, Tag, Key, TerminalSquare,
+  Newspaper, MessageCircle, Key, TerminalSquare,
   Menu, X, Sparkles, Circle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,7 +22,6 @@ const navigation = [
   { name: "Finance-Team", href: "/finance-team", icon: Users, badge: "KI", gruppe: "umsatz" },
   { name: "Newsletter", href: "/newsletter", icon: Newspaper, badge: "NEU", gruppe: "umsatz" },
   { name: "WhatsApp", href: "/whatsapp", icon: MessageCircle, badge: "NEU", gruppe: "umsatz" },
-  { name: "🎫 Coupons", href: "/coupons", icon: Tag, badge: "NEU", gruppe: "umsatz" },
   { name: "📧 E-Mail-Auto", href: "/email", icon: Mail, badge: "NEU", gruppe: "umsatz" },
   { name: "Content", href: "/content", icon: FileText, gruppe: "content" },
   { name: "SEO-Empire", href: "/seo-content", icon: Search, badge: "AUTO", gruppe: "content" },

@@ -19,3 +19,6 @@ export * from "./leads";
 export * from "./dunning";
 export * from "./pendingAttribution";
 export * from "./webhookEvents";
+
+export * from "./coupons";
+export * from "./abandonedCarts";

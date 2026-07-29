@@ -25,6 +25,13 @@ import influencerCoreRouter from "./influencerCore";
 import whatsappRouter from "./whatsapp";
 import masterAgentV2Router from "./masterAgentV2";
 import digistoreRouter from "./digistore";
+import stripeProductsRouter from "./stripeProducts";
+import stripePaymentsRouter from "./stripePayments";
+import stripeDashboardRouter from "./stripeDashboard";
+import stripePortalRouter from "./stripePortal";
+import emailRoutesRouter from "./emailRoutes";
+import pushRoutesRouter from "./pushRoutes";
+import socialRoutesRouter from "./socialRoutes";
 
 const router: IRouter = Router();
 
@@ -54,5 +61,12 @@ router.use(influencerCoreRouter);
 router.use(whatsappRouter);
 router.use(masterAgentV2Router);
 router.use(digistoreRouter);
+router.use(stripeProductsRouter);
+router.use(stripePaymentsRouter);
+router.use(stripeDashboardRouter);
+router.use(stripePortalRouter);
+router.use(emailRoutesRouter);
+router.use(pushRoutesRouter);
+router.use(socialRoutesRouter);
 
 export default router;
