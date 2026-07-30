@@ -85,12 +85,12 @@ export class HaraAgent extends AgentBase {
   async fuehreAlleAutonomAus(): Promise<AufgabeErgebnis> {
     if (!db) return { success: false, message: "Keine DB verfügbar" };
 
+    // SPRINT 53: ALLE bestätigten Pakete verarbeiten (kein Limit)
     const bestaetigte = await db
       .select()
       .from(haraProposalsTable)
       .where(eq(haraProposalsTable.status, "bestaetigt"))
-      .orderBy(desc(haraProposalsTable.gesamtScore))
-      .limit(10);
+      .orderBy(desc(haraProposalsTable.gesamtScore));
 
     if (bestaetigte.length === 0) {
       return { success: true, message: "Keine bestätigten Pakete zur Ausführung" };
@@ -116,6 +116,17 @@ export class HaraAgent extends AgentBase {
         status: fehler === 0 ? "erfolgreich" : "warnung",
         nachricht: `${durchgefuehrt} Pakete ausgeführt, ${fehler} Fehler`,
       });
+    }
+
+    // SPRINT 53: Prüfe ob noch bestätigte Pakete übrig sind → rekursiv weiter
+    const restliche = await db
+      .select({ id: haraProposalsTable.id })
+      .from(haraProposalsTable)
+      .where(eq(haraProposalsTable.status, "bestaetigt"))
+      .limit(5);
+    if (restliche.length > 0 && durchgefuehrt > 0) {
+      logger.info({ rest: restliche.length }, "🔄 HARA: Weitere bestätigte Pakete gefunden — setze Ausführung fort");
+      return this.fuehreAlleAutonomAus();
     }
 
     return {
@@ -147,12 +158,14 @@ export class HaraAgent extends AgentBase {
       .from(haraProposalsTable)
       .where(inArray(haraProposalsTable.status, ["vorgeschlagen", "bestaetigt", "in_umsetzung"]));
 
+    // SPRINT 53: Bestätigte Vorschläge immer ausführen (auch wenn Queue nicht voll)
+    const bestaetigteCheck = offene.filter(o => o.status === "bestaetigt");
+    if (bestaetigteCheck.length > 0) {
+      logger.info({ anzahl: bestaetigteCheck.length }, "🤖 HARA: Führe bestätigte Vorschläge sofort aus");
+      return this.fuehreAlleAutonomAus();
+    }
+    
     if (offene.length >= MAX_OFFENE_VORSCHLAEGE) {
-      const bestaetigte = offene.filter(o => o.status === "bestaetigt");
-      if (bestaetigte.length > 0) {
-        logger.info({ anzahl: bestaetigte.length }, "HARA: Führe bestätigte Vorschläge aus trotz vollem Queue");
-        return this.fuehreAlleAutonomAus();
-      }
       return {
         success: true,
         message: `${offene.length} Pakete aktiv — erst diese abarbeiten`,
