@@ -5,7 +5,7 @@
 import { Router } from "express";
 import { chatWidgetHtml } from "../lib/chatWidget";
 import { newsletterWidgetHtml } from "../lib/newsletterWidget";
-import { systemStatusBadgeHtml } from "../lib/chatWidget";
+import { systemStatusBadgeHtml } from "../lib/systemWidget";
 import { db } from "@workspace/db";
 import { produkteTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
