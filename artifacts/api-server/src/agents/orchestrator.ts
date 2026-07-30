@@ -300,6 +300,54 @@ let mainLoopZyklus = 0;
 
 // ─── Initialisierung ─────────────────────────────────────────────────────────
 
+async function automaticheDatenInitialisierung(): Promise<void> {
+  try {
+    const { produkteTable, revenueOpportunitiesTable, transactionsTable } = await import("@workspace/db");
+    const prodCount = await db.select({ count: sql`COUNT(*)` }).from(produkteTable);
+    const prodAnzahl = Number(prodCount[0]?.count ?? 0);
+    const oppCount = await db.select({ count: sql`COUNT(*)` }).from(revenueOpportunitiesTable);
+    const oppAnzahl = Number(oppCount[0]?.count ?? 0);
+
+    if (prodAnzahl === 0 && oppAnzahl === 0) {
+      logger.info("📦 Auto-Seeding: Erstelle initiale Revenue-Opportunities");
+      const initialChancen = [
+        { titel: "KI-Toolkit Premium Verkauf", kanal: "website", potenzial: "4700.00", prioritaet: 1, typ: "verkauf", status: "aktiv", beschreibung: "Hauptprodukt: KI-Toolkit" },
+        { titel: "Revenue OS Abo-Modell", kanal: "in-app", potenzial: "9700.00", prioritaet: 1, typ: "abo", status: "aktiv", beschreibung: "Monatliches Revenue OS Abo" },
+        { titel: "AI Consulting Sessions", kanal: "coaching", potenzial: "5000.00", prioritaet: 2, typ: "dienstleistung", status: "aktiv", beschreibung: "1:1 KI-Business-Consulting" },
+        { titel: "Social Media AI Content", kanal: "social", potenzial: "2700.00", prioritaet: 2, typ: "content", status: "aktiv", beschreibung: "KI-Content für Social Media" },
+        { titel: "YouTube Kanal Automation", kanal: "youtube", potenzial: "3500.00", prioritaet: 2, typ: "content", status: "aktiv", beschreibung: "YouTube Automation" },
+      ];
+      for (const c of initialChancen) {
+        try { await db.insert(revenueOpportunitiesTable).values({ titel: c.titel, kanal: c.kanal, potenzial: c.potenzial, prioritaet: c.prioritaet, typ: c.typ, status: c.status, beschreibung: c.beschreibung, erstelltAm: new Date(), quelle: "Auto-Seeding" }); } catch {}
+      }
+      logger.info({ chancen: initialChancen.length }, "✅ Auto-Seeding: Revenue-Opportunities erstellt");
+
+      try {
+        const stripe = (await import("../lib/stripeClient")).getStripeClient();
+        if (stripe) {
+          const basisProdukte = [
+            { name: "KI-Toolkit Premium", preis: 47.00, desc: "KI-Toolkit" },
+            { name: "Revenue OS License", preis: 97.00, desc: "Revenue OS" },
+            { name: "AI Content Package", preis: 27.00, desc: "AI Content" },
+          ];
+          for (const p of basisProdukte) {
+            try {
+              const sp = await stripe.products.create({ name: p.name, description: p.desc });
+              const spr = await stripe.prices.create({ product: sp.id, unit_amount: Math.round(p.preis * 100), currency: "eur" });
+              await db.insert(produkteTable).values({ name: p.name, preis: String(p.preis), beschreibung: p.desc, stripeProduktId: sp.id, stripePreisId: spr.id, aktiv: true, verkaeufeAnzahl: "0" });
+            } catch {}
+          }
+          logger.info("✅ Auto-Seeding: Stripe-Produkte erstellt");
+        }
+      } catch {}
+    } else {
+      logger.info({ produkte: prodAnzahl, chancen: oppAnzahl }, "✅ Auto-Seeding: Daten bereits vorhanden");
+    }
+  } catch (err) {
+    logger.warn({ err }, "Auto-Seeding nicht kritisch");
+  }
+}
+
 export async function initialisiereAgenten(): Promise<void> {
   for (const def of AGENT_DEFINITIONEN) {
     const vorhandene = await db
@@ -921,53 +969,7 @@ function registriereQueueHandler(): void {
 
 // ─── Auto-Seeding: Erstellt initiale Daten beim ersten Start ──────────────────
 
-async function automaticheDatenInitialisierung(): Promise<void> {
-  try {
-    const { produkteTable, revenueOpportunitiesTable, transactionsTable } = await import("@workspace/db");
-    const prodCount = await db.select({ count: sql`COUNT(*)` }).from(produkteTable);
-    const prodAnzahl = Number(prodCount[0]?.count ?? 0);
-    const oppCount = await db.select({ count: sql`COUNT(*)` }).from(revenueOpportunitiesTable);
-    const oppAnzahl = Number(oppCount[0]?.count ?? 0);
 
-    if (prodAnzahl === 0 && oppAnzahl === 0) {
-      logger.info("📦 Auto-Seeding: Erstelle initiale Revenue-Opportunities");
-      const initialChancen = [
-        { titel: "KI-Toolkit Premium Verkauf", kanal: "website", potenzial: "4700.00", prioritaet: 1, typ: "verkauf", status: "aktiv", beschreibung: "Hauptprodukt: KI-Toolkit" },
-        { titel: "Revenue OS Abo-Modell", kanal: "in-app", potenzial: "9700.00", prioritaet: 1, typ: "abo", status: "aktiv", beschreibung: "Monatliches Revenue OS Abo" },
-        { titel: "AI Consulting Sessions", kanal: "coaching", potenzial: "5000.00", prioritaet: 2, typ: "dienstleistung", status: "aktiv", beschreibung: "1:1 KI-Business-Consulting" },
-        { titel: "Social Media AI Content", kanal: "social", potenzial: "2700.00", prioritaet: 2, typ: "content", status: "aktiv", beschreibung: "KI-Content für Social Media" },
-        { titel: "YouTube Kanal Automation", kanal: "youtube", potenzial: "3500.00", prioritaet: 2, typ: "content", status: "aktiv", beschreibung: "YouTube Automation" },
-      ];
-      for (const c of initialChancen) {
-        try { await db.insert(revenueOpportunitiesTable).values({ titel: c.titel, kanal: c.kanal, potenzial: c.potenzial, prioritaet: c.prioritaet, typ: c.typ, status: c.status, beschreibung: c.beschreibung, erstelltAm: new Date(), quelle: "Auto-Seeding" }); } catch {}
-      }
-      logger.info({ chancen: initialChancen.length }, "✅ Auto-Seeding: Revenue-Opportunities erstellt");
-
-      try {
-        const stripe = (await import("../lib/stripeClient")).getStripeClient();
-        if (stripe) {
-          const basisProdukte = [
-            { name: "KI-Toolkit Premium", preis: 47.00, desc: "KI-Toolkit" },
-            { name: "Revenue OS License", preis: 97.00, desc: "Revenue OS" },
-            { name: "AI Content Package", preis: 27.00, desc: "AI Content" },
-          ];
-          for (const p of basisProdukte) {
-            try {
-              const sp = await stripe.products.create({ name: p.name, description: p.desc });
-              const spr = await stripe.prices.create({ product: sp.id, unit_amount: Math.round(p.preis * 100), currency: "eur" });
-              await db.insert(produkteTable).values({ name: p.name, preis: String(p.preis), beschreibung: p.desc, stripeProduktId: sp.id, stripePreisId: spr.id, aktiv: true, verkaeufeAnzahl: "0" });
-            } catch {}
-          }
-          logger.info("✅ Auto-Seeding: Stripe-Produkte erstellt");
-        }
-      } catch {}
-    } else {
-      logger.info({ produkte: prodAnzahl, chancen: oppAnzahl }, "✅ Auto-Seeding: Daten bereits vorhanden");
-    }
-  } catch (err) {
-    logger.warn({ err }, "Auto-Seeding nicht kritisch");
-  }
-}
   });
   logger.info("Job-Queue Handler registriert");
 }
