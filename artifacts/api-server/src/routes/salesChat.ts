@@ -5,10 +5,11 @@
  */
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { leadsTable } from "@workspace/db";
+import { leadsTable, produkteTable } from "@workspace/db";
 import { openai, openaiVerfuegbar } from "../lib/openaiClient";
 import { getStripeClient } from "../lib/stripeClient";
 import { logger } from "../lib/logger";
+import { eq } from "drizzle-orm";
 
 const router = Router();
 const PUBLIC_URL = process.env["PUBLIC_APP_URL"] ?? "http://167.233.196.20:3000";
@@ -20,7 +21,6 @@ const MAX_VERLAUF = 50;
 // Produktliste aus DB für den Kontext
 async function ladeProduktKontext(): Promise<string> {
   try {
-    const { produkteTable } = await import("@workspace/db");
     const produkte = await db
       .select({ name: produkteTable.name, preis: produkteTable.preis, kategorie: produkteTable.kategorie })
       .from(produkteTable)
