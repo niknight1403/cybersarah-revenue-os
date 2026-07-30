@@ -1,51 +1,66 @@
-# SPRINT 47 — Marketing Website + Checkout Pages + APK v6.1
+# SPRINT 48 — One-Click Seller + APK v6.2
 
 ## ✅ ABGESCHLOSSEN
 
-### 🏪 Professionelle Marketing-Website (NEU)
-**Datei:** `artifacts/dashboard/dist/site.html`
-**Öffnen:** Nach APK-Start oder `http://server:3000/site.html`
+### 🛍️ One-Click Seller (NEU — Verkaufen in 5 Sekunden!)
+**Datei:** `one-click-seller.py`
 
-**Eine komplette Produkt-Website mit:**
-- 🎨 **Modernes Dark-Design** mit Glas-Effekt
-- 📱 **Mobile-optimiert** (responsive)
-- 🛍️ **Alle 10 Produkte** mit Preisen
-- 🔗 **Checkout-Seite** für jedes Produkt
-- ⚡ **Schnell-Ladezeiten** (statisches HTML)
-- 🤖 **KI-gestützte Features**-Sektion
-- 🛠️ **Tools-Übersicht** mit Terminal-Befehlen
+```bash
+# Einfach starten:
+python3 one-click-seller.py
 
-```
-┌─────────────────────────────────────┐
-│  🚀 CyberSarah                      │
-│  KI-gestütztes Revenue OS           │
-│                                      │
-│  [🛍️ Produkte] [📱 APK]            │
-│                                      │
-│  10+ Produkte | 24/7 | 35 Agenten   │
-├─────────────────────────────────────┤
-│  🛍️ Unsere Produkte                 │
-│  ┌────────┐ ┌────────┐ ┌────────┐  │
-│  │Produkt1│ │Produkt2│ │Produkt3│  │
-│  │ €9.99  │ │ €9.99  │ │ €9.99  │  │
-│  │[Kaufen]│ │[Kaufen]│ │[Kaufen]│  │
-│  └────────┘ └────────┘ └────────┘  │
-└─────────────────────────────────────┘
+# Oder automatisch (bestes Produkt):
+python3 one-click-seller.py --auto
+
+# Oder ALLE Produkte:
+python3 one-click-seller.py --all
 ```
 
-### 🔗 Checkout-Seite (NEU)
-**Datei:** `artifacts/dashboard/dist/checkout.html`
-- Zeigt Produktname + Preis
-- Erstellt automatisch Stripe-Checkout-Link
-- Modernes Design mit Vertrauens-Siegeln
-- Fallback zu Stripe-Direktlink
+**Was passiert in EINEM Schritt:**
+1. 🔗 **Checkout-Link** von Stripe LIVE
+2. 📝 **KI-Marketing-Text** für Kunden
+3. 🏗️ **Verkaufsseite** (HTML, professionell)
+4. 💾 **Alles gespeichert** in `sell_ready/`
+5. 📤 **Fertig zum Teilen!**
 
-### 📱 APK v6.1 (Build 26)
-- Version 6.1.0 — 3.6 MB, signiert
+**Ausgabe:**
+```
+sell_ready/
+├── produktname_20260730_151200.html   ← Verkaufsseite
+├── produktname_20260730_151200.txt    ← Links + Text
+└── ALL_PRODUCTS_20260730_151200.html  ← Alle Produkte auf einer Seite
+```
 
-### 📦 Geänderte Dateien
-- `artifacts/dashboard/dist/site.html` — NEU (Marketing-Website)
-- `artifacts/dashboard/dist/checkout.html` — NEU (Checkout-Seite)
-- `android/app/build.gradle` — v6.1.0 (Build 26)
-- `CyberSarah-Master-v6.1-release.apk` — NEU
-- `artifacts/dashboard/dist/index.html` — Update auf v6.1
+**So einfach geht's:**
+```bash
+python3 one-click-seller.py
+# → Produkt wählen
+# → Checkout-Link kopieren
+# → An Kunden senden
+# → 💰 Geld erhalten!
+```
+
+### 📱 APK v6.2 (Build 27)
+- Version 6.2.0 — 3.6 MB, signiert
+
+### 🚀 Das komplette Revenue-System (48 Sprints)
+```bash
+# 🛍️ VERKAUFEN (3 Wege)
+python3 one-click-seller.py              # ⚡ One-Click (NEU!)
+python3 sales-server.py                   # 🏪 Lokaler Store
+python3 product-launch-system.py          # 🚀 Launch-Automation
+
+# 💳 STRIPE
+python3 stripe-dashboard.py               # LIVE Dashboard
+
+# 🤖 AUTOMATION
+python3 master-automation.py              # 24/7 Hub
+python3 cybersarah-command-center.py      # All-in-One
+
+# 📱 CONTENT
+python3 social-content-engine.py          # TikTok/IG/YT
+python3 whatsapp-campaign.py              # WhatsApp
+
+# 🛠️ DEPLOYMENT
+bash deploy-now.sh --password=PASS        # Server deployen
+```
