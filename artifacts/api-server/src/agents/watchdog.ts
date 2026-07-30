@@ -13,8 +13,8 @@ import { eq, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { openai, openaiVerfuegbar } from "../lib/openaiClient";
 
-const WATCHDOG_INTERVALL_MS = 5 * 60 * 1000; // 5 Minuten
-const STUCK_TIMEOUT_MS = 30 * 60 * 1000;     // 30 Minuten
+const WATCHDOG_INTERVALL_MS = 60 * 1000; // 5 Minuten
+const STUCK_TIMEOUT_MS = 10 * 60 * 1000;     // 30 Minuten
 const FALLBACK_SCHWELLE = 50;                  // Nach 50 Fallbacks → Auto-Pause
 const API_KEY_FEHLER_PATTERN = /401|Incorrect API key|Invalid API key/i;
 
@@ -253,7 +253,10 @@ async function fuehreWatchdogZyklusDurch(): Promise<void> {
         continue;
       }
 
-      // 3. AKTIV + stuck (keine Aktivität >30 Min)
+      // 3. Erzwinge Queue-Verarbeitung (wecke wartende Jobs auf)
+      // Dies stellt sicher, dass der Job-Queue-Loop aktiv bleibt
+      
+      // 4. AKTIV + stuck (keine Aktivität >10 Min)
       if (agent.status === "aktiv" && agent.letzteAktivitaet && agent.letzteAktivitaet < stuckGrenze) {
         const stuckSeit = Math.round((Date.now() - agent.letzteAktivitaet.getTime()) / 1000);
 
@@ -273,6 +276,13 @@ async function fuehreWatchdogZyklusDurch(): Promise<void> {
       }
     }
 
+    // Aktive Queue-Verarbeitung triggern
+    try {
+      const { globalQueue } = await import("./JobQueue");
+      // Bereinige alte Jobs (älter als 1h)
+      globalQueue.bereinige(3600000);
+    } catch {}
+    
     const dauer = Date.now() - startzeit;
     logger.info({ zyklus: watchdogZyklus, zurueckgesetzt, alarme, dauer },
       `Watchdog-Zyklus #${watchdogZyklus}: ${zurueckgesetzt} resets, ${alarme} Alarme`);
@@ -289,7 +299,7 @@ async function fuehreWatchdogZyklusDurch(): Promise<void> {
 export function starteWatchdog(): void {
   if (watchdogTimer) return;
 
-  setTimeout(() => { void fuehreWatchdogZyklusDurch(); }, 30_000);
+  setTimeout(() => { void fuehreWatchdogZyklusDurch(); }, 10_000);
 
   watchdogTimer = setInterval(() => {
     void fuehreWatchdogZyklusDurch();
