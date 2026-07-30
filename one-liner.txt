@@ -1,18 +1,19 @@
 ╔══════════════════════════════════════════════════════════════╗
-║  CyberSarah v5.1 — Einzeiler für Termux                    ║
+║  CyberSarah v5.2 — Einzeiler für Termux                    ║
 ║  Einfach kopieren und in Termux einfügen                   ║
 ╚══════════════════════════════════════════════════════════════╝
 
-🤖 NEU: AUTO-UPDATE AGENT — Einmal deployen, für immer autonom!
+🚀 DEPLOY-NOW (Zero-Config — fragt nach SSH-Passwort):
+bash deploy-now.sh
 
-📱 DEPLOY-BOT (fragt nach SSH-Passwort):
-python3 termux-deploy.py
-
-🤖 DEPLOY-BOT mit Passwort (vollautomatisch):
-python3 termux-deploy.py --password DEIN_PASSWORT
+🤖 DEPLOY-NOW mit Passwort (automatisch):
+bash deploy-now.sh --password=DEIN_PASSWORT
 
 🛠️ QUICK-FIX SERVER (via SSH):
 ssh root@167.233.196.20 "bash <(curl -sL https://raw.githubusercontent.com/niknight1403/cybersarah-revenue-os/main/quick-fix-server.sh)"
+
+📱 APK DOWNLOAD & MOBILE DASHBOARD:
+http://167.233.196.20:3000/apk/
 
 🚀 STATUS PRÜFEN:
 curl -s http://167.233.196.20:3000/api/quick-status | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('oneLine','?'))"
@@ -26,11 +27,5 @@ http://167.233.196.20:3000/api/revenue
 📊 SYSTEM-MONITORING:
 http://167.233.196.20:3000/api/system-dashboard
 
-📱 APK v5.1 DOWNLOAD:
-http://167.233.196.20:3000/apk/CyberSarah-Master-v5.1-release.apk
-
 🎮 TERMUX MANAGER:
 bash <(curl -sL https://raw.githubusercontent.com/niknight1403/cybersarah-revenue-os/main/termux-manager.sh)
-
-⚡ EIN-BEFEHL-DEPLOY (SSH auf Server):
-ssh root@167.233.196.20 "cd /opt/cybersarah && bash deploy-simple.sh"
