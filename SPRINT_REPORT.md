@@ -1,57 +1,44 @@
-# SPRINT 51 — APK v7.0 + Premium Dark Dashboard + Auto-Deploy
+# SPRINT 52 — Auto Sales Engine + APK v7.1 + Product Store
 
 ## ✅ ABGESCHLOSSEN
 
-### 📱 APK v7.0 (Build 29)
-- **Datei:** `CyberSarah-Master-v7.0-release.apk` (3.6 MB)
-- **Version:** 7.0.0 (Code 29)
-- Signiert mit `cybersarah-release.keystore`
-- Liegt im Repo-Root und in `artifacts/dashboard/dist/`
+### 📱 APK v7.1 (Build 30)
+- **Datei:** `CyberSarah-Master-v7.1-release.apk` (3.6 MB)
+- Neu: Produkt-Store in der App (checkout.html)
 
-### 🎨 Premium Dark Dashboard (Design 1)
-**Datei:** `artifacts/dashboard/dist/index.html`
+### 🛍️ Produkt-Store (checkout.html)
+**Neu gestaltet als vollwertiger Store:**
+- Lädt ALLE Stripe-Produkte live vom Server
+- Preis-Anzeige, Beschreibung, Kauf-Button
+- Stripe LIVE Checkout direkt integriert
+- Premium Dark Design (Design 1)
+- Funktioniert in der APK und im Browser
 
-**Neu gestaltet mit:**
-- **Glassmorphism** (Glas-Effekt) — backdrop-filter: blur(20px)
-- **Premium Dark** — Anthrazit (#08080f) mit Violett/Blau Akzenten
-- **4-Tab Navigation** — Dashboard | Agenten | Revenue | System
-- **Floating Action Button** — Schnell-Refresh
-- **KPI-Karten** mit Echtzeitdaten aus dem Server
-- **Bottom Navigation** für Einhandbedienung
-- **Agenten-Liste** mit Status-Dots und Aufgaben-Zählern
-- **HARA Chancen** aus Server-Notifications
-
-**API-Integration:**
-- `/api/system-status` → System, Stripe, OpenAI, Gemini Status
-- `/api/agents` → Alle 35 Agenten mit Aufgaben
-- `/api/revenue` → Umsatz Heute / 30 Tage
-- `/api/notifications` → HARA Chancen
-- `/api/orchestrator/status` → Queue + Zyklus-Status
-- Funktioniert auch als APK (erkennt file:// und nutzt Server-URL)
-
-### 🚀 Auto-Deploy System
-- **Datei:** `.github/workflows/deploy.yml` — GitHub Actions Auto-Deploy
-- **Datei:** `termux-deploy.sh` — ONE-CLICK Termux Deploy Script
-- Admin-Deploy-Endpoint im Server-Code (`/api/admin/deploy`)
-- Pullt Code → Installiert Deps → Startet Server neu
-
-### 📦 51 Sprints — Live-Server Status
-
+### 🛒 Auto Sales Engine (NEU)
+**Datei:** `auto-sales-engine.py`
+```bash
+python3 auto-sales-engine.py  # Startet Verkaufsseite auf Port 8765
 ```
-Stripe:     ✅ LIVE 💰
-OpenAI:     ✅ gpt-4o-mini
-Gemini:     ✅ gemini-2.0-flash
-Digistore24:✅ Aktiv
-Agenten:    35 (alle registriert)
-System:     ✅ Gesund (84/100)
-Orchestrator:#282 Zyklen, 18.082 Queue
+- Holt alle Produkte + Payment Links vom Server
+- Zeigt sie in mobiler Store-Oberfläche
+- Kunden kaufen direkt via Stripe Checkout
+- Läuft auf dem Handy (Termux)
+
+### 📊 Server-Status (LIVE)
+```
+Stripe:     ✅ LIVE 💰 (10+ Produkte mit Payment Links)
+Agents:     35 aktiv
+HARA:       50 Proposals (34 aktiv, 15 bestätigt, 1 in Umsetzung)
+Products:   10+ in DB mit Stripe-Links
+System:     ✅ Gesund
+Umsatz:     €0 (keine Verkäufe bisher)
 ```
 
-### 📊 Umsatz: €0 (noch kein echter Verkauf)
-**Nächste Schritte für echten Umsatz:**
-1. Server deployen: `bash termux-deploy.sh` (von Termux aus)
-2. Store-Seite bewerben / Traffic generieren
-3. Agenten laufen autonom — brauchen Besucher/Kunden
+### 🔧 Wichtige Erkenntnisse
+- Das System hat ALLE Werkzeuge für Verkäufe (Stripe LIVE, Produkte, Payment Links)
+- Es fehlen nur Kunden/Traffic
+- HARA findet Chancen (€1.000-€1.900/Monat geschätzt)
+- Nach dem Deploy (bash termux-deploy.sh) sind alle Optimierungen aktiv
 
 ## 🚀 Deploy-Anweisung
 
@@ -60,8 +47,8 @@ Orchestrator:#282 Zyklen, 18.082 Queue
 cd /opt/cybersarah && bash termux-deploy.sh
 ```
 
-**Nach dem Deploy verfügbar:**
+**Nach dem Deploy:**
 - Dashboard: http://167.233.196.20:3000
-- APK Download: http://167.233.196.20:3000/CyberSarah-Master-v7.0-release.apk
-- Agenten API: http://167.233.196.20:3000/api/agents
-- Revenue API: http://167.233.196.20:3000/api/revenue
+- Store: http://167.233.196.20:3000/checkout.html
+- APK: http://167.233.196.20:3000/CyberSarah-Master-v7.1-release.apk
+- Auto Sales: python3 auto-sales-engine.py
