@@ -9,21 +9,20 @@ import { holeApiStatus } from "../agents/apiManagerAgent";
 
 const router = Router();
 
-// Bekannte Agenten-Anzahl aus der Orchestrator-Registry
-const BEKANNTE_AGENTEN_ANZAHL = 26;
+const BEKANNTE_AGENTEN_ANZAHL = 35;
 
-// GET /system/status — Gesamtstatus aller kritischen Subsysteme
-router.get("/system/status", async (req, res) => {
+router.get("/system-status", async (req, res) => {
   try {
-    // DB-less fallback: compute health from live API checks only
+    const apiKeyStatus = holeApiStatus();
+    const smartPausen = holeSmartPausen();
+
     if (!db) {
       const fallbackInfo = holeFallbackZaehler();
       const gesamtFallbacks = Object.values(fallbackInfo).reduce((s, v) => s + v.count, 0);
-      const smartPausen = holeSmartPausen();
       const warnungen: string[] = [];
-      if (!openaiVerfuegbar) warnungen.push("⚠️ OpenAI API-Key nicht verfügbar");
-      if (!stripeLiveKey) warnungen.push("⚠️ Stripe nicht im LIVE-Modus");
-      warnungen.push("⚠️ Datenbank nicht verbunden — Agenten-Count aus Registry");
+      if (!openaiVerfuegbar) warnungen.push("OpenAI API-Key nicht verfuegbar");
+      if (!stripeLiveKey) warnungen.push("Stripe nicht im LIVE-Modus");
+      warnungen.push("Datenbank nicht verbunden - Agenten-Count aus Registry");
       const systemGesundheit = Math.round((openaiVerfuegbar ? 40 : 0) + (stripeLiveKey ? 30 : 10) + 30);
       res.json({
         openaiVerfuegbar,
@@ -31,7 +30,7 @@ router.get("/system/status", async (req, res) => {
         stripeVerfuegbar: !!process.env.STRIPE_SECRET_KEY,
         stripeTestModus,
         apiKeyStatus,
-        geminiAktiv: !!(process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_GEMINI_KEY"]),
+        geminiAktiv: !!(process.env["GEMINI_API_KEY"] || process.env["GOOGLE_GEMINI_KEY"]),
         digistoreAktiv: !!process.env["DIGISTORE24_API_KEY"],
         stripeLiveKey,
         stripeModus: stripeLiveKey ? "live" : stripeTestModus ? "test" : "nicht_konfiguriert",
@@ -51,18 +50,12 @@ router.get("/system/status", async (req, res) => {
       return;
     }
 
-    const smartPausen = holeSmartPausen();
-    const apiKeyStatus = holeApiStatus();
-
     const agenten = await db.select().from(agentsTable);
-
-    // Agenten-Statistik
     const agentenNachStatus = agenten.reduce((acc, a) => {
-      acc[a.status] = (acc[a.status] ?? 0) + 1;
+      acc[a.status] = (acc[a.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Erfolgsrate der letzten 24h aus agentLogs
     const seit24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const logs24h = await db
       .select({ status: agentLogsTable.status })
@@ -75,12 +68,10 @@ router.get("/system/status", async (req, res) => {
       ? Math.round((erfolgreichLogs / gesamtLogs) * 100)
       : 100;
 
-    // Fallback-Zähler
     const fallbackInfo = holeFallbackZaehler();
     const gesamtFallbacks = Object.values(fallbackInfo).reduce((s, v) => s + v.count, 0);
     const agentsImFallbackModus = Object.keys(fallbackInfo).length;
 
-    // System-Gesundheits-Score (0-100)
     const systemGesundheit = Math.round(
       (openaiVerfuegbar ? 40 : 0) +
       (stripeLiveKey ? 30 : 10) +
@@ -88,10 +79,10 @@ router.get("/system/status", async (req, res) => {
     );
 
     const warnungen: string[] = [];
-    if (!openaiVerfuegbar) warnungen.push("⚠️ OpenAI API-Key nicht verfügbar");
-    if (!stripeLiveKey) warnungen.push("⚠️ Stripe nicht im LIVE-Modus");
-    if ((agentenNachStatus["fehler"] ?? 0) > 0) {
-      warnungen.push(`⚠️ ${agentenNachStatus["fehler"]} Agent(en) im FEHLER-Status`);
+    if (!openaiVerfuegbar) warnungen.push("OpenAI API-Key nicht verfuegbar");
+    if (!stripeLiveKey) warnungen.push("Stripe nicht im LIVE-Modus");
+    if ((agentenNachStatus["fehler"] || 0) > 0) {
+      warnungen.push(agentenNachStatus["fehler"] + " Agent(en) im FEHLER-Status");
     }
 
     res.json({
@@ -100,7 +91,7 @@ router.get("/system/status", async (req, res) => {
       stripeVerfuegbar: !!process.env.STRIPE_SECRET_KEY,
       stripeTestModus,
       apiKeyStatus,
-      geminiAktiv: !!(process.env["GEMINI_API_KEY"] ?? process.env["GOOGLE_GEMINI_KEY"]),
+      geminiAktiv: !!(process.env["GEMINI_API_KEY"] || process.env["GOOGLE_GEMINI_KEY"]),
       digistoreAktiv: !!process.env["DIGISTORE24_API_KEY"],
       stripeLiveKey,
       stripeModus: stripeLiveKey ? "live" : stripeTestModus ? "test" : "nicht_konfiguriert",
@@ -118,8 +109,7 @@ router.get("/system/status", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (err: any) {
-    console.error("❌ SYSTEM STATUS FEHLER:", err?.message, err?.code, err?.stack?.split("\n").slice(0,3).join(" | "));
-    req.log?.error({ err }, "Fehler beim System-Status");
+    console.error("SYSTEM STATUS FEHLER:", err?.message, err?.code);
     res.status(500).json({ error: "Interner Serverfehler", detail: err?.message?.slice(0, 200) });
   }
 });
