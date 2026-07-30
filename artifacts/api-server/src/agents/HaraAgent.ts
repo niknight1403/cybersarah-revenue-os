@@ -1031,13 +1031,13 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
               stripeProduktId: sp.id, stripePreisId: spr.id,
               aktiv: true, verkaeufeAnzahl: "0",
             });
-            aktionen.push(f"💰 Produkt erstellt: {p.name} (€{p.preis:.2f})");
+            aktionen.push(`💰 Produkt erstellt: ${p.name} (€${Number(p.preis).toFixed(2)})`);
           } catch (e) {
-            aktionen.push(f"⚠️ {p.name} nicht erstellt: {e instanceof Error ? e.message : '?'}");
+            aktionen.push(`⚠️ ${p.name} nicht erstellt: ${e instanceof Error ? e.message : '?'}`);
           }
         }
       } else {
-        aktionen.push(f"✅ {prodCount[0].count} Produkte vorhanden");
+        aktionen.push(`✅ ${prodCount[0].count} Produkte vorhanden`);
       }
     } catch (e) {
       aktionen.push("⚠️ Produkt-Check fehlgeschlagen");
@@ -1053,7 +1053,7 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
       const tCount = Number(trans7d[0]?.count ?? 0);
       const tSum = Number(trans7d[0]?.summe ?? 0);
       if (tCount > 0) {
-        aktionen.push(f"💰 {tCount} Transaktionen (€{tSum:.2f}) in 7 Tagen");
+        aktionen.push(`💰 ${tCount} Transaktionen (€${Number(tSum).toFixed(2)}) in 7 Tagen`);
       }
     } catch {}
 
@@ -1099,16 +1099,16 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
             currency: "eur",
           });
           await db.update(produkteTable).set({ stripePreisId: preis.id, updatedAt: new Date() }).where(eq(produkteTable.id, p.id));
-          aktionen.push(f"🔗 Payment-Link für {p.name} erstellt");
+          aktionen.push(`🔗 Payment-Link für ${p.name} erstellt`);
         } catch (e2) {
-          aktionen.push(f"⚠️ Payment-Link {p.name} fehlgeschlagen");
+          aktionen.push(`⚠️ Payment-Link ${p.name} fehlgeschlagen`);
         }
       }
     } catch {}
 
     return {
       success: true,
-      message: f"Fast-Revenue-Scan: {len(aktionen)} Aktionen — {' | '.join(aktionen)}",
+      message: `Fast-Revenue-Scan: ${aktionen.length} Aktionen — ${aktionen.join(' | ')}`,
       metadaten: { aktionen },
     };
   }
