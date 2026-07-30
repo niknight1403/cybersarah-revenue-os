@@ -46,8 +46,8 @@ class ApkHandler(http.server.SimpleHTTPRequestHandler):
             <div class="card">
                 <h1>🚀 CyberSarah</h1>
                 <p>KI-gestütztes Revenue Operating System</p>
-                <a class="apk-btn" href="/CyberSarah-Master-v5.0-release.apk" download>📱 APK v5.0 herunterladen</a>
-                <a class="apk-btn" href="/CyberSarah-Master-v4.0-release.apk" download style="background:linear-gradient(90deg,#374151,#4b5563);font-size:0.9rem">📱 APK v4.0 (ältere Version)</a>
+                <a class="apk-btn" href="/CyberSarah-Master-v7.0-release.apk" download>📱 APK v7.0 herunterladen</a>
+                <a class="apk-btn" href="/CyberSarah-Master-v4.0-release.apk" download style="background:linear-gradient(90deg,#374151,#4b5563);font-size:0.9rem">📱 APK v6.3 (ältere Version)</a>
                 <div class="info">
                     <span class="version">Version 5.0.0</span> • Build 15<br>
                     Signiert & releasefertig<br><br>
