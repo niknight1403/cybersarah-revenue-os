@@ -242,13 +242,26 @@ export async function erstelleSofortProdukte(): Promise<{
       .where(eq(setupSchritteTable.schluessel, "stripe_produkte"));
   }
 
-  await db.insert(agentLogsTable).values({
-    agentId: 0,
-    agentName: "SofortStart Agent",
-    aktion: "stripe_produkte_erstellen",
-    status: fehler.length === 0 ? "erfolgreich" : erstellt.length > 0 ? "erfolgreich" : "fehler",
-    nachricht: `${erstellt.length} Produkte erstellt, ${fehler.length} Fehler`,
-  });
+  // SPRINT 53: Agent-ID aus der DB holen (statt hardcodiertem Wert 0)
+  let sofortAgentId = 0;
+  try {
+    const { agentsTable } = await import("@workspace/db");
+    const [agent] = await db.select({ id: agentsTable.id })
+      .from(agentsTable)
+      .where(eq(agentsTable.name, "SofortStart Agent"))
+      .limit(1);
+    if (agent) sofortAgentId = agent.id;
+  } catch {}
+  
+  if (sofortAgentId > 0) {
+    await db.insert(agentLogsTable).values({
+      agentId: sofortAgentId,
+      agentName: "SofortStart Agent",
+      aktion: "stripe_produkte_erstellen",
+      status: fehler.length === 0 ? "erfolgreich" : erstellt.length > 0 ? "erfolgreich" : "fehler",
+      nachricht: `${erstellt.length} Produkte erstellt, ${fehler.length} Fehler`,
+    });
+  }
 
   return { erstellt: erstellt.length, produkte: erstellt, fehler };
 }
