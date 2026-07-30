@@ -41,6 +41,7 @@ import socialRoutesRouter from "./socialRoutes";
 import crossSellRoutesRouter from "./crossSellRoutes";
 import subscriptionRoutesRouter from "./subscriptionRoutes";
 import conversionRoutesRouter from "./conversionRoutes";
+import quickStartRouter from "./quickStart";
 import revenueDashboardRouter from "./revenueDashboard";
 import systemDashboardRouter from "./systemDashboard";
 import adminRouter from "./admin";
@@ -97,6 +98,7 @@ router.use(apkUploadRouter);
 router.use("/admin", adminRouter);
 router.use(systemDashboardRouter);
 router.use(revenueDashboardRouter);
+router.use(quickStartRouter);
 router.use(newsletterSignupRouter);
 
 export default router;
