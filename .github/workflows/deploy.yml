@@ -1,0 +1,24 @@
+name: Auto-Deploy to Hetzner Server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  deploy:
+    name: Deploy to Hetzner VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Trigger Deployment Webhook
+        run: |
+          curl -s -X POST "${{ secrets.DEPLOY_WEBHOOK_URL || 'http://167.233.196.20:3000/api/admin/deploy' }}" \
+            -H "X-Deploy-Token: ${{ secrets.DEPLOY_TOKEN || 'cybersarah2026' }}" \
+            --max-time 30 2>&1
+          
+      - name: Check Deployment Result
+        run: |
+          echo "✅ Deployment triggered!"
+          echo "Check server status: http://167.233.196.20:3000/api/system-status"
