@@ -76,6 +76,7 @@ router.use(cartRecoveryRoutesRouter);
 router.use(loyaltyRoutesRouter);
 router.use(affiliateRoutesRouter);
 router.use(salesChatRoutesRouter);
+router.use(stripeOverviewRouter);
 router.use(stripeProductsRouter);
 router.use(stripePaymentsRouter);
 router.use(stripeDashboardRouter);
