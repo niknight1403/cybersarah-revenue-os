@@ -222,6 +222,7 @@ import { erstelleFehlendeSequenzen, versendeFaelligeEmails } from "./emailListen
 import { generiereFacelessVideo, veroeffentlicheFaelligeVideos, analysiereUndOptimiere as analysiereFacelessVideos } from "./facelessVideoAgent";
 import { recycleContent } from "./contentRecyclingAgent";
 import { starteWatchdog, stoppeWatchdog } from "./watchdog";
+import { startAutoUpdateAgent } from "./autoUpdateAgent";
 import { scanneExpansionChancen } from "./expansionAgent";
 import { fuehreStrategieAnalyseDurch } from "./directorAgent";
 import { analysiereUmsatz } from "./revenueAgent";
@@ -1231,6 +1232,7 @@ export function starteOrchestrator(): void {
 
   // Watchdog starten (5-Min-Takt, 401-Erkennung + Auto-Reset)
   starteWatchdog();
+  startAutoUpdateAgent();
 
   // ─── Social-Media Auto-Post (3x täglich: 09:00, 14:00, 20:00) ──────────
   cron.schedule("0 9,14,20 * * *", () => {

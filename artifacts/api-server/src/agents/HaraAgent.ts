@@ -44,8 +44,8 @@ interface KiVorschlag {
   automatisierbarkeitScore: number;
 }
 
-const MAX_OFFENE_VORSCHLAEGE = 50;
-const AUTO_CONFIRM_SCHWELLE = 30;
+const MAX_OFFENE_VORSCHLAEGE = 100; // SPRINT 36: Mehr Vorschläge = mehr Umsatz
+const AUTO_CONFIRM_SCHWELLE = 15; // SPRINT 36: Aggressiver — mehr autonome Aktionen
 const AUTO_RETRY_TAGE = 7;
 const MARKEN = ["CyberSarah", "GeldPilot AI", "UnternehmerGPT"] as const;
 

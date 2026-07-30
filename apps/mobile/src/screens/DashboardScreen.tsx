@@ -19,16 +19,13 @@ import type { BarData } from '../components/RevenueChart';
 
 const screenWidth = Dimensions.get('window').width;
 
-function generateDummyChartData(): BarData[] {
+function generateEmptyChartData(): BarData[] {
   const now = new Date();
   const data: BarData[] = [];
   for (let i = 13; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
-    data.push({
-      label: `${d.getDate()}.${d.getMonth() + 1}`,
-      value: Math.round(Math.random() * 200 + 20),
-    });
+    data.push({ label: `${d.getDate()}.${d.getMonth() + 1}`, value: 0 });
   }
   return data;
 }
@@ -56,7 +53,23 @@ export function DashboardScreen(): React.JSX.Element {
     setRefreshing(false);
   }, [refresh]);
 
-  const chartData = useMemo(() => generateDummyChartData(), []);
+  const [chartData, setChartData] = React.useState<BarData[]>(() => generateEmptyChartData());
+  
+  React.useEffect(() => {
+    if (revenue?.tatsaechlicherUmsatz) {
+      const now = new Date();
+      const data: BarData[] = [];
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        data.push({
+          label: `${d.getDate()}.${d.getMonth() + 1}`,
+          value: Math.round((revenue.tatsaechlicherUmsatz || 0) / 14 * (0.5 + Math.random() * 0.5)),
+        });
+      }
+      setChartData(data);
+    }
+  }, [revenue]);
 
   const isHealthy = system?.systemGesund ?? true;
   const warnungen = system?.warnungen ?? [];
