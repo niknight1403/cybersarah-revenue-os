@@ -3,6 +3,7 @@
  * Wird automatisch aktualisiert, wenn neue Produkte in Stripe erstellt werden.
  */
 import { Router } from "express";
+import { chatWidgetHtml } from "../lib/chatWidget";
 import { db } from "@workspace/db";
 import { produkteTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
@@ -75,6 +76,7 @@ ${bodyHtml}
 &copy; 2026 CyberSarah &middot; KI-gestützte Automatisierung &middot; <a href="/sitemap.xml" style="color:#6b7280">Sitemap</a>
 </div>
 </footer>
+${chatWidgetHtml()}
 </body>
 </html>`;
 }
