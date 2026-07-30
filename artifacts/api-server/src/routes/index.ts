@@ -41,6 +41,7 @@ import socialRoutesRouter from "./socialRoutes";
 import crossSellRoutesRouter from "./crossSellRoutes";
 import subscriptionRoutesRouter from "./subscriptionRoutes";
 import conversionRoutesRouter from "./conversionRoutes";
+import apkUploadRouter from "./apkUpload";
 import notificationsRouter from "./notifications"
 import newsletterSignupRouter from "./newsletterSignup";
 
@@ -89,6 +90,7 @@ router.use(crossSellRoutesRouter);
 router.use(subscriptionRoutesRouter);
 router.use(conversionRoutesRouter);
 router.use(notificationsRouter);
+router.use(apkUploadRouter);
 router.use(newsletterSignupRouter);
 
 export default router;
