@@ -1,51 +1,48 @@
-# SPRINT 57 — DB Backup + Auto-Deploy Agent + APK v7.6
+# SPRINT 58 — Marketing Website + GitHub Pages + APK v7.7
 
 ## ✅ ABGESCHLOSSEN
 
-### 💾 DB Backup & Restore (NEU)
-```bash
-python3 db-backup.py
-```
-- Voll-Backup aller 50+ Tabellen aus Neon PostgreSQL
-- Komprimiert als .sql.gz
-- Wiederherstellung im Notfall
-- Auto-Backup alle 6 Stunden (Cron-Job)
+### 🌐 Professionelle Marketing-Website
+**Datei:** `index.html` — eine komplette, öffentliche Marketing-Seite
 
-### 🚀 Auto-Deploy Agent (NEU)
+- Hero-Bereich mit KI-Produkten
+- Features-Sektion (6 Karten)
+- Beliebte Produkte mit Stripe-Links
+- Newsletter-Anmeldung
+- SEO-optimiert (Meta-Tags, OG-Image)
+- Responsive Design für Handy + Desktop
+- Premium Dark Theme
+
+**Live auf GitHub Pages:**  
+→ https://niknight1403.github.io/cybersarah-revenue-os/
+
+### 🛍️ Store-Integration
+- Startseite → "Produkte entdecken" → products.html
+- Beliebte Produkte mit Direkt-Kauf-Links zu Stripe
+- Newsletter-Formular für Lead-Generierung
+
+### 📱 APK v7.7 (Build 36)
+- `CyberSarah-Master-v7.7-release.apk` (3.6 MB)
+- Neue Marketing-Startseite integriert
+
+### 📊 Server
+```
+System:     ✅ Gesund (84/100)
+Stripe:     LIVE 💰
+Agenten:    35 (28 aktiv, 7 wartend)
+HARA:       324 Proposals
+Produkte:   100+ in Stripe
+Umsatz:     €0
+```
+
+### 🚀 Jetzt online sichtbar!
 ```bash
+# Deploy (einmalig):
+bash termux-deploy.sh
+
+# Auto-Deploy (dauerhaft):
 python3 auto-deploy-agent.py
-```
-- Prüft alle 15 Minuten auf neue GitHub-Commits
-- Deployed automatisch via SSH (Passwort einmal eingeben)
-- Auto-Mode: einmal starten → für immer autonom
-- Funktioniert in Termux
 
-### 🛠️ Tools aktualisiert
-- Fehlerhafte f-Strings in db-backup.py und auto-deploy-agent.py gefixt
-- Beide Tools sind jetzt voll funktionsfähig
-
-### 📱 APK v7.6 (Build 35)
-- `CyberSarah-Master-v7.6-release.apk` (3.6 MB)
-- Neue Checkout-Seiten integriert
-- 5-Tab Navigation
-
-### 📊 Server LIVE
-```
-Agenten:     35 (28 aktiv ✅)
-Stripe:      LIVE 💰
-HARA:        324 Proposals aktiv
-Fehler:      0 ✅
-Umsatz:      €0
-```
-
-### 💰 Nächster Schritt für echten Umsatz:
-```bash
-# 1. Auto-Deploy einrichten
-python3 auto-deploy-agent.py  # → Passwort eingeben → Auto-Mode starten
-
-# 2. Produkte teilen
-python3 product-sharer.py     # → WhatsApp/Telegram öffnet sich
-
-# 3. DB regelmäßig sichern
-python3 db-backup.py          # → Option 5: Backup + Cron
+# Produkte teilen:
+python3 product-sharer.py
 ```
