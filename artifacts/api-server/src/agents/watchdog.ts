@@ -15,7 +15,7 @@ import { openai, openaiVerfuegbar } from "../lib/openaiClient";
 
 const WATCHDOG_INTERVALL_MS = 60 * 1000; // 5 Minuten
 const STUCK_TIMEOUT_MS = 10 * 60 * 1000;     // 30 Minuten
-const FALLBACK_SCHWELLE = 50;                  // Nach 50 Fallbacks → Auto-Pause
+const FALLBACK_SCHWELLE = 30; // SPRINT 36: Früher pausieren bei Fehlern                  // Nach 50 Fallbacks → Auto-Pause
 const API_KEY_FEHLER_PATTERN = /401|Incorrect API key|Invalid API key/i;
 
 let watchdogTimer: NodeJS.Timeout | null = null;
@@ -305,7 +305,7 @@ export function starteWatchdog(): void {
     void fuehreWatchdogZyklusDurch();
   }, WATCHDOG_INTERVALL_MS);
 
-  logger.info({ intervall: "5 Min", timeout: "30 Min Stuck", fallbackSchwelle: FALLBACK_SCHWELLE },
+  logger.info({ intervall: "1 Min", timeout: "30 Min Stuck", fallbackSchwelle: FALLBACK_SCHWELLE },
     "Watchdog Manager gestartet — 401-Erkennung + Fallback-Tracking + Auto-Reset aktiv");
 }
 

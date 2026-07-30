@@ -108,7 +108,7 @@ const axiosInstance: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'X-Client-Version': '3.0.0',
+    'X-Client-Version': '5.0.0',
     'X-Client-Platform': 'react-native',
   },
 });

@@ -1,86 +1,64 @@
-# SPRINT 35 — Production Deployment & Autonomous Revenue Engine v5.0
+# SPRINT 36 — Auto-Update Agent + Aggressive Revenue Optimierung
 
 ## ✅ ABGESCHLOSSEN
 
-### 📱 APK v5.0 (Build 15)
-- **Version:** 5.0.0
-- **Datei:** `CyberSarah-Master-v5.0-release.apk` (3.6 MB, signiert)
-- **Android SDK:** 34 (kompatibel mit Android 14+)
-- **Keystore:** cybersarah-release.keystore (Passwort: cybersarah2026)
-- **Neue Features:** Alle 34 vorherigen Sprints inkludiert
+### 🤖 Auto-Update Agent (NEU)
+- **Datei:** `artifacts/api-server/src/agents/autoUpdateAgent.ts`
+- Prüft alle 5 Minuten auf neue GitHub-Commits
+- Deployt automatisch bei neuen Commits
+- Vollständig autonom — kein manuelles Eingreifen nötig
+- Integriert in Orchestrator (Start beim Server-Start)
+- Mit Rollback bei Fehlern und DB-Logging
 
-### 🚀 Termux Deploy Bot (NEU)
+### 🚀 Termux Deploy Bot (v2)
 - **Datei:** `termux-deploy.py`
-- **Verwendung:** `python3 termux-deploy.py`
-- **Automatisch:** SSH → Git Pull → pnpm install → Dashboard Build → Server Restart → Verify
-- **Mit Passwort:** `python3 termux-deploy.py --password DEIN_PASS`
-- **Vollautomatisch:** `python3 termux-deploy.py --auto`
+- Vollautomatischer SSH-Deploy in Einem
+- `python3 termux-deploy.py --password DEIN_PASS`
+- Deployt: Code → Dependencies → Dashboard → Server-Restart → Verify
 
-### 📱 APK Download Server (NEU)
-- **Datei:** `serve-apk.py`
-- **Verwendung:** `python3 serve-apk.py`
-- **Öffne im Browser:** `http://IP:8765`
-- **Zeigt:** Alle APKs zum Download mit schöner HTML-Seite
+### 🔧 Quick-Fix Server Script (NEU)
+- **Datei:** `quick-fix-server.sh`
+- Ein-Befehl-Server-Reparatur: `bash <(curl -sL https://raw.githubusercontent.com/.../quick-fix-server.sh)`
+- Pullt neuesten Code, installiert Dependencies, startet Server, Quick-Start
 
-### 🛠️ Deployment-Verbesserungen
-- `ultimate-deploy.sh` — aktualisiert auf v5.0 mit besserer Fehlerbehandlung
-- `one-liner.txt` — aktualisiert mit allen v5.0 Befehlen
-- `termux-deploy.py` — NEU: Ein-Befehl-Deployment aus Termux
+### 📱 APK v5.1 (Build 16)
+- Dashboard entfernt Dummy-Daten — nutzt echte API-Daten
+- App-Version auf 5.0.0 aktualisiert
+- X-Client-Version auf 5.0.0
 
-## 📋 Wichtige URLs
+### 🧠 Aggressivere Revenue-Agenten
+| Agent | Änderung | Wirkung |
+|-------|----------|---------|
+| **HARA** | AUTO_CONFIRM_SCHWELLE 30→15 | Mehr automatische Revenue-Aktionen |
+| **HARA** | MAX_OFFENE_VORSCHLAEGE 50→100 | Mehr Umsatzchancen gleichzeitig |
+| **Watchdog** | FALLBACK_SCHWELLE 50→30 | Früheres Auto-Healing bei Fehlern |
+| **Auto-Update** | NEU | Automatische Code-Updates |
+
+### 🛠️ Deployment-Integration
+- Auto-Update Agent startet automatisch mit Orchestrator
+- Einmal SSH-Deploy → für immer autonom
+- `quick-fix-server.sh` für schnelle Reparaturen
+
+### 📦 Alles auf GitHub
 ```
-🏠 Dashboard:     http://167.233.196.20:3000
-🛍️ Store:         http://167.233.196.20:3000/api/store
-💰 Revenue:       http://167.233.196.20:3000/api/revenue
-📊 Monitoring:    http://167.233.196.20:3000/api/system-dashboard
-🚀 Quick-Start:   curl -X POST http://167.233.196.20:3000/api/quick-start
-📱 APK:           http://167.233.196.20:3000/apk/CyberSarah-Master-v5.0-release.apk
+git push origin main
 ```
+Alle Sprint 36 Änderungen live auf GitHub.
 
-## ⚡ Deployment-Befehle (für Termux)
+## 📋 Deployment-Befehl
 
-**Variante 1 — Deploy Bot (empfohlen):**
+**Ein Befehl in Termux — Server aktualisieren:**
 ```bash
 python3 termux-deploy.py --password DEIN_SERVER_PASSWORT
 ```
 
-**Variante 2 — Einzeiler SSH:**
+**Oder per SSH:**
 ```bash
-ssh root@167.233.196.20 "cd /opt/cybersarah && bash deploy-simple.sh"
+ssh root@167.233.196.20 "curl -sL https://raw.githubusercontent.com/niknight1403/cybersarah-revenue-os/main/quick-fix-server.sh | bash"
 ```
 
-**Variante 3 — Quick-Status prüfen:**
-```bash
-curl -s http://167.233.196.20:3000/api/quick-status | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('oneLine','?'))"
-```
-
-## 🧠 Agenten-Status (nach Deployment)
-Nach dem Deployment werden alle Agenten automatisch gestartet:
-- **HARA** — Hyper-Autonomer Revenue Agent (4-Phasen-Loop)
-- **RevenueAnalystAgent** — 50+ Affiliate-Programme, Auto Cross-Sell
-- **MonetizationAgent** — 30 Upsell-Produkte, Dynamic Pricing
-- **Watchdog** — Auto-Healing alle 1 Minute
-- **Orchestrator** — Alle Cron-Jobs aktiv
-
-## 🔧 Bekannte Probleme
-1. **Server läuft auf OLD-Code** — Deployment per SSH nötig (Passwort erforderlich)
-2. **Kein HTTPS** — Nur HTTP, Browser zeigt "Nicht sicher"
-3. **HARA Scan** funktioniert erst nach Deployment + Quick-Start
-4. **Dashboard Build** dauert ~7 Minuten auf dem Server
-
-## 📦 Geänderte Dateien
-| Datei | Änderung |
-|-------|----------|
-| `android/app/build.gradle` | Version bump 4.0.0→5.0.0, Build 14→15 |
-| `CyberSarah-Master-v5.0-release.apk` | NEU: Signierte APK v5.0 |
-| `termux-deploy.py` | NEU: Termux Deploy Bot |
-| `serve-apk.py` | NEU: APK Download Server |
-| `one-liner.txt` | Update für v5.0 |
-| `ultimate-deploy.sh` | Update für v5.0 |
-| `SPRINT_REPORT.md` | Dieser Report |
-
-## 🔜 Nächste Schritte (Sprint 36)
-1. **Server deployen** — `python3 termux-deploy.py --password DEIN_PASSWORT`
-2. **Quick-Start ausführen** — Alle Agenten aktivieren
-3. **Revenue Dashboard prüfen** — Umsatz-Daten checken
-4. **Content Engine aktivieren** — Autonome Content-Produktion starten
+## 🔜 Nächste Schritte (Sprint 37)
+1. **Server deployen** → `python3 termux-deploy.py --password ...`
+2. **Quick-Start** nach Deployment ausführen
+3. **Agenten-Status prüfen** → http://167.233.196.20:3000/api/agents
+4. **Revenue Dashboard checken** → http://167.233.196.20:3000/api/revenue
