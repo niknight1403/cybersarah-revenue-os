@@ -1,48 +1,47 @@
-# SPRINT 58 — Marketing Website + GitHub Pages + APK v7.7
+# SPRINT 59 — Affiliate Center + Social Media + APK v7.8
 
 ## ✅ ABGESCHLOSSEN
 
-### 🌐 Professionelle Marketing-Website
-**Datei:** `index.html` — eine komplette, öffentliche Marketing-Seite
+### 🤝 Affiliate Center (NEU)
+```bash
+python3 affiliate-center.py
+```
+- **Partner verwalten** — erfassen, Status, Provision (10% Standard)
+- **Affiliate-Links** — für jedes Produkt mit Referrer-Tracking
+- **Statistiken** — Klicks, Konversionen, Umsatz, Auszahlungen
+- **Marketing-Vorlagen** — WhatsApp, E-Mail, Social Media
+- Nutzt die existierenden `/api/affiliates/*` Endpunkte
 
-- Hero-Bereich mit KI-Produkten
-- Features-Sektion (6 Karten)
-- Beliebte Produkte mit Stripe-Links
-- Newsletter-Anmeldung
-- SEO-optimiert (Meta-Tags, OG-Image)
-- Responsive Design für Handy + Desktop
-- Premium Dark Theme
+### 📢 Social Content Poster (NEU)
+```bash
+python3 social-content-poster.py
+```
+- Generiert fertige Posts für TikTok, Instagram, Twitter, WhatsApp
+- Enthält Stripe-Links
+- Copy & Paste — sofort nutzbar
+- Alle 100+ Produkte verfügbar
 
-**Live auf GitHub Pages:**  
-→ https://niknight1403.github.io/cybersarah-revenue-os/
+### 📱 APK v7.8 (Build 37)
+- `CyberSarah-Master-v7.8-release.apk` (3.6 MB)
 
-### 🛍️ Store-Integration
-- Startseite → "Produkte entdecken" → products.html
-- Beliebte Produkte mit Direkt-Kauf-Links zu Stripe
-- Newsletter-Formular für Lead-Generierung
-
-### 📱 APK v7.7 (Build 36)
-- `CyberSarah-Master-v7.7-release.apk` (3.6 MB)
-- Neue Marketing-Startseite integriert
-
-### 📊 Server
+### 📊 Server Status
 ```
 System:     ✅ Gesund (84/100)
 Stripe:     LIVE 💰
-Agenten:    35 (28 aktiv, 7 wartend)
+Agenten:    35 (28 aktiv)
 HARA:       324 Proposals
-Produkte:   100+ in Stripe
+Produkte:   100+
+Affiliates: 0 (wartet auf Partner!)
 Umsatz:     €0
 ```
 
-### 🚀 Jetzt online sichtbar!
+### 🎯 Jetzt Partner anwerben!
 ```bash
-# Deploy (einmalig):
-bash termux-deploy.sh
+python3 affiliate-center.py
+# → Partner erfassen → Affiliate-Links generieren → Marketing-Texte kopieren
+```
 
-# Auto-Deploy (dauerhaft):
-python3 auto-deploy-agent.py
-
-# Produkte teilen:
-python3 product-sharer.py
+```bash
+python3 social-content-poster.py
+# → Produkt auswählen → Plattform wählen → Post kopieren & teilen
 ```
