@@ -1933,3 +1933,37 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
 
 // In orchestrator.ts NACHDEN bestehenden Cron-Jobs einfügen:
 
+// ── Auto-Healing: Fehlerhafte Agenten alle 3 Minuten zurücksetzen ──
+cron.schedule("*/3 * * * *", () => {
+  if (!db) return;
+  db.select({ id: agentsTable.id, name: agentsTable.name, status: agentsTable.status })
+    .from(agentsTable)
+    .where(eq(agentsTable.status, "fehler"))
+    .limit(30)
+    .then((fehlerAgenten) => {
+      if (fehlerAgenten && fehlerAgenten.length > 0) {
+        for (const agent of fehlerAgenten) {
+          db.update(agentsTable)
+            .set({ status: "aktiv", fehlerAnzahl: 0, letzteAktivitaet: new Date(), updatedAt: new Date() })
+            .where(eq(agentsTable.id, agent.id))
+            .then(() => {
+              db.insert(agentLogsTable).values({
+                agentId: agent.id, agentName: agent.name,
+                aktion: "Auto-Healing: Reset", status: "erfolgreich",
+                nachricht: "Auto-Healing: Agent von fehler zu aktiv zurueckgesetzt",
+              }).catch(() => {});
+            })
+            .catch(() => {});
+        }
+      }
+    })
+    .catch(() => {});
+});
+
+// ── Health Heartbeat: Alle 1 Minute ──
+cron.schedule("* * * * *", () => {
+  const aktive = subAgenten.filter(function(a) { return a.istLaufend(); }).length;
+  if (aktive === 0 && subAgenten.length > 0) {
+    logger.info("Heartbeat: " + subAgenten.length + " Agenten, " + aktive + " aktiv");
+  }
+});
