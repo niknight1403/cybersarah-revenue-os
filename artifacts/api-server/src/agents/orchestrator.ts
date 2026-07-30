@@ -86,6 +86,33 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
   });
   cron.schedule("0 3 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "full_check" }, { prioritaet: 3 });
+  // ── Auto-Healing: Fehlerhafte Agenten resetten (alle 5 Min) ──
+  cron.schedule("*/5 * * * *", () => {
+    db.select({ id: agentsTable.id, name: agentsTable.name, status: agentsTable.status })
+      .from(agentsTable)
+      .where(eq(agentsTable.status, "fehler"))
+      .limit(20)
+      .then((fehlerAgenten) => {
+        for (const agent of fehlerAgenten) {
+          logger.warn({ agentId: agent.id, agentName: agent.name }, "🔄 Auto-Healing: Resette fehlerhaften Agenten");
+          db.update(agentsTable)
+            .set({ status: "aktiv", letzteAktivitaet: new Date(), updatedAt: new Date() })
+            .where(eq(agentsTable.id, agent.id))
+            .then(() => {
+              db.insert(agentLogsTable).values({
+                agentId: agent.id,
+                agentName: agent.name,
+                aktion: "Auto-Healing: Reset",
+                status: "erfolgreich",
+                nachricht: "🔄 Auto-Healing: Agent von fehler → aktiv zurückgesetzt",
+              }).catch(() => {});
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+  });
+
   });
 
   // ── HARA Fast-Revenue-Scan alle 5 Minuten (Sprint 7.1 Optimierung) ──
@@ -825,6 +852,33 @@ function registriereQueueHandler(): void {
   });
   cron.schedule("0 3 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "full_check" }, { prioritaet: 3 });
+  // ── Auto-Healing: Fehlerhafte Agenten resetten (alle 5 Min) ──
+  cron.schedule("*/5 * * * *", () => {
+    db.select({ id: agentsTable.id, name: agentsTable.name, status: agentsTable.status })
+      .from(agentsTable)
+      .where(eq(agentsTable.status, "fehler"))
+      .limit(20)
+      .then((fehlerAgenten) => {
+        for (const agent of fehlerAgenten) {
+          logger.warn({ agentId: agent.id, agentName: agent.name }, "🔄 Auto-Healing: Resette fehlerhaften Agenten");
+          db.update(agentsTable)
+            .set({ status: "aktiv", letzteAktivitaet: new Date(), updatedAt: new Date() })
+            .where(eq(agentsTable.id, agent.id))
+            .then(() => {
+              db.insert(agentLogsTable).values({
+                agentId: agent.id,
+                agentName: agent.name,
+                aktion: "Auto-Healing: Reset",
+                status: "erfolgreich",
+                nachricht: "🔄 Auto-Healing: Agent von fehler → aktiv zurückgesetzt",
+              }).catch(() => {});
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+  });
+
   });
     const agent = subAgenten.find(a => a instanceof AbandonedCartRecoveryAgent);
     if (!agent) throw new Error("AbandonedCartRecoveryAgent nicht gefunden");
@@ -1358,6 +1412,33 @@ export function starteOrchestrator(): void {
   });
   cron.schedule("0 3 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "full_check" }, { prioritaet: 3 });
+  // ── Auto-Healing: Fehlerhafte Agenten resetten (alle 5 Min) ──
+  cron.schedule("*/5 * * * *", () => {
+    db.select({ id: agentsTable.id, name: agentsTable.name, status: agentsTable.status })
+      .from(agentsTable)
+      .where(eq(agentsTable.status, "fehler"))
+      .limit(20)
+      .then((fehlerAgenten) => {
+        for (const agent of fehlerAgenten) {
+          logger.warn({ agentId: agent.id, agentName: agent.name }, "🔄 Auto-Healing: Resette fehlerhaften Agenten");
+          db.update(agentsTable)
+            .set({ status: "aktiv", letzteAktivitaet: new Date(), updatedAt: new Date() })
+            .where(eq(agentsTable.id, agent.id))
+            .then(() => {
+              db.insert(agentLogsTable).values({
+                agentId: agent.id,
+                agentName: agent.name,
+                aktion: "Auto-Healing: Reset",
+                status: "erfolgreich",
+                nachricht: "🔄 Auto-Healing: Agent von fehler → aktiv zurückgesetzt",
+              }).catch(() => {});
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+  });
+
   });
   });
   });

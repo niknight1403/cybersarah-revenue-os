@@ -13,6 +13,7 @@
 import { Router } from "express";
 import { chatWidgetHtml } from "../lib/chatWidget";
 import { newsletterWidgetHtml } from "../lib/newsletterWidget";
+import { systemStatusBadgeHtml } from "../lib/chatWidget";
 import { db } from "@workspace/db";
 import { seoContentTable, produkteTable } from "@workspace/db";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
@@ -99,7 +100,7 @@ ${options.bodyHtml}
     &copy; ${new Date().getFullYear()} CyberSarah Revenue OS &middot; KI-gestützte Automatisierung
   </div>
 </footer>
-${newsletterWidgetHtml()}${chatWidgetHtml()}
+${systemStatusBadgeHtml()}${newsletterWidgetHtml()}${chatWidgetHtml()}
 </body>
 </html>`;
 }
