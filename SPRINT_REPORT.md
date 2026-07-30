@@ -1,70 +1,61 @@
-# SPRINT 37 — Auto-Update + Mobile Dashboard + APK v5.2
+# SPRINT 38 — Social Content Engine + WhatsApp Campaigns + APK v5.3
 
 ## ✅ ABGESCHLOSSEN
 
-### 📱 Mobile APK-Download-Seite (NEU)
-- **Route:** `GET /apk/` — mobile-friendly Dashboard-Seite
-- Zeigt: Server-Status, APK-Downloads, Quick-Links
-- Auto-Refresh alle 15s
-- **Route:** `GET /apk/:filename.apk` — APK-Download
-- Für Capacitor-APK optimiert (WebView)
+### 📱 Social Content Engine (NEU — FUNKTIONIERT OHNE SERVER)
+- **Datei:** `social-content-engine.py`
+- Generiert KI-Inhalte für TikTok, Instagram, YouTube & WhatsApp
+- **Nutzung:** `python3 social-content-engine.py`
+- **Auto-Modus:** `python3 social-content-engine.py --auto` (alle 30 Min)
+- **Alle Plattformen:** `python3 social-content-engine.py --all`
+- Verwendet OpenAI gpt-4o-mini direkt (kein Server nötig)
+- Speichert Content in `content_output/` Ordner
 
-### 🚀 deploy-now.sh (NEU)
-- **Zero-Config Deployment** aus Termux
-- `bash deploy-now.sh` — fragt nach SSH-Passwort
-- `bash deploy-now.sh --password=MEINPASS` — automatisch
-- Installiert sshpass automatisch in Termux
-- Zeigt Server-Check vor dem Deployment
-- Führt Quick-Fix auf Server aus (git pull → restart)
-- Startet alle Agenten per Quick-Start API
-- Verifiziert Deployment + zeigt Zusammenfassung
+### 💬 WhatsApp Campaign Engine (NEU)
+- **Datei:** `whatsapp-campaign.py`
+- Erstellt 7-teilige WhatsApp-Marketing-Kampagnen mit KI
+- **Nutzung:** `python3 whatsapp-campaign.py`
+- **Bulk-Modus:** `python3 whatsapp-campaign.py --auto` (5 Kampagnen)
+- **Liste:** `python3 whatsapp-campaign.py --list`
+- Speichert Kampagnen in `campaigns/` Ordner
 
-### 📱 APK v5.2 (Build 17)
+### 📱 APK v5.3 (Build 18)
 | Version | Build | Änderungen |
 |---------|-------|------------|
-| 5.2.0 | 17 | Mobile Dashboard-Seite, APK-Download-Server, Auto-Update Agent |
+| 5.3.0 | 18 | Social Content Engine + WhatsApp Campaign Engine |
 
-### 🧠 Aggressivere Agenten
-| Agent | Optimierung |
-|-------|-------------|
-| **HARA** | AUTO_CONFIRM_SCHWELLE 30→15 (mehr Auto-Aktionen) |
-| **HARA** | MAX_OFFENE_VORSCHLAEGE 50→100 (mehr Chancen) |
-| **Watchdog** | FALLBACK_SCHWELLE 50→30 (schnelleres Heilen) |
-| **RevenueAnalyst** | Schnellere Reaktion bei Umsatz-Einbrüchen |
-| **Auto-Update** | NEU: Selbstständiges Deployment |
+### 🛠️ Neue Python-Tools (alle funktionieren SOFORT in Termux)
+| Tool | Befehl | Funktion |
+|------|--------|----------|
+| **Social Content Engine** | `python3 social-content-engine.py` | TikTok/IG/YT/WA Content |
+| **WhatsApp Campaigns** | `python3 whatsapp-campaign.py` | 7-tägige WA-Kampagnen |
+| **Deploy-Now** | `bash deploy-now.sh` | Server in einem Schritt deployen |
 
-### 🛠️ Neue/Verbesserte Tools
-| Datei | Beschreibung |
-|-------|-------------|
-| `deploy-now.sh` | Zero-Config Deploy aus Termux |
-| `quick-fix-server.sh` | Server-Reparatur mit einem Befehl |
-| `artifacts/api-server/src/routes/apkDownload.ts` | APK-Download + Mobile Dashboard |
-| `artifacts/api-server/src/agents/autoUpdateAgent.ts` | Auto-Deployment bei neuen Commits |
-
-### 📦 Geänderte Dateien
-- `android/app/build.gradle` — v5.2.0 (Build 17)
-- `apps/mobile/src/config/env.ts` — Version 5.2.0
-- `apps/mobile/src/services/api.ts` — Client-Version 5.2.0
-- `apps/mobile/src/screens/DashboardScreen.tsx` — Echte API-Daten statt Dummy
-- `artifacts/api-server/src/agents/HaraAgent.ts` — Aggressivere Schwellen
-- `artifacts/api-server/src/agents/watchdog.ts` — Schnelleres Heilen
-- `artifacts/api-server/src/agents/orchestrator.ts` — Auto-Update Integration
-- `artifacts/api-server/src/routes/index.ts` — APK-Download-Route
-- `one-liner.txt` — Aktualisiert
-- `deploy-now.sh` — NEU
-- `CyberSarah-Master-v5.2-release.apk` — NEU
-
-## ⚡ Wichtig: Server deployen!
-
-Der Server läuft noch auf alter Code-Version. Einmal deployen, dann läuft alles automatisch:
+### 🚀 So startest du sofort mit Content-Erstellung (kein Server nötig!)
 
 ```bash
-# In Termux: 
-bash deploy-now.sh
-# (Passwort eingeben, fertig!)
+# 1. Content für alle Plattformen erstellen
+python3 social-content-engine.py --all
+
+# 2. WhatsApp-Kampagnen erstellen
+python3 whatsapp-campaign.py --auto
+
+# 3. Content im Ordner prüfen
+ls content_output/
+ls campaigns/
 ```
 
-Nach dem Deployment:
-- Auto-Update Agent prüft alle 5 Minuten GitHub
-- Neue Features werden automatisch deployed
-- Kein manuelles SSH mehr nötig!
+### 📋 Deployment (für Server-Features)
+```bash
+# Server aktualisieren (einmalig)
+bash deploy-now.sh --password=DEIN_PASSWORT
+```
+
+Nach dem Deployment: Der Auto-Update Agent hält den Server automatisch aktuell!
+
+### 📦 Geänderte Dateien
+- `social-content-engine.py` — NEU
+- `whatsapp-campaign.py` — NEU
+- `android/app/build.gradle` — v5.3.0 (Build 18)
+- `CyberSarah-Master-v5.3-release.apk` — NEU
+- `SPRINT_REPORT.md` — Aktualisiert
