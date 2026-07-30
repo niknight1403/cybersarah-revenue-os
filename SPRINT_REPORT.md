@@ -1,66 +1,64 @@
-# SPRINT 48 — One-Click Seller + APK v6.2
+# SPRINT 49 — Startup Wizard + APK v6.3
 
 ## ✅ ABGESCHLOSSEN
 
-### 🛍️ One-Click Seller (NEU — Verkaufen in 5 Sekunden!)
-**Datei:** `one-click-seller.py`
+### 🚀 Startup Wizard (NEU — Zero to Sale in 60s!)
+**Datei:** `startup-wizard.py`
+**Start:** `python3 startup-wizard.py`
+
+**Der schnellste Weg, alles zum Laufen zu bringen:**
+```
+╔══════════════════════════════════════╗
+║  🚀 CyberSarah Startup Wizard       ║
+╚══════════════════════════════════════╝
+
+[1/5] Prüfe Stripe... ✅ LIVE 💰
+[2/5] Prüfe OpenAI... ✅ GPT-4o-mini
+[3/5] Prüfe Server... ✅ 35 Agenten
+[4/5] Prüfe Tools...  ✅ 10/10 verfügbar
+[5/5] Zusammenfassung ✅
+
+📊 System-Status
+Stripe        ✅ LIVE 💰
+OpenAI        ✅ Bereit
+Server        ✅ Online (35 Agenten)
+Produkte      10
+Tools         ✅ Alle bereit
+
+🎯 BEREIT ZUM VERKAUFEN!
+Starte: python3 one-click-seller.py --auto
+```
+
+**Was der Wizard prüft:**
+- ✅ Stripe LIVE/Test-Modus + Kontostand
+- ✅ OpenAI API-Key + Erreichbarkeit
+- ✅ Hetzner-Server + Agenten
+- ✅ Alle 10 Python-Tools
+- ✅ Zeigt klare Start-Befehle
+
+### 📱 APK v6.3 (Build 28)
+- Version 6.3.0 — 3.6 MB, signiert
+
+### 📦 49 Sprints — Das komplette System
 
 ```bash
-# Einfach starten:
-python3 one-click-seller.py
+# 🚀 STARTE HIER (NEU)
+python3 startup-wizard.py               # System-Check + Anleitung
 
-# Oder automatisch (bestes Produkt):
-python3 one-click-seller.py --auto
+# ⚡ VERKAUFEN (3 Wege)
+python3 one-click-seller.py --auto      # Link → Kunde → 💰 (5 Sek)
+python3 sales-server.py                 # Store auf deinem Handy
+python3 product-launch-system.py        # Launch für alle 10 Produkte
 
-# Oder ALLE Produkte:
-python3 one-click-seller.py --all
-```
+# 💳 STRIPE VERWALTEN
+python3 stripe-dashboard.py             # Kontostand + Transaktionen
 
-**Was passiert in EINEM Schritt:**
-1. 🔗 **Checkout-Link** von Stripe LIVE
-2. 📝 **KI-Marketing-Text** für Kunden
-3. 🏗️ **Verkaufsseite** (HTML, professionell)
-4. 💾 **Alles gespeichert** in `sell_ready/`
-5. 📤 **Fertig zum Teilen!**
-
-**Ausgabe:**
-```
-sell_ready/
-├── produktname_20260730_151200.html   ← Verkaufsseite
-├── produktname_20260730_151200.txt    ← Links + Text
-└── ALL_PRODUCTS_20260730_151200.html  ← Alle Produkte auf einer Seite
-```
-
-**So einfach geht's:**
-```bash
-python3 one-click-seller.py
-# → Produkt wählen
-# → Checkout-Link kopieren
-# → An Kunden senden
-# → 💰 Geld erhalten!
-```
-
-### 📱 APK v6.2 (Build 27)
-- Version 6.2.0 — 3.6 MB, signiert
-
-### 🚀 Das komplette Revenue-System (48 Sprints)
-```bash
-# 🛍️ VERKAUFEN (3 Wege)
-python3 one-click-seller.py              # ⚡ One-Click (NEU!)
-python3 sales-server.py                   # 🏪 Lokaler Store
-python3 product-launch-system.py          # 🚀 Launch-Automation
-
-# 💳 STRIPE
-python3 stripe-dashboard.py               # LIVE Dashboard
-
-# 🤖 AUTOMATION
-python3 master-automation.py              # 24/7 Hub
-python3 cybersarah-command-center.py      # All-in-One
+# 🤖 24/7 AUTOMATION
+python3 master-automation.py            # Drücke 6 für Auto-Modus
 
 # 📱 CONTENT
-python3 social-content-engine.py          # TikTok/IG/YT
-python3 whatsapp-campaign.py              # WhatsApp
+python3 social-content-engine.py --all  # TikTok/IG/YT/WA
 
-# 🛠️ DEPLOYMENT
-bash deploy-now.sh --password=PASS        # Server deployen
+# 🛠️ SERVER (wenn bereit)
+bash deploy-now.sh --password=PASS
 ```
