@@ -41,6 +41,7 @@ import socialRoutesRouter from "./socialRoutes";
 import crossSellRoutesRouter from "./crossSellRoutes";
 import subscriptionRoutesRouter from "./subscriptionRoutes";
 import conversionRoutesRouter from "./conversionRoutes";
+import storeRouter from "./store";
 import quickStartRouter from "./quickStart";
 import revenueDashboardRouter from "./revenueDashboard";
 import systemDashboardRouter from "./systemDashboard";
@@ -99,6 +100,7 @@ router.use("/admin", adminRouter);
 router.use(systemDashboardRouter);
 router.use(revenueDashboardRouter);
 router.use(quickStartRouter);
+router.use(storeRouter);
 router.use(newsletterSignupRouter);
 
 export default router;
