@@ -125,7 +125,7 @@ def main():
     print(f"  {clr('g', '2)')} Alle Produkte + Links anzeigen")
     print(f"  {clr('g', '3)')} Marketing-Texte generieren")
     print(f"  {clr('g', '4)')} Vollständigen System-Check")
-    print(f"  {clr('g', '5)')) Dauerhaft alle 30 Sekunden scannen (Auto-Pilot)")
+    print(f"  {clr(chr(103), chr(53))} Dauerhaft alle 30 Sekunden scannen (Auto-Pilot)")
     print(f"  {clr('r', '0)')} Beenden")
     
     try:
