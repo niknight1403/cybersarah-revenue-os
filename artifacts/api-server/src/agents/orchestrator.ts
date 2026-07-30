@@ -968,6 +968,10 @@ async function automaticheDatenInitialisierung(): Promise<void> {
     logger.warn({ err }, "Auto-Seeding nicht kritisch");
   }
 }
+  });
+  logger.info("Job-Queue Handler registriert");
+}
+
 // ─── Main-Loop (60-Sekunden-Zyklus) ─────────────────────────────────────────
 
 async function mainLoop(): Promise<void> {
