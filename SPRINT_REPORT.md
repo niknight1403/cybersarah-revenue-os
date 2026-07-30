@@ -1,76 +1,67 @@
-# SPRINT 44 — Product Launch System + APK v5.8
+# SPRINT 45 — Sales Server + APK v5.9
 
 ## ✅ ABGESCHLOSSEN
 
-### 🚀 Product Launch System (NEU — Generiert REALE Umsätze!)
-**Datei:** `product-launch-system.py`
-**Start:** `python3 product-launch-system.py`
+### 🛍️ Sales Server (NEU — Verkaufsseite auf deinem Handy!)
+**Datei:** `sales-server.py`
+**Start:** `python3 sales-server.py`
+**Dann:** Browser → `http://HANDY_IP:8765`
 
-**Komplette Launch-Automation für ALLE 10 Stripe LIVE Produkte!**
+**Ein kompletter Verkaufs-Server, der auf DEINEM Handy läuft!**
 
-| Schritt | Was passiert |
-|---------|-------------|
-| 1. 📡 | Holt ALLE Produkte aus Stripe LIVE |
-| 2. 🔗 | Erstellt Checkout-Links |
-| 3. 📝 | KI-optimierte Produktbeschreibung |
-| 4. 📱 | TikTok-Video-Skript |
-| 5. 📸 | Instagram-Post + Hashtags |
-| 6. 💼 | LinkedIn-Post |
-| 7. 📧 | 5-tägige E-Mail-Kampagne |
-| 8. 💬 | WhatsApp-Verkaufsnachricht |
-| 9. 🏗️ | Sales-Page (HTML) |
-| 10. 📋 | Kompletter 7-Tage-Launch-Plan |
+```
+┌─────────────────────────────────────────────┐
+│  🚀 CyberSarah Store                        │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐       │
+│  │ Produkt │ │ Produkt │ │ Produkt │       │
+│  │  €9.99  │ │  €9.99  │ │  €9.99  │       │
+│  │ [Kaufen]│ │ [Kaufen]│ │ [Kaufen]│       │
+│  └─────────┘ └─────────┘ └─────────┘       │
+│  Stripe LIVE 💰 • 10 Produkte • € verfügbar │
+└─────────────────────────────────────────────┘
+```
 
-**Optionen:**
-- **Einzelnes Produkt** — gezielter Launch
-- **ALLE 10 Produkte** — Massen-Launch (empfohlen!)
-- **Nur Checkout-Links** — für schnelle Verkäufe
+**Features:**
+- ✅ **ALLE 10 Stripe LIVE Produkte** auf einer Seite
+- ✅ **Einzelne Produktseiten** mit "Jetzt kaufen" Button
+- ✅ **Stripe Checkout** — echte Zahlungen, echtes Geld!
+- ✅ **Läuft auf deinem Handy** — kein Server nötig!
+- ✅ **Im WLAN erreichbar** — vom Laptop/Tablet aus bedienbar
+- ✅ **Modernes Dark-Design** — wie ein echter Online-Store
 
-**Ausgabe:** Ordner `product_launch_*/` mit allen Materialien + `00_LAUNCH_PLAN.md`
+**So nutzt du ihn:**
+```bash
+# 1. Server starten
+python3 sales-server.py
 
-### 📱 APK v5.8 (Build 23)
-- Version 5.8.0 — 3.6 MB, signiert
+# 2. Im Browser öffnen
+# http://localhost:8765 (auf dem Handy)
+# Oder http://IP:8765 (vom Laptop im WLAN)
 
-### 🎯 Wie du JETZT sofort Verkäufe generierst:
+# 3. Produkt wählen → "Jetzt kaufen" → Stripe-Checkout → 💰
+```
+
+### 📱 APK v5.9 (Build 24)
+- Version 5.9.0 — 3.6 MB, signiert
+
+### 🎯 Deine Revenue-Pipeline (komplett!)
 
 ```bash
-# 1. Product Launch System starten
-python3 product-launch-system.py
+# 🛍️ VERKAUFEN (lokal auf dem Handy!)
+python3 sales-server.py          # 🏪 Store-Server (NEU!)
 
-# 2. "ALLE 10 Produkte gleichzeitig launchen" wählen
-# 3. KI erstellt ALLE Materialien + Checkout-Links
-# 4. Launch-Plan befolgen (Tag 1-7)
-# 5. Fertig! 🎉
-```
+# 🚀 PRODUKTE LAUNCHEN
+python3 product-launch-system.py # Alle Materialien + Links
 
-### 💰 Deine 10 Stripe LIVE Produkte:
-```
-1. Digitale Networking-Tipps für Freelancer - Workbook
-2. Kreative Online-Dienstleistungsumfragen - Leitfaden
-3. Onboarding-Leitfaden für kreative Dienstleister
-4. Kreativer Kundenbindungs-Strategien für E-Commerce
-5. Effizientes E-Mail Engagement Toolkit
-6. Digitale Content-Recycling-Strategien
-7. Kreative Personal Branding Strategien - Template-Kit
-8. Zielgerichtetes Kundenengagement - Toolkit
-9. Kreative Verkaufsförderungsstrategien für Solopreneure
-10. Kreatives Branding für Selbstständige
-```
-
-### 📦 Komplette Tool-Übersicht (alle 44 Sprints)
-
-```bash
-# 💰 VERKAUFEN (Umsatz generieren)
-python3 product-launch-system.py    # 🚀 Launch-System (komplett)
-python3 stripe-dashboard.py         # 💳 Stripe LIVE Dashboard
-python3 revenue-hub.py              # 📊 Revenue Hub + KI
+# 💳 STRIPE VERWALTEN
+python3 stripe-dashboard.py      # Kontostand + Transaktionen
 
 # 📱 CONTENT ERSTELLEN
-python3 social-content-engine.py    # TikTok/IG/YT/WA
-python3 whatsapp-campaign.py        # WhatsApp Kampagnen
-python3 content-empire.py           # Blog + SEO
+python3 social-content-engine.py # TikTok/IG/YT Content
 
-# 🚀 STEUERUNG
-python3 cybersarah-command-center.py # All-in-One
-bash deploy-now.sh                  # Server deployen
+# 🚀 ALLES IN EINEM
+python3 cybersarah-command-center.py
+
+# 🚀 SERVER (wenn bereit)
+bash deploy-now.sh --password=DEIN_PASSWORT
 ```
