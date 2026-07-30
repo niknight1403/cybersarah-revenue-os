@@ -47,6 +47,7 @@ import revenueDashboardRouter from "./revenueDashboard";
 import systemDashboardRouter from "./systemDashboard";
 import adminRouter from "./admin";
 import apkUploadRouter from "./apkUpload";
+import apkDownloadRouter from "./apkDownload";
 import notificationsRouter from "./notifications"
 import newsletterSignupRouter from "./newsletterSignup";
 
@@ -96,6 +97,7 @@ router.use(subscriptionRoutesRouter);
 router.use(conversionRoutesRouter);
 router.use(notificationsRouter);
 router.use(apkUploadRouter);
+router.use("/apk", apkDownloadRouter);
 router.use("/admin", adminRouter);
 router.use(systemDashboardRouter);
 router.use(revenueDashboardRouter);

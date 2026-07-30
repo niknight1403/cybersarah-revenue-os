@@ -63,8 +63,8 @@ export const STORAGE_KEYS = {
 } as const;
 
 // ─── App-Metadaten ───────────────────────────────────────────────────
-export const APP_VERSION = '5.0.0' as const;
-export const APP_BUILD = 15 as const;
+export const APP_VERSION = '5.2.0' as const;
+export const APP_BUILD = 17 as const;
 export const APP_NAME = 'CyberSarah' as const;
 
 // ─── Helper: Lässt sich zur Laufzeit patchen (z. B. nach Login mit User-Config) ──
