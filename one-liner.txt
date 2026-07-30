@@ -1,28 +1,31 @@
 ╔══════════════════════════════════════════════════════════════╗
-║  CyberSarah — Einzeiler für Termux                         ║
+║  CyberSarah v5.0 — Einzeiler für Termux                    ║
 ║  Einfach kopieren und in Termux einfügen                   ║
 ╚══════════════════════════════════════════════════════════════╝
 
-📱 STATUS PRÜFEN:
+📱 NEU: DEPLOY-BOT (fragt nach SSH-Passwort):
+python3 termux-deploy.py
+
+🤖 DEPLOY-BOT mit Passwort (vollautomatisch):
+python3 termux-deploy.py --password DEIN_PASSWORT
+
+🚀 STATUS PRÜFEN:
 curl -s http://167.233.196.20:3000/api/quick-status | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('oneLine','?'))"
 
-🚀 QUICK-START (alle Agenten aktivieren):
+💥 QUICK-START (alle Agenten aktivieren):
 curl -s -X POST http://167.233.196.20:3000/api/quick-start | python3 -c "import sys,json;[print(l) for l in json.load(sys.stdin).get('details',[])]"
 
-📥 DEPLOY (Server updaten + neustarten):
-curl -s -X POST http://167.233.196.20:3000/api/admin/deploy -H "X-Deploy-Token: cybersarah2026" | python3 -c "import sys,json;print(json.load(sys.stdin).get('message','?'))"
-
-💰 REVENUE (im Browser öffnen):
+💰 REVENUE-DASHBOARD:
 http://167.233.196.20:3000/api/revenue
 
-📊 SYSTEM-DASHBOARD (im Browser öffnen):
+📊 SYSTEM-MONITORING:
 http://167.233.196.20:3000/api/system-dashboard
 
-📱 APK DOWNLOAD:
-http://167.233.196.20:3000/apk/CyberSarah-Master-v3.0-release.apk
+📱 APK v5.0 DOWNLOAD:
+http://167.233.196.20:3000/apk/CyberSarah-Master-v5.0-release.apk
 
-🎮 TERMUX MANAGER (volles Menü):
+🎮 TERMUX MANAGER:
 bash <(curl -sL https://raw.githubusercontent.com/niknight1403/cybersarah-revenue-os/main/termux-manager.sh)
 
-⚡ EIN-BEFEHL-DEPLOY (SSH auf Server):
+⚡ SSH-EIN-ZEILER-DEPLOY:
 ssh root@167.233.196.20 "cd /opt/cybersarah && bash deploy-simple.sh"
