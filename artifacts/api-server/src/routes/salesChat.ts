@@ -51,7 +51,7 @@ async function erstellePaymentLink(produktName: string): Promise<string | null> 
   } catch { return null; }
 }
 
-router.post("/api/sales-chat", async (req, res) => {
+router.post("/sales-chat", async (req, res) => {
   try {
     const { message, sessionId } = req.body as { message?: string; sessionId?: string };
     if (!message || !sessionId) { res.status(400).json({ error: "message + sessionId required" }); return; }
