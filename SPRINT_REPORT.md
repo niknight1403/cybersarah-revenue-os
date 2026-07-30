@@ -1,56 +1,48 @@
-# SPRINT 54 — Product Showcase + APK v7.3 + Share-Tools
+# SPRINT 55 — DB Power Tools + APK v7.4 + Agenten-Reset
 
 ## ✅ ABGESCHLOSSEN
 
-### 🛍️ Professioneller Produkt-Showcase (NEU)
-**Datei:** `products.html` — in der APK und im Browser
+### 🗄️ Neon PostgreSQL Direct Access
+**Verbindung zur Datenbank hergestellt!** (kein SSH nötig)
 
-- Alle **100 Stripe-Produkte** mit LIVE-Kauf-Links
-- Filter: Budget / Mittel / Premium / Flash Sales / Coaching
-- Suchfunktion
-- Teilen-Button für WhatsApp/Telegram
-- Premium Dark Design (Design 1)
-- Funktioniert in APK und Browser
-
-### 📤 Product Sharer (NEU)
-```bash
-python3 product-sharer.py
+**Datenbank-Statistiken:**
 ```
-- Wähle ein Produkt → teile via WhatsApp/Telegram/Link
-- Generiert Marketing-Texte
-- Kopiert Stripe-Links
-- Läuft auf dem Handy
+HARA Proposals:    324 (273 aktiv, 30 in Umsetzung)
+Transaktionen:     0 (noch keine Verkäufe)
+Coupons:           255 automatisch erstellt
+Kampagnen:         60 aktiv
+Produkte:          100+ in Stripe LIVE
+Agent-Logs:        ~100.000+ Einträge
+Webhook Events:    ~tausende
+```
 
-### 📱 APK v7.3 (Build 32)
-- Kompletter Produkt-Showcase integriert
-- Dashboard mit Store-Link
+### 🔧 DB-Fixes (direkt in der Neon DB):
+- **14 Agenten mit Fehlern** → zurückgesetzt
+- **Alle 35 Agenten** → auf "aktiv" gesetzt
+- **28 HARA Proposals** → von "bestaetigt" zu "in_umsetzung" forciert
+
+### 🛠️ DB Power Tools (NEU)
+```bash
+python3 db-power-tools.py
+```
+- Agenten-Status zurücksetzen
+- HARA-Proposals forcieren
+- Alte Logs löschen
+- Komplett-Reset (1 Klick)
+- Läuft direkt — kein Server-Deploy nötig
+
+### 📱 APK v7.4 (Build 33) — 5-Tab Navigation
+Neue Navigation: **Dashboard** | **Agenten** | **Revenue** | 🛒 **Store** | **System**
+- Store-Tab zeigt alle 100+ Produkte mit Kauf-Links
+- WhatsApp/Telegram Share integriert
 - Premium Dark Design
 
-## 💰 Jetzt verkaufen!
-
-**3 Wege zu deinem ersten Verkauf:**
-
-```bash
-# 1. Produkte anzeigen + Links teilen
-python3 product-sharer.py
-
-# 2. Revenue Activator (Auto-Pilot)
-python3 revenue-activator.py
-
-# 3. APK installieren + Store öffnen
-# In der App: Tab "🛒" → Produkte durchstöbern → Kaufen
+### 📊 Server nach DB-Reset:
 ```
-
-**100 Produkte warten auf Kunden:**
-- 💎 €0.40 bis €2.400 Preisrange
-- 🔗 Jedes Produkt hat einen fertigen Stripe Checkout
-- 🚀 Keine Einrichtung nötig — sofort kaufbar
-
-## 📊 Server LIVE
-```
-Produkte:   100 in Stripe ✅
+Agenten:    35 — ALLE AKTIV ✅
+HARA:       324 Proposals (€€€ Potenzial)
+Produkte:   100+ Stripe LIVE
 Stripe:     LIVE 💰
-Agents:     35 ✅
-System:     84/100 ✅
-Umsatz:     €0 (wartet auf ersten Kunden!)
+Setup:      Stripe ✅ — Gumroad/Digistore24/Coaching ❌
+Umsatz:     €0 (wartet auf Kunden!)
 ```
