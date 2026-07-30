@@ -1,49 +1,51 @@
-# SPRINT 56 — Server Repair Kit + Stripe Checkout + APK v7.5
+# SPRINT 57 — DB Backup + Auto-Deploy Agent + APK v7.6
 
 ## ✅ ABGESCHLOSSEN
 
-### 🔧 Server Repair Kit (NEU)
+### 💾 DB Backup & Restore (NEU)
 ```bash
-bash server-repair-kit.sh
+python3 db-backup.py
 ```
-- Automatischer Gesundheits-Check
-- Agenten-Reset via API
-- HARA-Proposals aktivieren
-- Revenue-Status anzeigen
-- Verfügbare Tools auflisten
+- Voll-Backup aller 50+ Tabellen aus Neon PostgreSQL
+- Komprimiert als .sql.gz
+- Wiederherstellung im Notfall
+- Auto-Backup alle 6 Stunden (Cron-Job)
 
-### 🛒 Stripe Checkout Pages (NEU)
-- **thank_you.html** — Erfolgsseite nach Kauf (mit Download-Hinweis)
-- **cancel.html** — Seite bei abgebrochener Zahlung
-- Liegen im APK und auf dem Server bereit
-
-### 📱 APK v7.5 (Build 34)
-- 5-Tab Navigation (Dashboard, Agenten, Revenue, Store, System)
-- Checkout-Seiten integriert
-- Premium Dark Design
-- WhatsApp/Telegram Share
-
-### 📊 Server Status
+### 🚀 Auto-Deploy Agent (NEU)
+```bash
+python3 auto-deploy-agent.py
 ```
-Agenten:     35 (28 aktiv, 7 wartend) ✅
-HARA:        324 Proposals (€€€ Potenzial)
+- Prüft alle 15 Minuten auf neue GitHub-Commits
+- Deployed automatisch via SSH (Passwort einmal eingeben)
+- Auto-Mode: einmal starten → für immer autonom
+- Funktioniert in Termux
+
+### 🛠️ Tools aktualisiert
+- Fehlerhafte f-Strings in db-backup.py und auto-deploy-agent.py gefixt
+- Beide Tools sind jetzt voll funktionsfähig
+
+### 📱 APK v7.6 (Build 35)
+- `CyberSarah-Master-v7.6-release.apk` (3.6 MB)
+- Neue Checkout-Seiten integriert
+- 5-Tab Navigation
+
+### 📊 Server LIVE
+```
+Agenten:     35 (28 aktiv ✅)
 Stripe:      LIVE 💰
-System:      84/100 ✅
-Fehler:      Keine ✅
-Umsatz:      €0 ← erster Kunde fehlt!
+HARA:        324 Proposals aktiv
+Fehler:      0 ✅
+Umsatz:      €0
 ```
 
-### 💰 So verkaufst du jetzt:
+### 💰 Nächster Schritt für echten Umsatz:
 ```bash
-# 1. Produkte + Links anzeigen und teilen
-python3 product-sharer.py
+# 1. Auto-Deploy einrichten
+python3 auto-deploy-agent.py  # → Passwort eingeben → Auto-Mode starten
 
-# 2. DB-Tools für Agenten-Reset
-python3 db-power-tools.py
+# 2. Produkte teilen
+python3 product-sharer.py     # → WhatsApp/Telegram öffnet sich
 
-# 3. Server-Repair
-bash server-repair-kit.sh
-
-# 4. Auto-Sales-Seite
-python3 auto-sales-engine.py
+# 3. DB regelmäßig sichern
+python3 db-backup.py          # → Option 5: Backup + Cron
 ```
