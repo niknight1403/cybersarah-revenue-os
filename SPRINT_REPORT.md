@@ -1,67 +1,75 @@
-# SPRINT 45 — Sales Server + APK v5.9
+# SPRINT 46 — Master Automation Hub + APK v6.0
 
 ## ✅ ABGESCHLOSSEN
 
-### 🛍️ Sales Server (NEU — Verkaufsseite auf deinem Handy!)
-**Datei:** `sales-server.py`
-**Start:** `python3 sales-server.py`
-**Dann:** Browser → `http://HANDY_IP:8765`
+### 🤖 Master Automation Hub (NEU — orchestrates ALL tools!)
+**Datei:** `master-automation.py`
+**Start:** `python3 master-automation.py`
 
-**Ein kompletter Verkaufs-Server, der auf DEINEM Handy läuft!**
+**DAS Herzstück — verbindet ALLE Tools in EINEM System!**
 
+**Live-Dashboard:**
 ```
-┌─────────────────────────────────────────────┐
-│  🚀 CyberSarah Store                        │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐       │
-│  │ Produkt │ │ Produkt │ │ Produkt │       │
-│  │  €9.99  │ │  €9.99  │ │  €9.99  │       │
-│  │ [Kaufen]│ │ [Kaufen]│ │ [Kaufen]│       │
-│  └─────────┘ └─────────┘ └─────────┘       │
-│  Stripe LIVE 💰 • 10 Produkte • € verfügbar │
-└─────────────────────────────────────────────┘
+╔══════════════════════════════════════════╗
+║  🤖 CyberSarah Master Automation v1.0  ║
+╚══════════════════════════════════════════╝
+                                          
+💰 Stripe LIVE                           
+Verfügbar: €X.XX  |  Ausstehend: €X.XX  
+                                          
+🌐 Server: ✅ Online — 35 Agenten        
+                                          
+📊 Automation Stats                       
+Content: 5  |  Links: 12  |  Revenue: 3 
 ```
 
-**Features:**
-- ✅ **ALLE 10 Stripe LIVE Produkte** auf einer Seite
-- ✅ **Einzelne Produktseiten** mit "Jetzt kaufen" Button
-- ✅ **Stripe Checkout** — echte Zahlungen, echtes Geld!
-- ✅ **Läuft auf deinem Handy** — kein Server nötig!
-- ✅ **Im WLAN erreichbar** — vom Laptop/Tablet aus bedienbar
-- ✅ **Modernes Dark-Design** — wie ein echter Online-Store
+**24/7 Auto-Modus (einschalten und laufen lassen!):**
+- **Alle 5 Min:** Stripe-Check + Transaktionen prüfen
+- **Alle 30 Min:** KI-Content erstellen + speichern
+- **Alle 2h:** Checkout-Links aktualisieren
+- **Alle 10 Min:** Server-Status prüfen
 
-**So nutzt du ihn:**
+**Manuelle Aktionen:**
+- `1` → Content sofort erstellen
+- `2` → Checkout-Links generieren
+- `3` → Stripe LIVE aktualisieren
+- `4` → Server-Status prüfen
+- `5` → Alle Tools anzeigen
+- `6` → Auto-Modus starten (24/7!)
+
+### 📱 APK v6.0 (Build 25) — MAJOR RELEASE!
+- **Version:** 6.0.0 🎉
+- **Build:** 25
+- **Größe:** 3.6 MB
+- **Signiert:** ✅
+
+### 🎯 ALLE 46 Sprints — Vollständige Übersicht
+
 ```bash
-# 1. Server starten
-python3 sales-server.py
+# 🤖 MASTER AUTOMATION (NEU — Alles in einem)
+python3 master-automation.py
 
-# 2. Im Browser öffnen
-# http://localhost:8765 (auf dem Handy)
-# Oder http://IP:8765 (vom Laptop im WLAN)
+# 🛍️ VERKAUFEN
+python3 sales-server.py              # Store auf deinem Handy
+python3 product-launch-system.py     # Launch-Automation
+python3 stripe-dashboard.py          # Stripe LIVE Dashboard
 
-# 3. Produkt wählen → "Jetzt kaufen" → Stripe-Checkout → 💰
+# 📱 CONTENT
+python3 social-content-engine.py     # TikTok/IG/YT/WA
+python3 whatsapp-campaign.py         # WhatsApp Kampagnen
+
+# 🚀 STEUERUNG
+python3 cybersarah-command-center.py # All-in-One Terminal
+python3 revenue-hub.py               # Revenue Hub + KI
+python3 cybersarah-dashboard.py      # Server-Dashboard
+
+# 🛠️ DEPLOYMENT
+bash deploy-now.sh                   # Server deployen
+python3 serve-apk.py                 # APK Download Server
 ```
 
-### 📱 APK v5.9 (Build 24)
-- Version 5.9.0 — 3.6 MB, signiert
-
-### 🎯 Deine Revenue-Pipeline (komplett!)
-
-```bash
-# 🛍️ VERKAUFEN (lokal auf dem Handy!)
-python3 sales-server.py          # 🏪 Store-Server (NEU!)
-
-# 🚀 PRODUKTE LAUNCHEN
-python3 product-launch-system.py # Alle Materialien + Links
-
-# 💳 STRIPE VERWALTEN
-python3 stripe-dashboard.py      # Kontostand + Transaktionen
-
-# 📱 CONTENT ERSTELLEN
-python3 social-content-engine.py # TikTok/IG/YT Content
-
-# 🚀 ALLES IN EINEM
-python3 cybersarah-command-center.py
-
-# 🚀 SERVER (wenn bereit)
-bash deploy-now.sh --password=DEIN_PASSWORT
-```
+### 📦 Geänderte Dateien
+- `master-automation.py` — NEU (Herzstück)
+- `android/app/build.gradle` — v6.0.0 (Build 25)
+- `CyberSarah-Master-v6.0-release.apk` — NEU (Major Release)
+- `artifacts/dashboard/dist/` — APK + Index Update
