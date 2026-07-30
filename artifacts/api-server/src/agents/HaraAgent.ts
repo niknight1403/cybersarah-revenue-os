@@ -11,7 +11,7 @@ import { db } from "@workspace/db";
 import {
   haraProposalsTable,
   haraPerformanceTable,
-  campaignsTable,
+  campaignsTable, transactionsTable,
   revenueOpportunitiesTable,
   produkteTable,
   agentLogsTable,
@@ -989,70 +989,113 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
     };
   }
   // ═════════════════════════════════════════════════════════════════════════════
-  // FAST-REVENUE-SCAN: Leichtgewichtiger Schnellscan für häufige Ausführung
-  // Fokussiert auf schnelle Umsatzchancen ohne volle KI-Analyse
+  // FAST-REVENUE-SCAN: Aggressiver Schnellscan — erzeugt selbstständig Umsatzchancen
+  // Führt bei jedem Durchlauf Aktionen aus: Produkte anlegen, Payment-Links, Opportunities
   // ═════════════════════════════════════════════════════════════════════════════
   async fastRevenueScan(): Promise<AufgabeErgebnis> {
     logger.info("⚡ HARA: Fast-Revenue-Scan gestartet");
     const aktionen: string[] = [];
-    const vor24h = new Date(Date.now() - 86400000);
 
-    // 1. Prüfe ob es offene Stripe-Zahlungen ohne Tracking gibt
+    // ── 1. Prüfe ob Produkte existieren — wenn nicht, automatisch anlegen ──
     try {
-      const { pendingAttributionTable } = await import("@workspace/db");
-      const pending = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(pendingAttributionTable)
-        .where(eq(pendingAttributionTable.status, "pending"));
-      if (Number(pending[0]?.count ?? 0) > 5) {
-        aktionen.push(`⚡ ${pending[0].count} offene Attributionen`);
-      }
-    } catch {}
-
-    // 2. Prüfe ob es inaktive Produkte gibt die reaktiviert werden könnten
-    try {
-      const inaktiveMitHistorie = await db
-        .select({ name: transactionsTable.produktName, letzterKauf: sql<Date>`MAX(created_at)` })
-        .from(transactionsTable)
-        .groupBy(transactionsTable.produktName)
-        .having(sql`MAX(created_at) < ${vor24h}`)
-        .limit(5);
-      for (const p of inaktiveMitHistorie) {
-        if (!p.name) continue;
-        // Prüfe ob Produkt noch aktiv ist
-        const aktiv = await db
-          .select({ count: sql<number>`COUNT(*)` })
-          .from(revenueOpportunitiesTable)
-          .where(and(eq(revenueOpportunitiesTable.titel, p.name), eq(revenueOpportunitiesTable.status, "aktiv")));
-        if (Number(aktiv[0]?.count ?? 0) === 0) {
-          // Reaktivieren!
-          await db.insert(agentLogsTable).values({
-            agentId: this.agentId ?? 0, agentName: "HARA",
-            aktion: "fast_revenue_scan", status: "info",
-            nachricht: `Produkt ${p.name} inaktiv obwohl letzter Kauf: ${p.letzterKauf}`,
-          });
-          aktionen.push(`🔄 ${p.name} — Reaktivierung vorgeschlagen`);
+      const prodCount = await db
+        .select({ count: sql`COUNT(*)` })
+        .from(produkteTable);
+      if (Number(prodCount[0]?.count ?? 0) === 0) {
+        aktionen.push("📦 Keine Produkte — Erstelle automatisch...");
+        const stripe = getStripeClient();
+        const basisProdukte = [
+          { name: "KI-Toolkit Premium", preis: 47.00, desc: "Komplettes KI-Toolkit für automatisierte Umsatzgenerierung" },
+          { name: "Revenue OS License", preis: 97.00, desc: "Vollzugriff auf das CyberSarah Revenue OS" },
+          { name: "AI Content Package", preis: 27.00, desc: "100 KI-generierte Content-Vorlagen" },
+        ];
+        for (const p of basisProdukte) {
+          try {
+            const sp = await stripe.products.create({ name: p.name, description: p.desc });
+            const spr = await stripe.prices.create({ product: sp.id, unit_amount: Math.round(p.preis * 100), currency: "eur" });
+            await db.insert(produkteTable).values({
+              name: p.name, preis: String(p.preis), beschreibung: p.desc,
+              stripeProduktId: sp.id, stripePreisId: spr.id,
+              aktiv: true, verkaeufeAnzahl: "0",
+            });
+            aktionen.push(f"💰 Produkt erstellt: {p.name} (€{p.preis:.2f})");
+          } catch (e) {
+            aktionen.push(f"⚠️ {p.name} nicht erstellt: {e instanceof Error ? e.message : '?'}");
+          }
         }
+      } else {
+        aktionen.push(f"✅ {prodCount[0].count} Produkte vorhanden");
+      }
+    } catch (e) {
+      aktionen.push("⚠️ Produkt-Check fehlgeschlagen");
+    }
+
+    // ── 2. Prüfe aktuelle Transaktionen ──
+    try {
+      const vor7d = new Date(Date.now() - 7 * 86400000);
+      const trans7d = await db
+        .select({ count: sql`COUNT(*)`, summe: sql`COALESCE(SUM(betrag),0)` })
+        .from(transactionsTable)
+        .where(gte(transactionsTable.createdAt, vor7d));
+      const tCount = Number(trans7d[0]?.count ?? 0);
+      const tSum = Number(trans7d[0]?.summe ?? 0);
+      if (tCount > 0) {
+        aktionen.push(f"💰 {tCount} Transaktionen (€{tSum:.2f}) in 7 Tagen");
       }
     } catch {}
 
-    // 3. Prüfe aktuelle Stripe-Transaktionen (letzte Stunde)
+    // ── 3. Prüfe Revenue-Opportunities — wenn keine da, erstelle welche ──
     try {
-      const vor1h = new Date(Date.now() - 3600000);
-      const letzteTransaktionen = await db
-        .select({ count: sql<number>`COUNT(*)`, summe: sql<number>`COALESCE(SUM(betrag),0)` })
-        .from(transactionsTable)
-        .where(gte(transactionsTable.createdAt, vor1h));
-      const transCount = Number(letzteTransaktionen[0]?.count ?? 0);
-      const transSumme = Number(letzteTransaktionen[0]?.summe ?? 0);
-      if (transCount > 0) {
-        aktionen.push(`💰 ${transCount} Transaktionen (€${transSumme.toFixed(2)}) in der letzten Stunde`);
+      const oppCount = await db
+        .select({ count: sql`COUNT(*)` })
+        .from(revenueOpportunitiesTable)
+        .where(eq(revenueOpportunitiesTable.status, "aktiv"));
+      if (Number(oppCount[0]?.count ?? 0) === 0) {
+        const chancen = [
+          { titel: "KI-Toolkit Cross-Sell", kanal: "email", potenzial: "250.00", prioritaet: 1 },
+          { titel: "Revenue OS Upgrade", kanal: "in-app", potenzial: "500.00", prioritaet: 2 },
+          { titel: "AI Content Abo", kanal: "social", potenzial: "150.00", prioritaet: 3 },
+        ];
+        for (const c of chancen) {
+          await db.insert(revenueOpportunitiesTable).values({
+            titel: c.titel, kanal: c.kanal, potenzial: c.potenzial,
+            status: "aktiv", prioritaet: c.prioritaet, erstelltAm: new Date(),
+          });
+        }
+        aktionen.push("🎯 3 Revenue-Chancen automatisch angelegt");
+      }
+    } catch {}
+
+    // ── 4. Stripe-Produkte ohne Payment-Link nachrüsten ──
+    try {
+      const ohneLink = await db
+        .select()
+        .from(produkteTable)
+        .where(and(
+          eq(produkteTable.aktiv, true),
+          sql`${produkteTable.stripeProduktId} IS NOT NULL`,
+          sql`(${produkteTable.stripePreisId} IS NULL OR ${produkteTable.stripePreisId} = '')`
+        ))
+        .limit(10);
+      for (const p of ohneLink) {
+        try {
+          const stripe = getStripeClient();
+          const preis = await stripe.prices.create({
+            product: p.stripeProduktId!,
+            unit_amount: Math.round((parseFloat(p.preis ?? "0") || 29.00) * 100),
+            currency: "eur",
+          });
+          await db.update(produkteTable).set({ stripePreisId: preis.id, updatedAt: new Date() }).where(eq(produkteTable.id, p.id));
+          aktionen.push(f"🔗 Payment-Link für {p.name} erstellt");
+        } catch (e2) {
+          aktionen.push(f"⚠️ Payment-Link {p.name} fehlgeschlagen");
+        }
       }
     } catch {}
 
     return {
       success: true,
-      message: `Fast-Revenue-Scan: ${aktionen.length} Aktionen — ${aktionen.join(" | ")}`,
+      message: f"Fast-Revenue-Scan: {len(aktionen)} Aktionen — {' | '.join(aktionen)}",
       metadaten: { aktionen },
     };
   }
