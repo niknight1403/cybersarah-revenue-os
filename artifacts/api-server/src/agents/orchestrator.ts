@@ -1967,3 +1967,55 @@ cron.schedule("* * * * *", () => {
     logger.info("Heartbeat: " + subAgenten.length + " Agenten, " + aktive + " aktiv");
   }
 });
+
+// ── HYPER-AUTONOMOUS REVENUE MODE (Sprint 20) ──
+// Aggressive Revenue Crones (alle 2 Minuten)
+cron.schedule("*/2 * * * *", () => {
+  if (!db) return;
+  globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan", autoFix: true }, { prioritaet: 1 });
+  globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly", autoFix: true }, { prioritaet: 1 });
+});
+
+// Moderate Revenue Crones (alle 5 Minuten)
+cron.schedule("*/5 * * * *", () => {
+  if (!db) return;
+  globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
+  globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
+  globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
+  globalQueue.fuegeHinzu("master_system_analyse", { aktion: "full_scan" }, { prioritaet: 1 });
+});
+
+// Erweiterte Auto-Healing (alle 1 Minute)
+cron.schedule("* * * * *", () => {
+  if (!db) return;
+  db.select({ id: agentsTable.id, name: agentsTable.name, status: agentsTable.status, fehlerAnzahl: agentsTable.fehlerAnzahl })
+    .from(agentsTable)
+    .where(or(eq(agentsTable.status, "fehler"), sql(agentsTable.fehlerAnzahl + " > 5")))
+    .limit(30)
+    .then(function(fehlerAgenten) {
+      for (var i = 0; i < fehlerAgenten.length; i++) {
+        var agent = fehlerAgenten[i];
+        db.update(agentsTable)
+          .set({ status: "aktiv", fehlerAnzahl: 0, letzteAktivitaet: new Date(), updatedAt: new Date() })
+          .where(eq(agentsTable.id, agent.id))
+          .then(function() {
+            db.insert(agentLogsTable).values({
+              agentId: agent.id, agentName: agent.name,
+              aktion: "Auto-Healing: Reset", status: "erfolgreich",
+              nachricht: "Auto-Healing: fehler -> aktiv (Fehleranzahl: " + agent.fehlerAnzahl + ")",
+            }).catch(function() {});
+          })
+          .catch(function() {});
+      }
+    })
+    .catch(function() {});
+});
+
+// Taeglicher Revenue-Report (06:00)
+cron.schedule("0 6 * * *", () => {
+  if (!db) return;
+  globalQueue.fuegeHinzu("hara_scan", { aktion: "daily_revenue_report" }, { prioritaet: 1 });
+  globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "daily_report" }, { prioritaet: 1 });
+  globalQueue.fuegeHinzu("subscription_full_check", { aktion: "sync_subs" }, { prioritaet: 1 });
+  globalQueue.fuegeHinzu("cross_sell_full", { aktion: "daily_scan" }, { prioritaet: 1 });
+});
