@@ -146,7 +146,7 @@ router.post("/hara/proposals/:id/verwerfen", async (req, res) => {
 
     const agent = holeHaraAgent();
     if (agent) {
-      await agent.schreibePerformance(
+      await (agent as any).schreibePerformance(
         proposal.id,
         proposal.titel,
         proposal.kanal,
@@ -200,7 +200,7 @@ router.post("/hara/proposals/:id/schritte/:index/erledigt", async (req, res) => 
     if (alleErledigt) {
       const agent = holeHaraAgent();
       if (agent) {
-        await agent.schreibePerformance(
+        await (agent as any).schreibePerformance(
           proposal.id,
           proposal.titel,
           proposal.kanal,

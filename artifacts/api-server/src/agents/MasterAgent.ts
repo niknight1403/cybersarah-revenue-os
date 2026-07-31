@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
-import { agentsTable, agentLogsTable, revenueOpportunitiesTable, expansionChancenTable, transactionsTable } from "@workspace/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { agentsTable, agentLogsTable, revenueOpportunitiesTable, expansionChancenTable, transactionsTable, pendingAttributionTable, subscriptionPlansTable, couponsTable } from "@workspace/db";
+import { eq, desc, sql, and, gte } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { AgentBase, type Aufgabe, type AufgabeErgebnis } from "./AgentBase";
 import { globalQueue } from "./JobQueue";
@@ -40,7 +40,6 @@ export class MasterAgent extends AgentBase {
         return this.priorisierChancen();
       case "revenue_priorisierung":
         return this.revenuePriorisierung();
-        return this.priorisierChancen();
       default:
         return this.systemAnalyse();
     }
@@ -311,11 +310,10 @@ export class MasterAgent extends AgentBase {
 
     // 1. Höchste Priorität: Transaktionen ohne Affiliate-Tracking in den letzten 24h
     try {
-      const { pendingAttributionTable } = await import("@workspace/db");
       const offeneAttributionen = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(pendingAttributionTable)
-        .where(eq(pendingAttributionTable.status, "pending"));
+        .where(sql`${pendingAttributionTable.referenceKey} IS NOT NULL`);
       if (Number(offeneAttributionen[0]?.count ?? 0) > 0) {
         aktionen.push(`${offeneAttributionen[0].count} offene Attributionen → sofort verarbeiten`);
       }
@@ -328,7 +326,7 @@ export class MasterAgent extends AgentBase {
         .from(revenueOpportunitiesTable)
         .where(and(
           eq(revenueOpportunitiesTable.status, "aktiv"),
-          sql`stripe_payment_link IS NULL`
+          sql`${revenueOpportunitiesTable.stripePaymentLink} IS NULL`
         ));
       if (Number(ohneLink[0]?.count ?? 0) > 0) {
         aktionen.push(`${ohneLink[0].count} Opportunities ohne Stripe-Link → RevenueAnalyst`);
@@ -364,7 +362,6 @@ export class MasterAgent extends AgentBase {
 
     // 4. Prüfe ob Abo-Pläne initialisiert sind
     try {
-      const { subscriptionPlansTable } = await import("@workspace/db");
       const plans = await db.select({ count: sql<number>`COUNT(*)` }).from(subscriptionPlansTable);
       if (Number(plans[0]?.count ?? 0) === 0) {
         aktionen.push("Keine Abo-Pläne → SubscriptionAgent init");
@@ -376,7 +373,6 @@ export class MasterAgent extends AgentBase {
 
     // 5. Prüfe Coupon-Statistiken und optimiere
     try {
-      const { couponsTable } = await import("@workspace/db");
       const aktiveCoupons = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(couponsTable)
