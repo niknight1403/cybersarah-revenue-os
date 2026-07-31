@@ -1110,328 +1110,72 @@ export function starteOrchestrator(): void {
   mainLoopTimer = setInterval(mainLoop, 60_000);
   setTimeout(mainLoop, 2000); // Erster Lauf nach 2s
 
-  // Director Agent: täglich 06:00
-  cron.schedule("0 6 * * *", async () => {
-    const agentId = await holeAgentId("director");
-    if (!agentId) return;
-    await fuhreAgentAus(agentId, () => fuehreStrategieAnalyseDurch(agentId).then(() => {}));
+  // ═══════════════════════════════════════════════════════════════════
+  // UMSATZ & MONETISIERUNG (höchste Priorität)
+  // ═══════════════════════════════════════════════════════════════════
+  // HARA Scan: alle 3 Minuten — schnellste Revenue-Erkennung
+  cron.schedule("*/3 * * * *", () => {
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan", autoFix: true }, { prioritaet: 1 });
   });
 
-  // Revenue Optimizer: stündlich
-  cron.schedule("0 * * * *", async () => {
-    const agentId = await holeAgentId("revenue_optimizer");
-    if (agentId) {
-      await fuhreAgentAus(agentId, () => analysiereUmsatz(agentId).then(() => {}));
-    }
-    globalQueue.fuegeHinzu("revenue_analyse", { aktion: "roi_berechnen", zeitraum: "monat" }, { prioritaet: 1 });
-  });
-
-  // Content Factory: 08:00, 12:00, 18:00
-  cron.schedule("0 8,12,15,18,21 * * *", async () => {
-    const agentId = await holeAgentId("content_factory");
-    if (!agentId) return;
-    const marken = ["CyberSarah", "GeldPilot AI", "UnternehmerGPT"] as const;
-    const typen = ["kurzVideo", "reel", "tiktok", "blogartikel"] as const;
-    const plattformen = ["TikTok", "Instagram", "YouTube"] as const;
-    const themen = [
-      "KI-Automatisierung für Selbstständige 2026",
-      "Passives Einkommen mit KI-Tools aufbauen",
-      "ChatGPT Prompt-Strategien für Einsteiger",
-      "Online Geld verdienen: Der realistische Weg",
-      "KI-Marketing: Mehr Reichweite mit weniger Aufwand",
-      "Affiliate-Marketing automatisch skalieren",
-      "3 KI-Tools die dein Business verändern",
-    ];
-    await fuhreAgentAus(agentId, () => generiereContent({
-      marke: marken[Math.floor(Math.random() * marken.length)]!,
-      typ: typen[Math.floor(Math.random() * typen.length)]!,
-      plattform: plattformen[Math.floor(Math.random() * plattformen.length)]!,
-      thema: themen[Math.floor(Math.random() * themen.length)]!,
-    }, agentId).then(() => {}));
-  });
-
-  // Trend Analyst: alle 6 Stunden (0, 6, 12, 18 Uhr)
-  cron.schedule("0 0,6,12,18 * * *", async () => {
-    const agentId = await holeAgentId("trend_analyst");
-    if (!agentId) return;
-    await fuhreAgentAus(agentId, () => analysiereTrends(agentId).then(() => {}));
-  });
-
-  // Video Agent: 10:00 + 16:00
-  cron.schedule("0 10,16 * * *", async () => {
-    const agentId = await holeAgentId("video");
-    if (!agentId) return;
-    await fuhreAgentAus(agentId, () => generiereVideoSkript(agentId).then(() => {}));
-  });
-
-  // Sales Agent: 11:00 + 17:00
-  cron.schedule("0 11,17 * * *", async () => {
-    const agentId = await holeAgentId("sales");
-    if (!agentId) return;
-    await fuhreAgentAus(agentId, () => optimiereSales(agentId).then(() => {}));
-  });
-
-  // Funnel Agent: 07:00 täglich
-  cron.schedule("0 7,19 * * *", async () => {
-    const agentId = await holeAgentId("funnel");
-    if (!agentId) return;
-    await fuhreAgentAus(agentId, () => generiereFunnelSequenz(agentId).then(() => {}));
-    globalQueue.fuegeHinzu("monetization_funnel", { aktion: "funnel_optimieren" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("monetization_affiliate", { aktion: "affiliate_analyse" }, { prioritaet: 3 });
-  });
-
-  // Community Agent: 09:00, 13:00, 20:00
-  cron.schedule("0 9,13,20 * * *", async () => {
-    const agentId = await holeAgentId("community");
-    if (!agentId) return;
-    await fuhreAgentAus(agentId, () => verarbeiteCommunitiy(agentId).then(() => {}));
-  });
-
-  // Influencer Agent: 09:15 + 15:15 (Content-Generierung Queue)
-  cron.schedule("15 9,15 * * *", () => {
-    const marken = ["CyberSarah", "GeldPilot AI", "UnternehmerGPT"] as const;
-    globalQueue.fuegeHinzu(
-      "influencer_content",
-      { aktion: "content_generieren", marke: marken[Math.floor(Math.random() * marken.length)], plattform: "Instagram" },
-      { prioritaet: 2, maxVersuche: 3 },
-    );
-  });
-
-  // KI-Influencer Auto-Post: 08:00, 13:00, 19:00 — postet auf alle aktiven Plattformen
-  cron.schedule("0 8,13,19 * * *", async () => {
-    logger.info("⏰ KI-Influencer Auto-Post gestartet");
-    const { starteAutoPost } = await import("./InfluencerAutoPostAgent");
-    const ergebnis = await starteAutoPost();
-    logger.info(ergebnis, `🚀 Auto-Post abgeschlossen: ${ergebnis.gepostet}/${ergebnis.plattformen.length} Plattformen`);
-  });
-
-  // Influencer Tages-Zähler Reset: Mitternacht
-  cron.schedule("0 0 * * *", async () => {
-    const { db: dbInst } = await import("@workspace/db");
-    const { influencerPlatformenTable } = await import("@workspace/db");
-    await dbInst.update(influencerPlatformenTable).set({ postingsHeute: 0, updatedAt: new Date() });
-    logger.info("🔄 Influencer Tages-Zähler zurückgesetzt");
-  });
-
-  // Master Agent: alle 5 Minuten (erhöhte Frequenz)
+  // Revenue Analyst: alle 5 Minuten — Umsatz-Anomalien + Cross-Sell
   cron.schedule("*/5 * * * *", () => {
-    globalQueue.fuegeHinzu("master_system_analyse", { aktion: "system_analyse" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("master_chancen_priorisierung", { aktion: "chancen_priorisierung" }, { prioritaet: 1 });
-  });
-
-  // Revenue Analyst Agent: jede Stunde (maximale Frequenz)
-  cron.schedule("0 * * * *", () => {
-    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "chancen_scannen" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
     globalQueue.fuegeHinzu("revenue_analyst_stripe", { aktion: "stripe_link_erstellen" }, { prioritaet: 2 });
   });
 
-  // Revenue Analyst KI-Analyse: alle 4 Stunden
-  cron.schedule("0 */4 * * *", () => {
-    globalQueue.fuegeHinzu("revenue_analyst_ki", { aktion: "ki_chancen_analysieren" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("master_optimierung", { aktion: "optimierung" }, { prioritaet: 1 });
-  });
-
-  // Watchdog starten (5-Min-Takt, 401-Erkennung + Auto-Reset)
-  starteWatchdog();
-  startAutoUpdateAgent();
-
-  // ─── Social-Media Auto-Post (3x täglich: 09:00, 14:00, 20:00) ──────────
-  cron.schedule("0 9,14,20 * * *", () => {
-    globalQueue.fuegeHinzu("social_auto_post", { aktion: "auto_post" }, { prioritaet: 2 });
-  });
-
-  // Social-Media Analytics-Report: täglich 22:00
-  cron.schedule("0 22 * * *", () => {
-    globalQueue.fuegeHinzu("social_analytics", { aktion: "analytics" }, { prioritaet: 3 });
-  });
-
-  // ─── Expansion-Agenten Cron-Jobs ────────────────────────────────────────────
-  // Opportunity Scanner: alle 4h (häufiger für mehr Chancen)
-  cron.schedule("0 */4 * * *", () => {
-    globalQueue.fuegeHinzu("expansion_scan", { aktion: "chancen_scannen" }, { prioritaet: 2 });
-  });
-
-  // Object-Storage Sweep: alle 15 Min — löscht nicht-konforme oder nie
-  // bestätigte (verwaiste) Uploads, unabhängig davon ob /confirm aufgerufen wurde
-  cron.schedule("*/15 * * * *", async () => {
-    try {
-      const { ObjectStorageService } = await import("../lib/objectStorage");
-      const svc = new ObjectStorageService();
-      const ergebnis = await svc.sweepNonCompliantUploads({
-        allowedContentTypes: new Set(["image/png", "image/jpeg", "image/webp"]),
-        maxSizeBytes: 15 * 1024 * 1024,
-        maxUnconfirmedAgeMs: 30 * 60 * 1000,
-      });
-      if (ergebnis.deleted > 0) {
-        logger.info(ergebnis, "🧹 Object-Storage Sweep: nicht-konforme/verwaiste Uploads gelöscht");
-      }
-    } catch (err) {
-      logger.warn({ err }, "Object-Storage Sweep fehlgeschlagen");
-    }
-  });
-
-  // HARA Phase 1: alle 1 Stunde neue Revenue-Pakete generieren (aggressiv)
-  // wenn bereits genug Pakete auf Bestätigung/Umsetzung warten).
-  cron.schedule("0 * * * *", () => {
-    globalQueue.fuegeHinzu("hara_scan", { aktion: "scan" }, { prioritaet: 2 });
-  });
-
-  // Digitalprodukt-Katalog-Agent: täglich neue Produkte scannen (05:30 Uhr),
-  // alle 20 Min echte Stripe-Verkäufe abgleichen, täglich Preise optimieren/Flops pausieren (04:00 Uhr).
-  cron.schedule("30 5 * * *", () => {
-    globalQueue.fuegeHinzu("digitalprodukt_scan", {}, { prioritaet: 3 });
-  });
-  cron.schedule("*/20 * * * *", () => {
-    globalQueue.fuegeHinzu("digitalprodukt_verkaeufe_sync", {}, { prioritaet: 2 });
-  });
-  cron.schedule("0 4 * * *", () => {
-    globalQueue.fuegeHinzu("digitalprodukt_optimieren", {}, { prioritaet: 3 });
-  });
-
-  // SEO-Content-Empire-Agent: täglich neue SEO-Artikel generieren + veröffentlichen (07:30 Uhr)
-  cron.schedule("30 7,19 * * *", () => {
-    globalQueue.fuegeHinzu("seo_content_scan", {}, { prioritaet: 3 });
-  });
-
-  // E-Mail-Listen-Monetarisierungs-Agent: täglich fehlende Sequenzen erstellen (06:30 Uhr),
-  // stündlich fällige E-Mails an aktive Leads versenden.
-  cron.schedule("30 6,18 * * *", () => {
-    globalQueue.fuegeHinzu("email_sequenzen_erstellen", {}, { prioritaet: 3 });
-  });
-  cron.schedule("0 * * * *", () => {
-    globalQueue.fuegeHinzu("email_versenden", {}, { prioritaet: 2 });
-  });
-
-  // Faceless-Video-Auto-Publish-Agent: Content-Generierung 3x täglich (09/14/20 Uhr),
-  // Veröffentlichung stündlich zu :20, Performance-Analyse täglich um 22:30 Uhr.
-  cron.schedule("0 9,14,17,20 * * *", () => {
-    globalQueue.fuegeHinzu("faceless_video_generieren", {}, { prioritaet: 3 });
-  });
-  cron.schedule("20 * * * *", () => {
-    globalQueue.fuegeHinzu("faceless_video_veroeffentlichen", {}, { prioritaet: 2 });
-  });
-  cron.schedule("30 22 * * *", () => {
-    globalQueue.fuegeHinzu("faceless_video_analysieren", {}, { prioritaet: 3 });
-  });
-
-  // Content-Recycling-Agent: täglich um 11:45 Uhr Top-Performer scannen und
-  // eine neue Format-Variante generieren (fließt automatisch in Auto-Post-Pipeline ein).
-  cron.schedule("45 11,23 * * *", () => {
-    globalQueue.fuegeHinzu("content_recyceln", {}, { prioritaet: 3 });
-  });
-
-  // Stripe-Abgleich: alle 10 Min — holt Zahlungen aktiv von der Stripe-API ab.
-  // Nötig, weil bei privater Deployment-Sichtbarkeit eingehende Stripe-Webhooks
-  // vom Replit-Schutzschild blockiert werden (Webhook bleibt als Fallback aktiv).
-  cron.schedule("*/10 * * * *", async () => {
-    try {
-      const { syncStripeTransaktionen } = await import("../lib/stripeSync");
-      const ergebnis = await syncStripeTransaktionen();
-      if (ergebnis.neu > 0) {
-        logger.info(ergebnis, "💶 Stripe-Sync: neue Zahlungen übernommen");
-      }
-    } catch (err) {
-      logger.warn({ err }, "Stripe-Sync fehlgeschlagen");
-    }
-  });
-
-  // ── Marketing-Kampagnen: alle 4 Stunden (RevenueAnalystAgent) ──
-  cron.schedule("0 */4 * * *", () => {
-    globalQueue.fuegeHinzu("marketing_kampagnen_erstellen", { aktion: "marketing_kampagnen_erstellen" }, { prioritaet: 2 });
-  });
-
-  // ── Monetization Upsell: 2x täglich (06:00, 18:00) ──
-  cron.schedule("0 6,18 * * *", () => {
+  // Monetization Auto-Optimize: alle 10 Minuten
+  cron.schedule("*/10 * * * *", () => {
+    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "auto_optimize_all" }, { prioritaet: 2 });
     globalQueue.fuegeHinzu("monetization_upsell", { aktion: "upsell_strategie" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("monetization_preisoptimierung", { aktion: "preisoptimierung" }, { prioritaet: 2 });
   });
 
-  // ── Preisoptimierung: 3x täglich (05:00, 12:00, 20:00) ──
-  cron.schedule("0 5,12,20 * * *", () => {
-    globalQueue.fuegeHinzu("monetization_preisoptimierung", { aktion: "preisoptimierung" }, { prioritaet: 2 });
-
-    // ── Smart Coupon Agent: Standard-Coupons initialisieren + KI-Coupons generieren ──
-    globalQueue.fuegeHinzu("smart_coupon_init", { aktion: "init_coupons" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("smart_coupon_ki", { aktion: "ki_coupons" }, { prioritaet: 2 });
-
-    // ── Abandoned Cart Recovery: Stripe-Sessions scannen ──
+  // Abandoned Cart Recovery: alle 5 Minuten
+  cron.schedule("*/5 * * * *", () => {
     globalQueue.fuegeHinzu("cart_recovery_stripe", { aktion: "check_stripe" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("cart_recovery_check", { aktion: "check_carts" }, { prioritaet: 1 });
+  });
 
-    // ── Loyalty & Referral: Programm init + erster Check ──
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
-
-    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
-    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
-    // ── Sprint 8: Cross-Sell Engine beim Start ──
+  // Cross-Sell + Conversion: alle 15 Minuten
+  cron.schedule("*/15 * * * *", () => {
     globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
-    // ── Sprint 9: Conversion Optimizer beim Start ──
     globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
-    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
-    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
   });
 
-  // Newsletter-Agent: Jeden Freitag um 08:00 Uhr
-  cron.schedule("0 8 * * 5", async () => {
-    logger.info("📧 Newsletter-Agent: Wöchentlicher Newsletter wird generiert...");
-    await woechentlicherNewsletterScan();
-  });
-
-  // WhatsApp-Agent: Täglich um 09:30 Uhr
-  cron.schedule("30 9 * * *", async () => {
-    logger.info("📱 WhatsApp-Agent: Täglicher Tipp wird gesendet...");
-    await taeglicheWhatsAppAufgabe();
-
-  // ── Smart Coupon Agent: Init beim Start, KI-Coupons alle 12h, Optimierung alle 6h ──
-  cron.schedule("0 */12 * * *", () => {
+  // Smart Coupon: KI-Coupons alle 6h, Optimierung alle 3h, Flash alle 8h
+  cron.schedule("0 */6 * * *", () => {
     globalQueue.fuegeHinzu("smart_coupon_ki", { aktion: "ki_coupons" }, { prioritaet: 2 });
   });
-  cron.schedule("0 */6 * * *", () => {
+  cron.schedule("0 */3 * * *", () => {
     globalQueue.fuegeHinzu("smart_coupon_optimize", { aktion: "auto_optimize" }, { prioritaet: 2 });
   });
   cron.schedule("0 */8 * * *", () => {
     globalQueue.fuegeHinzu("smart_coupon_flash", { aktion: "flash_sale" }, { prioritaet: 3 });
   });
 
-  // ── Abandoned Cart Recovery: Stripe-Scan alle 15 Min, Erinnerungen alle 5 Min ──
-  cron.schedule("*/15 * * * *", () => {
-    globalQueue.fuegeHinzu("cart_recovery_stripe", { aktion: "check_stripe" }, { prioritaet: 1 });
-
-    // ── Loyalty & Referral: Programm init + erster Check ──
+  // ═══════════════════════════════════════════════════════════════════
+  // KUNDENBINDUNG & LOYALTY
+  // ═══════════════════════════════════════════════════════════════════
+  // Loyalty: Tägliche Karten-Prüfung + Empfehlungen
+  cron.schedule("0 8 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "check_referrals" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("loyalty_birthday", { aktion: "birthday_coupons" }, { prioritaet: 3 });
+  });
 
-    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
+  // Subscriptions: Alle 30 Minuten prüfen
+  cron.schedule("*/30 * * * *", () => {
     globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
-    // ── Sprint 8: Cross-Sell Engine beim Start ──
-    globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
-    // ── Sprint 9: Conversion Optimizer beim Start ──
-    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
-    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
-    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
   });
-  cron.schedule("*/5 * * * *", () => {
-    globalQueue.fuegeHinzu("cart_recovery_check", { aktion: "check_carts" }, { prioritaet: 1 });
 
-  // ── Sales Chat: Analyse stündlich, Follow-ups alle 30 Min ──
-  cron.schedule("5 * * * *", () => {
-    globalQueue.fuegeHinzu("sales_chat_analyze", { aktion: "analyze" }, { prioritaet: 3 });
-  });
-  cron.schedule("*/30 * * * *", () => {
-    globalQueue.fuegeHinzu("sales_chat_followup", { aktion: "followup" }, { prioritaet: 2 });
-  });
-  // ── Affiliate: Provisionen stündlich, Tiers täglich, Payouts monatlich (1. Tag) ──
+  // ═══════════════════════════════════════════════════════════════════
+  // AFFILIATE & PARTNER
+  // ═══════════════════════════════════════════════════════════════════
   cron.schedule("0 * * * *", () => {
     globalQueue.fuegeHinzu("affiliate_commissions", { aktion: "calculate_commissions" }, { prioritaet: 2 });
   });
@@ -1444,163 +1188,139 @@ export function starteOrchestrator(): void {
   cron.schedule("0 */4 * * *", () => {
     globalQueue.fuegeHinzu("affiliate_full_sync", { aktion: "full_sync" }, { prioritaet: 3 });
   });
-  // ── Loyalty & Referral: Karten-Check alle 30 Min, Empfehlungen alle 2h, Geburtstage täglich 08:00 ──
+
+  // ═══════════════════════════════════════════════════════════════════
+  // VERTRIEB & KOMMUNIKATION
+  // ═══════════════════════════════════════════════════════════════════
+  cron.schedule("*/15 * * * *", () => {
+    globalQueue.fuegeHinzu("sales_chat_analyze", { aktion: "analyze" }, { prioritaet: 3 });
+    globalQueue.fuegeHinzu("sales_chat_followup", { aktion: "followup" }, { prioritaet: 2 });
+  });
+
+  // Director: tägliche Strategie um 06:00
+  cron.schedule("0 6 * * *", () => {
+    const agentId = holeAgentId("director");
+    if (!agentId) return;
+    fuehreAgentAus(agentId, () => {
+      const agent = subAgenten.find(a => a instanceof DirectorAgent) as DirectorAgent | undefined;
+      return agent?.fuehreStrategieAus();
+    });
+    globalQueue.fuegeHinzu("hara_scan", { aktion: "daily_revenue_report" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "daily_report" }, { prioritaet: 1 });
+  });
+
+  // Trend Analyst: alle 6h
+  cron.schedule("0 */6 * * *", async () => {
+    const agentId = await holeAgentId("trend_analyst");
+    if (!agentId) return;
+    fuehreAgentAus(agentId, () => {
+      const agent = subAgenten.find(a => a instanceof TrendAnalystAgent) as TrendAnalystAgent | undefined;
+      return agent?.fuehreTrendAnalyseAus();
+    });
+  });
+
+  // Content Factory: 08:00, 12:00, 18:00
+  cron.schedule("0 8,12,18 * * *", async () => {
+    const agentId = await holeAgentId("content_factory");
+    if (!agentId) return;
+    fuehreAgentAus(agentId, () => {
+      const agent = subAgenten.find(a => a instanceof ContentAgent) as ContentAgent | undefined;
+      return agent?.erstelleContentPipeline();
+    });
+  });
+
+  // Video: 10:00, 16:00
+  cron.schedule("0 10,16 * * *", async () => {
+    const agentId = await holeAgentId("video");
+    if (!agentId) return;
+    fuehreAgentAus(agentId, () => {
+      const agent = subAgenten.find(a => a instanceof VideoAgent) as VideoAgent | undefined;
+      return agent?.erstelleVideoPipeline();
+    });
+  });
+
+  // Social Media Auto-Post: 09:00, 15:00
+  cron.schedule("0 9,15 * * *", async () => {
+    const agentId = await holeAgentId("social");
+    if (!agentId) return globalQueue.fuegeHinzu("social_auto_post", { aktion: "post_all" }, { prioritaet: 2 });
+  });
+
+  // SEO Content: 11:00
+  cron.schedule("0 11 * * *", async () => {
+    const agentId = await holeAgentId("seo_content");
+    if (!agentId) return;
+    fuehreAgentAus(agentId, () => {
+      const agent = subAgenten.find(a => a instanceof SEOContentAgent) as SEOContentAgent | undefined;
+      return agent?.erstelleSEOPipeline();
+    });
+  });
+
+  // Community: 09:00, 13:00, 20:00
+  cron.schedule("0 9,13,20 * * *", async () => {
+    const agentId = await holeAgentId("community");
+    if (!agentId) return;
+    fuehreAgentAus(agentId, () => {
+      const agent = subAgenten.find(a => a instanceof CommunityAgent) as CommunityAgent | undefined;
+      return agent?.fuehreCommunityAufgabeAus();
+    });
+  });
+
+  // Sales: 11:00, 17:00
+  cron.schedule("0 11,17 * * *", async () => {
+    const agentId = await holeAgentId("sales");
+    if (!agentId) return;
+    fuehreAgentAus(agentId, () => {
+      const agent = subAgenten.find(a => a instanceof SalesAgent) as SalesAgent | undefined;
+      return agent?.fuehreSalesPipelineAus();
+    });
+  });
+
+  // Funnel: 07:00
+  cron.schedule("0 7 * * *", async () => {
+    const agentId = await holeAgentId("funnel");
+    if (!agentId) return;
+    fuehreAgentAus(agentId, () => {
+      const agent = subAgenten.find(a => a instanceof FunnelAgent) as FunnelAgent | undefined;
+      return agent?.fuehreFunnelOptimierungAus();
+    });
+  });
+
+  // Revenue Optimizer: stündlich
+  cron.schedule("0 * * * *", () => {
+    globalQueue.fuegeHinzu("master_system_analyse", { aktion: "full_scan" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
+  });
+
+  // Master: alle 30 Minuten
   cron.schedule("*/30 * * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
-
-    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
-    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
-    // ── Sprint 8: Cross-Sell Engine beim Start ──
-    globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
-    // ── Sprint 9: Conversion Optimizer beim Start ──
-    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
-    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
-    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
-  });
-  cron.schedule("0 */2 * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "process_referrals" }, { prioritaet: 2 });
-  });
-  cron.schedule("0 8 * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_birthday", { aktion: "birthday_bonus" }, { prioritaet: 2 });
-  });
-  cron.schedule("0 3 * * *", () => {
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "full_check" }, { prioritaet: 3 });
-  // ── Auto-Healing: Fehlerhafte Agenten resetten (alle 5 Min) ──
-  cron.schedule("*/5 * * * *", () => {
-    db.select({ id: agentsTable.id, name: agentsTable.name, status: agentsTable.status })
-      .from(agentsTable)
-      .where(eq(agentsTable.status, "fehler"))
-      .limit(20)
-      .then((fehlerAgenten) => {
-        for (const agent of fehlerAgenten) {
-          logger.warn({ agentId: agent.id, agentName: agent.name }, "🔄 Auto-Healing: Resette fehlerhaften Agenten");
-          db.update(agentsTable)
-            .set({ status: "aktiv", letzteAktivitaet: new Date(), updatedAt: new Date() })
-            .where(eq(agentsTable.id, agent.id))
-            .then(() => {
-              db.insert(agentLogsTable).values({
-                agentId: agent.id,
-                agentName: agent.name,
-                aktion: "Auto-Healing: Reset",
-                status: "erfolgreich",
-                nachricht: "🔄 Auto-Healing: Agent von fehler → aktiv zurückgesetzt",
-              }).catch(() => {});
-            })
-            .catch(() => {});
-        }
-      })
-      .catch(() => {});
-  });
-
-  });
-  });
-  });
-
-  // ─── Sofort beim Start: Chancen scannen + Master-Check + Auto-Recovery ──────
-  setTimeout(async () => {
-    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "chancen_scannen" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("master_system_analyse", { aktion: "system_analyse" }, { prioritaet: 1 });
+    globalQueue.fuegeHinzu("master_optimierung", { aktion: "optimierung" }, { prioritaet: 1 });
+  });
 
-    // Stripe-Abgleich sofort beim Start (danach alle 10 Min per Cron)
-    try {
-      const { syncStripeTransaktionen } = await import("../lib/stripeSync");
-      const ergebnis = await syncStripeTransaktionen();
-      logger.info(ergebnis, "💶 Stripe-Sync beim Start abgeschlossen");
-    } catch (err) {
-      logger.warn({ err }, "Stripe-Sync beim Start fehlgeschlagen");
-    }
-    // Expansion-Chancen beim ersten Start befüllen
-    globalQueue.fuegeHinzu("expansion_scan", { aktion: "chancen_scannen" }, { prioritaet: 2 });
+  // Influencer: 09:15, 15:15
+  cron.schedule("15 9,15 * * *", async () => {
+    const agentId = await holeAgentId("influencer");
+    if (!agentId) return;
+    fuehreAgentAus(agentId, () => {
+      const agent = subAgenten.find(a => a instanceof InfluencerAgent) as InfluencerAgent | undefined;
+      return agent?.fuehreInfluencerAufgabeAus();
+    });
+    globalQueue.fuegeHinzu("influencer_trend_analyse", { aktion: "trend_analyse" }, { prioritaet: 3 });
+    globalQueue.fuegeHinzu("social_auto_post", { aktion: "post_all" }, { prioritaet: 2 });
+  });
 
-    // ── Social-Media-Plattformen auto-initialisieren (damit Auto-Post funktioniert) ──
-    try {
-      const { influencerPlatformenTable } = await import("@workspace/db");
-      const vorhandene = await db.select().from(influencerPlatformenTable).limit(1);
-      if (vorhandene.length === 0) {
-        logger.info("📱 Keine Social-Media-Plattformen vorhanden — initialisiere Standard-Plattformen");
-        const plattformen = [
-          { name: "tiktok", anzeigeName: "TikTok", symbol: "🎵", aktiv: true, postingsProTag: 3, besteZeiten: "08:00,13:00,19:00" },
-          { name: "instagram", anzeigeName: "Instagram", symbol: "📸", aktiv: true, postingsProTag: 3, besteZeiten: "09:00,14:00,20:00" },
-          { name: "youtube", anzeigeName: "YouTube", symbol: "🎬", aktiv: true, postingsProTag: 2, besteZeiten: "10:00,16:00" },
-          { name: "linkedin", anzeigeName: "LinkedIn", symbol: "💼", aktiv: true, postingsProTag: 2, besteZeiten: "07:00,12:00" },
-          { name: "twitter", anzeigeName: "X / Twitter", symbol: "🐦", aktiv: true, postingsProTag: 4, besteZeiten: "08:00,12:00,17:00,21:00" },
-        ];
-        for (const p of plattformen) {
-          await db.insert(influencerPlatformenTable).values(p);
-        }
-        logger.info({ anzahl: plattformen.length }, "📱 Social-Media-Plattformen initialisiert");
-      }
-    } catch (err) {
-      logger.warn({ err }, "Social-Media-Plattformen-Initialisierung fehlgeschlagen");
-    }
+  // Finance-Team: Reporting alle 4h
+  cron.schedule("0 */4 * * *", () => {
+    globalQueue.fuegeHinzu("finance_team_analyse", { aktion: "analyse" }, { prioritaet: 2 });
+    globalQueue.fuegeHinzu("revenue_forecast", { aktion: "forecast_erstellen" }, { prioritaet: 2 });
+  });
 
-    // ── Marketing-Kampagnen sofort beim Start erstellen ──
-    globalQueue.fuegeHinzu("marketing_kampagnen_erstellen", { aktion: "marketing_kampagnen_erstellen" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("monetization_upsell", { aktion: "upsell_strategie" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("monetization_preisoptimierung", { aktion: "preisoptimierung" }, { prioritaet: 2 });
+  // Newsletter: täglich 10:00
+  cron.schedule("0 10 * * *", () => {
+    globalQueue.fuegeHinzu("newsletter_daily", { aktion: "create_and_send" }, { prioritaet: 2 });
+  });
 
-    // ── Smart Coupon Agent: Standard-Coupons initialisieren + KI-Coupons generieren ──
-    globalQueue.fuegeHinzu("smart_coupon_init", { aktion: "init_coupons" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("smart_coupon_ki", { aktion: "ki_coupons" }, { prioritaet: 2 });
-
-    // ── Abandoned Cart Recovery: Stripe-Sessions scannen ──
-    globalQueue.fuegeHinzu("cart_recovery_stripe", { aktion: "check_stripe" }, { prioritaet: 1 });
-
-    // ── Loyalty & Referral: Programm init + erster Check ──
-    globalQueue.fuegeHinzu("loyalty_full_check", { aktion: "init_program" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("loyalty_cards", { aktion: "check_cards" }, { prioritaet: 2 });
-
-    // ── Subscription & Revenue Agent: Init + Sync beim Start ──
-    globalQueue.fuegeHinzu("subscription_full_check", { aktion: "init_plans" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("subscription_sync", { aktion: "sync_subs" }, { prioritaet: 2 });
-    // ── Sprint 8: Cross-Sell Engine beim Start ──
-    globalQueue.fuegeHinzu("cross_sell_full", { aktion: "full_scan" }, { prioritaet: 2 });
-    // ── Sprint 9: Conversion Optimizer beim Start ──
-    globalQueue.fuegeHinzu("conversion_full", { aktion: "create_tests" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("conversion_analyze", { aktion: "analyze" }, { prioritaet: 2 });
-    // ── Sprint 7.1: Aggressive Revenue Optimierungen beim Start ──
-    globalQueue.fuegeHinzu("hara_scan", { aktion: "fast_revenue_scan" }, { prioritaet: 1 });
-    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "revenue_anomaly" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "auto_cross_sell" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
-    globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
-
-    // ─── Auto-Recovery: Wenn System vorher aktiv war → sofort alle Agenten neu starten ──
-    try {
-      const aktiveAgenten = await db.select({ id: agentsTable.id }).from(agentsTable).where(eq(agentsTable.status, "aktiv"));
-      if (aktiveAgenten.length > 0) {
-        logger.info({ anzahl: aktiveAgenten.length }, "🔄 Auto-Recovery: System war aktiv vor Neustart — starte alle Agenten automatisch");
-        // Alle auf wartend setzen (kein zombie-state) dann sofort re-triggern
-        await db.update(agentsTable).set({ status: "wartend", updatedAt: new Date() }).where(eq(agentsTable.status, "aktiv"));
-        void fuehreAlleAgentanAus();
-      }
-    } catch (err) {
-      logger.warn({ err }, "Auto-Recovery: Konnte Status nicht prüfen");
-    }
-  }, 5000);
-
-  logger.info({
-    mainLoop: "60s Intervall",
-    director: "tägl. 06:00",
-    trend_analyst: "alle 6h",
-    content_factory: "08:00/12:00/18:00",
-    video: "10:00/16:00",
-    sales: "11:00/17:00",
-    funnel: "07:00",
-    community: "09:00/13:00/20:00",
-    revenue_optimizer: "stündl.",
-    influencer: "09:15/15:15",
-    monetization: "via funnel 07:00",
-    revenue: "via Queue alle 5 Min",
-    master: "alle 30 Min",
-    revenue_analyst: "alle 2h + tägl. 08:00 KI",
-  }, "Orchestrator + alle Cron-Jobs gestartet");
+  logger.info("Orchestrator + alle Cron-Jobs gestartet");
 }
 
 export function stoppeOrchestrator(): void {

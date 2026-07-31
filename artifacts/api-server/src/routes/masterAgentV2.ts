@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { masterAgent } from "../agents/masterAgent";
+import { masterAgent } from "../agents/masterAgentState";
 
 const router: IRouter = Router();
 

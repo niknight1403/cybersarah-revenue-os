@@ -162,10 +162,11 @@ export class SubscriptionAgent extends AgentBase {
       let aktualisiert = 0;
 
       for (const sub of subs.data) {
-        const customerEmail = (sub.customer as any)?.email ?? sub.metadata?.email ?? "unbekannt@cybersarah.de";
+        const stripeSub = sub as any;
+        const customerEmail = stripeSub.customer?.email ?? stripeSub.metadata?.email ?? "unbekannt@cybersarah.de";
 
         // Plan in DB finden
-        const items = sub.items.data;
+        const items = stripeSub.items.data;
         const stripePreisId = items[0]?.price?.id;
         const [plan] = await db
           .select({ id: subscriptionPlansTable.id })
@@ -182,19 +183,19 @@ export class SubscriptionAgent extends AgentBase {
           .where(eq(customerSubscriptionsTable.stripeSubscriptionId, sub.id))
           .limit(1);
 
-        const status = sub.status === "active" ? "aktiv"
-          : sub.status === "past_due" ? "fehlgeschlagen"
-          : sub.status === "canceled" ? "gekuendigt"
-          : sub.status === "incomplete" ? "ausstehend"
-          : sub.status === "trialing" ? "aktiv"
+        const status = stripeSub.status === "active" ? "aktiv"
+          : stripeSub.status === "past_due" ? "fehlgeschlagen"
+          : stripeSub.status === "canceled" ? "gekuendigt"
+          : stripeSub.status === "incomplete" ? "ausstehend"
+          : stripeSub.status === "trialing" ? "aktiv"
           : "gekuendigt";
 
-        const periodStart = sub.current_period_start ? new Date(sub.current_period_start * 1000) : null;
-        const periodEnd = sub.current_period_end ? new Date(sub.current_period_end * 1000) : null;
-        const trialEnd = sub.trial_end ? new Date(sub.trial_end * 1000) : null;
+        const periodStart = stripeSub.current_period_start ? new Date(stripeSub.current_period_start * 1000) : null;
+        const periodEnd = stripeSub.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null;
+        const trialEnd = stripeSub.trial_end ? new Date(stripeSub.trial_end * 1000) : null;
 
         // Rechnungsdaten
-        const invoice = sub.latest_invoice as any;
+        const invoice = stripeSub.latest_invoice as any;
         const invoiceBetrag = invoice?.amount_due ? (invoice.amount_due / 100) : null;
         const invoiceStatus = invoice?.status ?? null;
 
@@ -212,13 +213,13 @@ export class SubscriptionAgent extends AgentBase {
           aktualisiert++;
         } else {
           // Stripe-Customer-ID extrahieren
-          const stripeCustomerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as any)?.id;
+          const stripeCustomerId = typeof stripeSub.customer === "string" ? stripeSub.customer : stripeSub.customer?.id;
 
           const [neuSub] = await db.insert(customerSubscriptionsTable).values({
             planId: plan.id,
             kundenEmail: customerEmail,
-            kundenName: (sub.customer as any)?.name ?? null,
-            stripeSubscriptionId: sub.id,
+            kundenName: stripeSub.customer?.name ?? null,
+            stripeSubscriptionId: stripeSub.id,
             stripeCustomerId,
             status: status as any,
             aktuellerPeriodStart: periodStart,
@@ -229,7 +230,7 @@ export class SubscriptionAgent extends AgentBase {
           if (neuSub && invoiceBetrag) {
             await db.insert(subscriptionInvoicesTable).values({
               subscriptionId: neuSub.id,
-              stripeInvoiceId: invoice?.id ?? `inv_${sub.id}`,
+              stripeInvoiceId: invoice?.id ?? `inv_${stripeSub.id}`,
               stripeRechnungUrl: invoice?.hosted_invoice_url ?? null,
               betrag: String(invoiceBetrag),
               status: invoiceStatus === "paid" ? "bezahlt" : "offen",

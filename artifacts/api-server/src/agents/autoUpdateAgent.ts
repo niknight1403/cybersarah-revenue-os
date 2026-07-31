@@ -35,7 +35,7 @@ export class AutoUpdateAgent extends AgentBase {
     return "Prüft alle 5 Minuten auf neue GitHub-Commits und deployt automatisch";
   }
 
-  async bearbeiteAufgabe(aufgabe: Aufgabe): Promise<AufgabeErgebnis> {
+  async ausfuehren(aufgabe: Aufgabe): Promise<AufgabeErgebnis> {
     const aktion = String(aufgabe.payload?.["aktion"] ?? "check");
 
     try {
@@ -65,7 +65,7 @@ export class AutoUpdateAgent extends AgentBase {
     }
   }
 
-  private async checkForUpdates(): Promise<AufgabeErgebnis> {
+  public async checkForUpdates(): Promise<AufgabeErgebnis> {
     const latestHash = await this.getLatestCommitHash();
     if (!latestHash) {
       return { success: false, message: "Konnte GitHub nicht erreichen" };

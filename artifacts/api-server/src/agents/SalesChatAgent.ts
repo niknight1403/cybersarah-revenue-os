@@ -154,9 +154,16 @@ export class SalesChatAgent extends AgentBase {
     }
 
     // Nachrichten-Array parsen
-    const nachrichten: ChatMessage[] = JSON.parse(JSON.stringify(conversation.nachrichten ?? "[]"));
-    if (typeof nachrichten === "string") {
-      try { nachrichten = JSON.parse(nachrichten); } catch { nachrichten = []; }
+    let nachrichten: ChatMessage[] = [];
+    const rohNachrichten = conversation.nachrichten;
+    if (typeof rohNachrichten === "string") {
+      try {
+        nachrichten = JSON.parse(rohNachrichten) as ChatMessage[];
+      } catch {
+        nachrichten = [];
+      }
+    } else if (Array.isArray(rohNachrichten)) {
+      nachrichten = rohNachrichten as ChatMessage[];
     }
 
     // Kunden-Nachricht hinzufügen

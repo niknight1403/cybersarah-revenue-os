@@ -257,7 +257,7 @@ export class HaraAgent extends AgentBase {
         .limit(10);
 
       const aktiveKampagnen = await db
-        .select({ name: campaignsTable.name, marke: campaignsTable.marke, klicks: campaignsTable.klicks, konversionen: campaignsTable.konversionen, budget: campaignsTable.budget })
+        .select({ name: campaignsTable.name, marke: campaignsTable.marke, klicks: campaignsTable.klicks, konversionen: campaignsTable.konversionen })
         .from(campaignsTable)
         .where(eq(campaignsTable.status, "aktiv"))
         .limit(10);

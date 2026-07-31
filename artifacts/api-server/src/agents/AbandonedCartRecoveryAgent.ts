@@ -138,7 +138,7 @@ export class AbandonedCartRecoveryAgent extends AgentBase {
   // ═════════════════════════════════════════════════════════════════════════════
   // FÄLLIGE FOLGE-ERINNERUNGEN finden
   // ═════════════════════════════════════════════════════════════════════════════
-  private async holeFaelligeErinnerungen(): Promise<typeof offeneCartsFake extends any[] ? any[] : any[]> {
+  private async holeFaelligeErinnerungen(): Promise<any[]> {
     const ergebnisse: any[] = [];
 
     for (let i = 0; i < ERINNERUNGS_STUFEN.length - 1; i++) {
