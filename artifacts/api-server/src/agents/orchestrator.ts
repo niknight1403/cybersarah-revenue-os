@@ -216,6 +216,7 @@ import { SubscriptionAgent } from "./SubscriptionAgent";
 import { CrossSellAgent } from "./CrossSellAgent";
 import { ConversionOptimizerAgent } from "./ConversionOptimizerAgent";
 import { EmailSequenceAgent } from "./EmailSequenceAgent";
+import { ContentEngineAgent } from "./ContentEngineAgent";
 import { scanneNeueProdukte, synchronisiereVerkaeufe, optimierePreiseUndPausiereFlops } from "./digitalproduktAgent";
 import { generiereSeoArtikel } from "./seoContentAgent";
 import { erstelleFehlendeSequenzen, versendeFaelligeEmails } from "./emailListenAgent";
@@ -290,6 +291,7 @@ const subAgenten: AgentBase[] = [
   new SalesChatAgent(),
   new SubscriptionAgent(),
   new CrossSellAgent(),
+new ContentEngineAgent(),
   new ConversionOptimizerAgent(),
   new EmailSequenceAgent(),
 ];
@@ -856,6 +858,49 @@ function registriereQueueHandler(): void {
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "birthday_bonus" } });
   });
 
+  // ── Content Engine Agent ──
+  globalQueue.registriereHandler("content_generate_ideas", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof ContentEngineAgent);
+    if (!agent) throw new Error("ContentEngineAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { ...aufgabe.payload, aktion: "generate_ideas" } });
+  });
+
+  globalQueue.registriereHandler("content_draft", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof ContentEngineAgent);
+    if (!agent) throw new Error("ContentEngineAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { ...aufgabe.payload, aktion: "draft_content" } });
+  });
+
+  globalQueue.registriereHandler("content_quality_check", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof ContentEngineAgent);
+    if (!agent) throw new Error("ContentEngineAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { ...aufgabe.payload, aktion: "quality_check" } });
+  });
+
+  globalQueue.registriereHandler("content_schedule", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof ContentEngineAgent);
+    if (!agent) throw new Error("ContentEngineAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { ...aufgabe.payload, aktion: "schedule_publish" } });
+  });
+
+  globalQueue.registriereHandler("content_publish_due", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof ContentEngineAgent);
+    if (!agent) throw new Error("ContentEngineAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { ...aufgabe.payload, aktion: "publish_due" } });
+  });
+
+  globalQueue.registriereHandler("content_analyze_performance", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof ContentEngineAgent);
+    if (!agent) throw new Error("ContentEngineAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { ...aufgabe.payload, aktion: "analyze_performance" } });
+  });
+
+  globalQueue.registriereHandler("content_full_pipeline", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof ContentEngineAgent);
+    if (!agent) throw new Error("ContentEngineAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { ...aufgabe.payload, aktion: "full_pipeline" } });
+  });
+
   // ── Abandoned Cart Recovery Agent ──
   globalQueue.registriereHandler("cart_recovery_check", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
 
@@ -1094,6 +1139,18 @@ async function mainLoop(): Promise<void> {
     // Alle Stunde: Queue bereinigen
     if (mainLoopZyklus % 60 === 0) {
       globalQueue.bereinige(3_600_000);
+    }
+    // Alle 6 Stunden: Content Engine Full Pipeline für alle aktiven Charaktere
+    if (mainLoopZyklus % 360 === 0) {
+      globalQueue.fuegeHinzu("content_full_pipeline", { aktion: "full_pipeline", autoApprove: false }, { prioritaet: 2 });
+    }
+    // Alle 30 Min: Content veröffentlichen was fällig ist
+    if (mainLoopZyklus % 30 === 0) {
+      globalQueue.fuegeHinzu("content_publish_due", { aktion: "publish_due" }, { prioritaet: 1 });
+    }
+    // Alle 2 Stunden: Content Performance analysieren
+    if (mainLoopZyklus % 120 === 0) {
+      globalQueue.fuegeHinzu("content_analyze_performance", { aktion: "analyze_performance", days: 7 }, { prioritaet: 3 });
     }
 
     logger.debug({ zyklus: mainLoopZyklus, dauer: Date.now() - zyklusStart }, "Main-Loop Zyklus abgeschlossen");
