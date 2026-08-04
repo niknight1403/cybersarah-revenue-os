@@ -45,6 +45,7 @@ import { MobileRevenue } from "@/pages/mobileRevenue";
 import { ConversionDashboard } from "@/pages/conversionDashboard";
 import { SubscriptionDashboard } from "@/pages/subscriptionDashboard";
 import { StartupScreen } from "@/pages/_startup";
+import DesignDemo from "@/pages/design-demo";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient({
@@ -62,6 +63,7 @@ function Router() {
     <Layout>
       <Switch>
         <Route path="/" component={() => <ErrorBoundary name="Dashboard"><Dashboard /></ErrorBoundary>} />
+        <Route path="/design-demo" component={DesignDemo} />
         <Route path="/sofort-start" component={() => <ErrorBoundary name="SofortStart"><SofortStart /></ErrorBoundary>} />
         <Route path="/trading" component={() => <ErrorBoundary name="Trading"><Trading /></ErrorBoundary>} />
         <Route path="/chancen" component={() => <ErrorBoundary name="Chancen"><Chancen /></ErrorBoundary>} />

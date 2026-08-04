@@ -17,9 +17,9 @@ android {
     signingConfigs {
         release {
             storeFile file('cybersarah-release.keystore')
-            storePassword 'cybersarah2026'
+            storePassword System.getenv('CYBERSARAH_STORE_PASSWORD') ?: 'cybersarah2026'
             keyAlias 'cybersarah'
-            keyPassword 'cybersarah2026'
+            keyPassword System.getenv('CYBERSARAH_KEY_PASSWORD') ?: 'cybersarah2026'
         }
     }
     
