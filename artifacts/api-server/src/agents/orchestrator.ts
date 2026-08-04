@@ -1461,7 +1461,7 @@ async function holeAgentId(typ: string): Promise<number | null> {
   return agent?.id ?? null;
 }
 
-async function fuhreAgentAus(agentId: number, aktion: () => Promise<void>): Promise<void> {
+async function fuehreAgentAus(agentId: number, aktion: () => Promise<void>): Promise<void> {
   await db.update(agentsTable)
     .set({ status: "aktiv", letzteAktivitaet: new Date(), updatedAt: new Date() })
     .where(eq(agentsTable.id, agentId));
