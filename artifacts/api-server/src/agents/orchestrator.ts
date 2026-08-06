@@ -214,6 +214,7 @@ import { AffiliateAutomationAgent } from "./AffiliateAutomationAgent";
 import { SalesChatAgent } from "./SalesChatAgent";
 import { SubscriptionAgent } from "./SubscriptionAgent";
 import { CrossSellAgent } from "./CrossSellAgent";
+import { VoiceAgentServiceAgent } from "./VoiceAgentServiceAgent";
 import { ConversionOptimizerAgent } from "./ConversionOptimizerAgent";
 import { EmailSequenceAgent } from "./EmailSequenceAgent";
 import { ContentEngineAgent } from "./ContentEngineAgent";
@@ -291,6 +292,7 @@ const subAgenten: AgentBase[] = [
   new SalesChatAgent(),
   new SubscriptionAgent(),
   new CrossSellAgent(),
+  new VoiceAgentServiceAgent(),
 new ContentEngineAgent(),
   new ConversionOptimizerAgent(),
   new EmailSequenceAgent(),
@@ -796,6 +798,13 @@ function registriereQueueHandler(): void {
     const agent = subAgenten.find(a => a instanceof CrossSellAgent);
     if (!agent) throw new Error("CrossSellAgent nicht gefunden");
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "optimize" } });
+  });
+
+  // ── Voice-Agent-Service ──
+  globalQueue.registriereHandler("voice_agent_verarbeite_anruf", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof VoiceAgentServiceAgent);
+    if (!agent) throw new Error("VoiceAgentServiceAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "verarbeite_anruf", callId: aufgabe.payload?.["callId"] } });
   });
 
   // ── Conversion Optimizer Agent ──
@@ -1375,6 +1384,16 @@ export function starteOrchestrator(): void {
   // Newsletter: täglich 10:00
   cron.schedule("0 10 * * *", () => {
     globalQueue.fuegeHinzu("newsletter_daily", { aktion: "create_and_send" }, { prioritaet: 2 });
+  });
+
+  // Voice-Agent: Monatszähler am 1. jeden Monats um 00:05 Uhr zurücksetzen
+  cron.schedule("5 0 1 * *", () => {
+    globalQueue.fuegeHinzu("voice_agent_monat", { aktion: "monatszaehler_zuruecksetzen" }, { prioritaet: 2 });
+  });
+
+  // Voice-Agent: wöchentlicher Report, montags 08:00 Uhr
+  cron.schedule("0 8 * * 1", () => {
+    globalQueue.fuegeHinzu("voice_agent_report", { aktion: "woechentlicher_report" }, { prioritaet: 2 });
   });
 
   logger.info("Orchestrator + alle Cron-Jobs gestartet");

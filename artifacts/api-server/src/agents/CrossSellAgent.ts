@@ -109,7 +109,6 @@ export class CrossSellAgent extends AgentBase {
       .from(transactionsTable)
       .where(and(
         gte(transactionsTable.createdAt, vor30Tagen),
-        isNull(transactionsTable.produktName) ? undefined : undefined,
         sql`produkt_name IS NOT NULL`
       ))
       .groupBy(transactionsTable.produktName)
@@ -311,6 +310,15 @@ export class CrossSellAgent extends AgentBase {
               eq(crossSellRecommendationsTable.kundenEmail, lead.email),
               eq(crossSellRecommendationsTable.ruleId, regel.id),
             ));
+          // WICHTIG: anzahlEmpfohlen muss hier hochgezählt werden — sonst bleibt
+          // dieser Zähler für immer 0, und optimiereRabatte()'s Filter
+          // "anzahlEmpfohlen > 5" trifft NIE zu. Ohne diesen Fix läuft die
+          // komplette Rabatt-A/B-Optimierung permanent leer, ohne dass es im
+          // Log auffällt (0 optimiert, 0 geprüft — sieht nach "nichts zu tun"
+          // aus, ist aber ein stiller Totalausfall des Features).
+          await db.update(crossSellRulesTable)
+            .set({ anzahlEmpfohlen: sql`anzahl_empfohlen + 1` })
+            .where(eq(crossSellRulesTable.id, regel.id));
           empfehlungenGesendet++;
 
           // Auch Push-Benachrichtigung bei hoher Wahrscheinlichkeit
