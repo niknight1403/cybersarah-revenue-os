@@ -215,6 +215,7 @@ import { SalesChatAgent } from "./SalesChatAgent";
 import { SubscriptionAgent } from "./SubscriptionAgent";
 import { CrossSellAgent } from "./CrossSellAgent";
 import { VoiceAgentServiceAgent } from "./VoiceAgentServiceAgent";
+import { LeadNurtureAgent } from "./LeadNurtureAgent";
 import { ConversionOptimizerAgent } from "./ConversionOptimizerAgent";
 import { EmailSequenceAgent } from "./EmailSequenceAgent";
 import { ContentEngineAgent } from "./ContentEngineAgent";
@@ -293,6 +294,7 @@ const subAgenten: AgentBase[] = [
   new SubscriptionAgent(),
   new CrossSellAgent(),
   new VoiceAgentServiceAgent(),
+  new LeadNurtureAgent(),
 new ContentEngineAgent(),
   new ConversionOptimizerAgent(),
   new EmailSequenceAgent(),
@@ -805,6 +807,25 @@ function registriereQueueHandler(): void {
     const agent = subAgenten.find(a => a instanceof VoiceAgentServiceAgent);
     if (!agent) throw new Error("VoiceAgentServiceAgent nicht gefunden");
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "verarbeite_anruf", callId: aufgabe.payload?.["callId"] } });
+  });
+
+  // ── Lead-Nurture-Agent ──
+  globalQueue.registriereHandler("lead_nurture_verarbeite", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof LeadNurtureAgent);
+    if (!agent) throw new Error("LeadNurtureAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "verarbeite_faellige" } });
+  });
+
+  globalQueue.registriereHandler("lead_nurture_oeffnung", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof LeadNurtureAgent);
+    if (!agent) throw new Error("LeadNurtureAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "tracke_oeffnung", leadId: aufgabe.payload?.["leadId"] } });
+  });
+
+  globalQueue.registriereHandler("lead_nurture_klick", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof LeadNurtureAgent);
+    if (!agent) throw new Error("LeadNurtureAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "tracke_klick", leadId: aufgabe.payload?.["leadId"] } });
   });
 
   // ── Conversion Optimizer Agent ──
@@ -1394,6 +1415,11 @@ export function starteOrchestrator(): void {
   // Voice-Agent: wöchentlicher Report, montags 08:00 Uhr
   cron.schedule("0 8 * * 1", () => {
     globalQueue.fuegeHinzu("voice_agent_report", { aktion: "woechentlicher_report" }, { prioritaet: 2 });
+  });
+
+  // Lead-Nurture: alle 4 Stunden prüfen, wer fällig ist
+  cron.schedule("0 */4 * * *", () => {
+    globalQueue.fuegeHinzu("lead_nurture_verarbeite", { aktion: "verarbeite_faellige" }, { prioritaet: 2 });
   });
 
   logger.info("Orchestrator + alle Cron-Jobs gestartet");

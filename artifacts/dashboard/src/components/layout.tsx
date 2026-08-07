@@ -29,6 +29,7 @@ const navigation = [
   { name: "💬 Sales Chat", href: "/sales-chat", icon: MessageCircle, badge: "NEU", gruppe: "umsatz" },
   { name: "🎯 Cross-Sell", href: "/cross-sell", icon: Target, badge: "NEU", gruppe: "umsatz" },
   { name: "📞 Voice-Agent", href: "/voice-agent", icon: Phone, badge: "NEU", gruppe: "umsatz" },
+  { name: "📬 Lead-Nurture", href: "/lead-nurture", icon: Mail, badge: "NEU", gruppe: "umsatz" },
   { name: "📱 Mobile Revenue", href: "/mobile", icon: Smartphone, badge: "NEU", gruppe: "umsatz" },
   { name: "🧪 A/B-Tests", href: "/conversion", icon: Percent, badge: "NEU", gruppe: "umsatz" },
   { name: "🔄 Abos", href: "/subscriptions", icon: Repeat, badge: "NEU", gruppe: "umsatz" },

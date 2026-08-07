@@ -42,6 +42,7 @@ import { AffiliateDashboard } from "@/pages/affiliateDashboard";
 import { SalesChatDashboard } from "@/pages/salesChatDashboard";
 import { CrossSellDashboard } from "@/pages/crossSellDashboard";
 import { VoiceAgentDashboard } from "@/pages/voiceAgentDashboard";
+import { LeadNurtureDashboard } from "@/pages/leadNurtureDashboard";
 import { MobileRevenue } from "@/pages/mobileRevenue";
 import { ConversionDashboard } from "@/pages/conversionDashboard";
 import { SubscriptionDashboard } from "@/pages/subscriptionDashboard";
@@ -93,6 +94,7 @@ function Router() {
         <Route path="/sales-chat" component={() => <ErrorBoundary name="SalesChatDashboard"><SalesChatDashboard /></ErrorBoundary>} />
         <Route path="/cross-sell" component={() => <ErrorBoundary name="CrossSellDashboard"><CrossSellDashboard /></ErrorBoundary>} />
         <Route path="/voice-agent" component={() => <ErrorBoundary name="VoiceAgentDashboard"><VoiceAgentDashboard /></ErrorBoundary>} />
+        <Route path="/lead-nurture" component={() => <ErrorBoundary name="LeadNurtureDashboard"><LeadNurtureDashboard /></ErrorBoundary>} />
         <Route path="/conversion" component={() => <ErrorBoundary name="ConversionDashboard"><ConversionDashboard /></ErrorBoundary>} />
         <Route path="/subscriptions" component={() => <ErrorBoundary name="SubscriptionDashboard"><SubscriptionDashboard /></ErrorBoundary>} />
         <Route path="/email" component={() => <ErrorBoundary name="EmailAutomation"><EmailAutomation /></ErrorBoundary>} />
