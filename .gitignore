@@ -43,3 +43,8 @@ android/app/src/main/assets/public/
 /tmp/
 *.apk
 android/cybersarah-release.keystore
+
+# KI-Tool-eigene Dateien, nicht Teil des Projekts
+.agents/
+.claude/
+skills-lock.json
