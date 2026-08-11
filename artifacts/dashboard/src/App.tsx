@@ -38,6 +38,7 @@ import StripeZahlungen from "@/pages/stripeZahlungen";
 import StripeAbos from "@/pages/stripeAbos";
 import { CouponDashboard } from "@/pages/couponDashboard";
 import { LoyaltyDashboard } from "@/pages/loyaltyDashboard";
+import { ApiKeyGuardianDashboard } from "@/pages/apiKeyGuardianDashboard";
 import { AffiliateDashboard } from "@/pages/affiliateDashboard";
 import { SalesChatDashboard } from "@/pages/salesChatDashboard";
 import { CrossSellDashboard } from "@/pages/crossSellDashboard";
@@ -90,6 +91,7 @@ function Router() {
         <Route path="/whatsapp" component={() => <ErrorBoundary name="WhatsApp"><WhatsApp /></ErrorBoundary>} />
         <Route path="/coupons" component={() => <ErrorBoundary name="CouponDashboard"><CouponDashboard /></ErrorBoundary>} />
         <Route path="/loyalty" component={() => <ErrorBoundary name="LoyaltyDashboard"><LoyaltyDashboard /></ErrorBoundary>} />
+        <Route path="/api-keys" component={() => <ErrorBoundary name="ApiKeyGuardianDashboard"><ApiKeyGuardianDashboard /></ErrorBoundary>} />
         <Route path="/affiliates" component={() => <ErrorBoundary name="AffiliateDashboard"><AffiliateDashboard /></ErrorBoundary>} />
         <Route path="/sales-chat" component={() => <ErrorBoundary name="SalesChatDashboard"><SalesChatDashboard /></ErrorBoundary>} />
         <Route path="/cross-sell" component={() => <ErrorBoundary name="CrossSellDashboard"><CrossSellDashboard /></ErrorBoundary>} />

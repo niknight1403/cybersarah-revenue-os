@@ -210,6 +210,7 @@ import { HaraAgent } from "./HaraAgent";
 import { SmartCouponAgent } from "./SmartCouponAgent";
 import { AbandonedCartRecoveryAgent } from "./AbandonedCartRecoveryAgent";
 import { LoyaltyAgent } from "./LoyaltyAgent";
+import { ApiKeyGuardianAgent } from "./ApiKeyGuardianAgent";
 import { AffiliateAutomationAgent } from "./AffiliateAutomationAgent";
 import { SalesChatAgent } from "./SalesChatAgent";
 import { SubscriptionAgent } from "./SubscriptionAgent";
@@ -289,6 +290,7 @@ const subAgenten: AgentBase[] = [
   new SmartCouponAgent(),
   new AbandonedCartRecoveryAgent(),
   new LoyaltyAgent(),
+  new ApiKeyGuardianAgent(),
   new AffiliateAutomationAgent(),
   new SalesChatAgent(),
   new SubscriptionAgent(),
@@ -888,6 +890,13 @@ function registriereQueueHandler(): void {
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "birthday_bonus" } });
   });
 
+  // ── API-Key-Guardian ──
+  globalQueue.registriereHandler("apikey_full_check", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const agent = subAgenten.find(a => a instanceof ApiKeyGuardianAgent);
+    if (!agent) throw new Error("ApiKeyGuardianAgent nicht gefunden");
+    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "full_check" } });
+  });
+
   // ── Content Engine Agent ──
   globalQueue.registriereHandler("content_generate_ideas", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof ContentEngineAgent);
@@ -1420,6 +1429,11 @@ export function starteOrchestrator(): void {
   // Lead-Nurture: alle 4 Stunden prüfen, wer fällig ist
   cron.schedule("0 */4 * * *", () => {
     globalQueue.fuegeHinzu("lead_nurture_verarbeite", { aktion: "verarbeite_faellige" }, { prioritaet: 2 });
+  });
+
+  // API-Key-Guardian: alle 6 Stunden prüfen
+  cron.schedule("0 */6 * * *", () => {
+    globalQueue.fuegeHinzu("apikey_full_check", { aktion: "full_check" }, { prioritaet: 2 });
   });
 
   logger.info("Orchestrator + alle Cron-Jobs gestartet");
