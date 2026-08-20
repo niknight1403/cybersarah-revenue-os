@@ -34,3 +34,4 @@ export * from "./leadEngagement";
 export * from "./apiKeyRegistry";
 export * from "./publishingQueue";
 export * from "./jobLocks";
+export * from "./externalActionAudit";

@@ -1,4 +1,5 @@
 import { postToSocialMedia, type SocialPlatform } from "../lib/socialMediaClient";
+import { recordExternalAction } from "./externalActionAuditService";
 
 export type PublishingProvider = "tiktok" | "instagram";
 export type PublishingStatus = "queued" | "processing" | "published" | "retrying" | "failed" | "blocked";
@@ -56,6 +57,20 @@ export async function publishWithProvider(job: PublishingJob): Promise<ProviderR
 
   if (MOCK_MODE) {
     return { success: true, postId: `mock_${job.provider}_${job.idempotencyKey}`, url: `https://mock.invalid/${job.provider}/${job.idempotencyKey}`, mock: true };
+  }
+
+  try {
+    await recordExternalAction({
+      actionType: "social_publish",
+      provider: job.provider,
+      approvalId: job.approvalId!,
+      idempotencyKey: job.idempotencyKey,
+      dataClassification: "public",
+      requestSummary: { jobId: job.id, provider: job.provider, captionLength: job.caption.length, hasMedia: Boolean(job.mediaUrl) },
+      resultStatus: "approved",
+    });
+  } catch (error) {
+    return { success: false, error: "Externe Veröffentlichung ohne Audit-Log blockiert", mock: false };
   }
 
   const result = await postToSocialMedia({
