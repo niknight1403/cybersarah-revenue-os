@@ -154,7 +154,7 @@ async function loadStatus() {
         <div class="actions">
           <button class="btn btn-primary" onclick="loadStatus()">🔄 Aktualisieren</button>
           <button class="btn btn-outline" onclick="triggerWatchdog()">⚡ Watchdog</button>
-          <button class="btn btn-success" onclick="triggerDeploy()">🚀 Deploy</button>
+          <span class="btn btn-outline" title="Deployments werden ausschließlich über das geschützte CI/CD-Gate ausgeführt">🔒 Deploy via CI/CD</span>
         </div>
         <div id="actionResult" style="margin-top:12px;font-size:0.85rem;color:#6b7280"></div>
       </div>
@@ -197,19 +197,6 @@ async function triggerWatchdog() {
     const d = await r.json();
     el.textContent = d.success ? '✅ Watchdog ausgeführt' : '❌ Fehler: ' + (d.message || '?');
     setTimeout(loadStatus, 2000);
-  } catch(e) {
-    el.textContent = '❌ Fehler: ' + e.message;
-  }
-}
-
-async function triggerDeploy() {
-  if (!confirm('🚀 Server neu deployen? (Git Pull + Restart)')) return;
-  const el = document.getElementById('actionResult');
-  el.textContent = '⏳ Deploy wird ausgeführt...';
-  try {
-    const r = await fetch(API + '/admin/deploy', {method:'POST', headers:{'X-Deploy-Token':'cybersarah2026'}});
-    const d = await r.json();
-    el.textContent = d.success ? '✅ Deploy gestartet! Server restartet...' : '❌ Fehler: ' + (d.message || '?');
   } catch(e) {
     el.textContent = '❌ Fehler: ' + e.message;
   }

@@ -1,6 +1,9 @@
 import "dotenv/config";
 import app from "./app";
 import { logger } from "./lib/logger";
+import { assertRuntimeEnv } from "./config/runtimeEnv";
+
+assertRuntimeEnv();
 
 const rawPort = process.env["PORT"] ?? "3000";
 const port = Number(rawPort);

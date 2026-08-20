@@ -26,7 +26,8 @@
     "pino-http": "^10.5.0",
     "stripe": "^22.3.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
