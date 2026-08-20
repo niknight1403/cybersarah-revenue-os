@@ -35,3 +35,4 @@ export * from "./apiKeyRegistry";
 export * from "./publishingQueue";
 export * from "./jobLocks";
 export * from "./externalActionAudit";
+export * from "./stripeEventClaims";

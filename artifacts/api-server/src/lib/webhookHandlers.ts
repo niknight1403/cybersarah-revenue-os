@@ -19,6 +19,7 @@ import { transactionsTable, webhookEventsTable } from "@workspace/db";
 import { logger } from "./logger";
 import { sendEmail } from "./emailClient";
 import { orderConfirmation } from "./emailTemplates";
+import { claimStripeEvent, markStripeEventFailed, markStripeEventProcessed } from "../services/stripeEventClaimService";
 
 // ─── Event-Deduplizierung ─────────────────────────────────────────────────────
 // Verhindert Doppelverarbeitung bei Stripe-Retries oder schnellen
@@ -422,8 +423,9 @@ export class WebhookHandlers {
     event: Stripe.Event,
     ipAdresse?: string
   ): Promise<void> {
-    // ── 1. Event-Deduplizierung ──────────────────────────────────────────
-    if (istBereitsVerarbeitet(event.id)) {
+    // ── 1. Atomarer Event-Claim ──────────────────────────────────────────
+    const claimed = await claimStripeEvent(event.id, event.type);
+    if (!claimed || istBereitsVerarbeitet(event.id)) {
       logger.info(
         { eventId: event.id, eventType: event.type },
         "⏭️ Stripe Event bereits verarbeitet — übersprungen"
@@ -439,6 +441,7 @@ export class WebhookHandlers {
         await handler(event, ipAdresse);
 
         // Erfolgreiche Verarbeitung audit-loggen
+        await markStripeEventProcessed(event.id);
         await protokolliereWebhookEvent({
           quelle: "stripe",
           ereignisTyp: event.type,
@@ -458,8 +461,8 @@ export class WebhookHandlers {
           `❌ Stripe Event ${event.type} fehlgeschlagen`
         );
 
-        // Fehler audit-loggen (aber Event als "verarbeitet" markieren,
-        // damit Stripe nicht endlos retryed)
+        await markStripeEventFailed(event.id, fehlerMsg);
+        // Fehler audit-loggen; der Claim bleibt sichtbar und kann überwacht werden.
         await protokolliereWebhookEvent({
           quelle: "stripe",
           ereignisTyp: event.type,
