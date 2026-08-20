@@ -32,3 +32,4 @@ export * from "./contentEngine";
 export * from "./voiceAgent";
 export * from "./leadEngagement";
 export * from "./apiKeyRegistry";
+export * from "./publishingQueue";

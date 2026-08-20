@@ -4,6 +4,7 @@
   "license": "MIT",
   "scripts": {
     "build": "node artifacts/api-server/build.mjs",
+    "test:publishing": "tsx scripts/test-publishing-pipeline.ts",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "dev": "bash start.sh",
@@ -13,6 +14,7 @@
   "devDependencies": {
     "@capacitor/cli": "^8.4.2",
     "prettier": "^3.8.4",
+    "tsx": "catalog:",
     "typescript": "~5.9.3"
   },
   "dependencies": {
