@@ -33,3 +33,4 @@ export * from "./voiceAgent";
 export * from "./leadEngagement";
 export * from "./apiKeyRegistry";
 export * from "./publishingQueue";
+export * from "./jobLocks";

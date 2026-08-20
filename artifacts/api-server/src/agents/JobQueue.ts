@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import { logger } from "../lib/logger";
+import { acquireJobLock } from "../services/jobLockService";
 import type { Aufgabe, AufgabeErgebnis } from "./AgentBase";
 
 export type JobStatus = "wartend" | "laufend" | "abgeschlossen" | "fehlgeschlagen" | "wiederholt";
@@ -97,6 +98,12 @@ export class JobQueue extends EventEmitter {
       return;
     }
 
+    const releaseLock = await acquireJobLock(`agent-job:${job.aufgabe.typ}`);
+    if (!releaseLock) {
+      logger.debug({ typ: job.aufgabe.typ }, "Job übersprungen: verteilter Lock ist bereits aktiv");
+      return;
+    }
+
     this.gleichzeitigLaufend++;
     job.status = "laufend";
     job.gestartetAm = new Date();
@@ -134,6 +141,7 @@ export class JobQueue extends EventEmitter {
         );
       }
     } finally {
+      await releaseLock();
       this.gleichzeitigLaufend--;
       this.verarbeite();
     }
