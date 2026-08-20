@@ -1,6 +1,7 @@
 import { and, asc, eq, lte, or, isNull } from "drizzle-orm";
 import { db, publishingQueueTable, type NewPublishingQueueEntry, type PublishingQueueEntry } from "@workspace/db";
 import { maxAttemptsReached, preflightPublishing, publishWithProvider, retryDelayMs, type PublishingProvider } from "./socialPublishingService";
+import { emitHaraSignal } from "./haraSignalService";
 
 function requireDb() {
   if (!db) throw new Error("Datenbank ist nicht konfiguriert");
@@ -68,6 +69,16 @@ export async function processPublishingQueue(limit = 10): Promise<{ processed: n
     const result = await publishWithProvider({ ...job, attemptCount });
     if (result.success) {
       await database.update(publishingQueueTable).set({ status: "published", providerPostId: result.postId ?? null, providerUrl: result.url ?? null, nextAttemptAt: null }).where(eq(publishingQueueTable.id, job.id));
+      await emitHaraSignal({
+        signalKey: `publishing:${job.id}:${result.postId ?? job.idempotencyKey}`,
+        signalType: "publishing",
+        attributionStatus: job.personaId || job.campaignId || job.offerId || job.utmCampaign ? "attributed" : "unattributed",
+        personaId: job.personaId,
+        campaignId: job.campaignId ? String(job.campaignId) : null,
+        offerId: job.offerId,
+        utmCampaign: job.utmCampaign,
+        summary: `Publishing erfolgreich: ${job.provider}`,
+      });
       published++;
     } else if (maxAttemptsReached(attemptCount)) {
       await database.update(publishingQueueTable).set({ status: "failed", lastError: result.error?.slice(0, 500) ?? "Providerfehler", nextAttemptAt: null }).where(eq(publishingQueueTable.id, job.id));
