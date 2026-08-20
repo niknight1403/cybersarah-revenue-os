@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import { timingSafeEqual } from "node:crypto";
 import { execSync } from "child_process";
 import path from "path";
 import fs from "fs";
@@ -6,13 +7,20 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-const DEPLOY_TOKEN = process.env["DEPLOY_TOKEN"] || "cybersarah2026";
+const DEPLOY_TOKEN = process.env["DEPLOY_TOKEN"]?.trim();
 const PROJECT_DIR = path.resolve(import.meta.dirname ?? ".", "../../../..");
 
 // Simple auth check
 function checkToken(req: Request, res: Response): boolean {
-  const token = req.headers["x-deploy-token"] || req.query["token"];
-  if (token !== DEPLOY_TOKEN) {
+  const supplied = req.headers["x-deploy-token"];
+  if (!DEPLOY_TOKEN || typeof supplied !== "string") {
+    res.status(401).json({ success: false, message: "Invalid token" });
+    return false;
+  }
+  const expectedBytes = Buffer.from(DEPLOY_TOKEN, "utf8");
+  const suppliedBytes = Buffer.from(supplied, "utf8");
+  const valid = expectedBytes.length === suppliedBytes.length && timingSafeEqual(expectedBytes, suppliedBytes);
+  if (!valid) {
     res.status(401).json({ success: false, message: "Invalid token" });
     return false;
   }

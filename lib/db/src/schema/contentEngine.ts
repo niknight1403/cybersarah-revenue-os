@@ -57,7 +57,7 @@ export const contentCharactersTable = pgTable("content_characters", {
   maxPostsPerDay: integer("max_posts_per_day").default(3).notNull(),
   
   // Qualität & Compliance
-  qualityThresholds: jsonb("quality_thresholds").$type<Record<string, number>>().default({
+  qualityThresholds: jsonb("quality_thresholds").$type<Record<string, number | boolean>>().default({
     minReadabilityScore: 60,
     maxMarketingSpeak: 0.3,
     minPersonalVoice: 0.7,
