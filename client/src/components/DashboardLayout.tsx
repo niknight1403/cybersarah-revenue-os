@@ -21,19 +21,25 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Activity, Bot, ChartNoAxesCombined, LayoutDashboard, LogOut, PanelLeft, ShieldCheck } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { Activity, Bot, BrainCircuit, ChartNoAxesCombined, CheckSquare, LayoutDashboard, LogOut, Megaphone, PanelLeft, ShieldCheck, Sparkles } from "lucide-react";
+import React, { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
+  { icon: BrainCircuit, label: "HARA", path: "/hara" },
+  { icon: Sparkles, label: "KI Influence", path: "/influence" },
+  { icon: CheckSquare, label: "Tasks", path: "/tasks" },
+  { icon: Megaphone, label: "Vermarktung", path: "/marketing" },
   { icon: LayoutDashboard, label: "Workspace", path: "/app" },
   { icon: Bot, label: "Agenten", path: "/agents" },
   { icon: ShieldCheck, label: "Freigaben", path: "/approvals" },
   { icon: ChartNoAxesCombined, label: "Growth", path: "/growth" },
   { icon: Activity, label: "System", path: "/system" },
 ];
+
+export const MOBILE_AUTONOMY_NAV = menuItems.slice(0, 4).concat({ icon: ChartNoAxesCombined, label: "Growth", path: "/growth" });
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -46,12 +52,14 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [sidebarWidth, setSidebarWidth] = useState(() => {
+    if (typeof window === "undefined") return DEFAULT_WIDTH;
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
@@ -260,8 +268,9 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="flex-1 p-4">{children}</main>
+        <main className="flex-1 p-4 pb-24 sm:p-6 sm:pb-6">{children}</main>
       </SidebarInset>
+      {isMobile && <nav aria-label="Autonomie-Navigation" className="fixed inset-x-0 bottom-0 z-50 border-t border-cyan-100/10 bg-slate-950/90 px-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-16px_44px_rgba(2,6,23,0.45)] backdrop-blur-xl"><div className="grid grid-cols-5 gap-1">{MOBILE_AUTONOMY_NAV.map(item => { const isActive = location === item.path; return <button key={item.path} onClick={() => setLocation(item.path)} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-medium transition-colors ${isActive ? "bg-cyan-300/15 text-cyan-100" : "text-slate-400 hover:bg-white/5 hover:text-slate-100"}`}><item.icon className="h-4 w-4" /><span className="truncate">{item.label}</span></button>; })}</div></nav>}
     </>
   );
 }

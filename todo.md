@@ -102,3 +102,18 @@
 ## Bewertung neuer Echtgeld-Revenue-Modelle
 - [x] Fünf vorgeschlagene Revenue-Modelle gegen den bestehenden Stripe-, Freigabe-, Audit- und Datenschutzrahmen bewertet
 - [x] Einen priorisierten, freigabegesicherten Integrationspfad für Outcome- und Usage-Billing festgelegt
+
+## Mobile-first Autonomie- und Vermarktungszentrale
+- [x] Vorhandene Agenten, Freigabeentwürfe und Growth-Abläufe in HARA-, KI-Influence-, Aufgaben- und Produktmarketing-Module überführt
+- [x] Mobile-first Navigation und moderne, fingerfreundliche Bedienung mit klarer Aufgabenpriorisierung gestaltet
+- [x] HARA-System mit nachvollziehbaren autonomen Handlungsempfehlungen, Zuständen und Audit-Verweisen bereitgestellt
+- [x] KI-Influence-Tab mit freigabepflichtigen Kampagnen-, Content- und Outreach-Entwürfen bereitgestellt
+- [x] Aufgaben-Tab mit priorisierten, umsetzbaren autonomen Arbeitsaufträgen und Freigabestatus bereitgestellt
+- [x] Autonome Produktvermarktung als freigabegesicherte Kampagnen- und Produktintegrationsansicht bereitgestellt
+- [x] Mobile Benutzerführung, Rollen- und Freigabebegrenzungen automatisiert geprüft
+- [x] HARA-Modul um echte Audit-Verweise und nachvollziehbare Bewertungskontexte ergänzt
+- [x] KI-Influence-Tab um konkrete Kampagnen-, Content- und Outreach-Inhalte erweitert
+- [x] Rollen- und Außenwirkungsgrenzen der neuen Autonomie-Module automatisiert geprüft
+- [x] Routenschutz der HARA-, KI-Influence-, Tasks- und Produktmarketing-Module ohne Sitzung automatisiert nachgewiesen
+- [x] Für neue Autonomie-Aktionen den Entwurfsstatus ohne direkte Außenwirkung im Router und UI regressiv nachgewiesen
+- [x] KI-Influence- und Produktmarketing-Aktionen über den produktiven Router als reine Freigabeentwürfe nachgewiesen

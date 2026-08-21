@@ -31,6 +31,10 @@ function createAuthenticatedContext(): TrpcContext {
   };
 }
 
+function createAnonymousContext(): TrpcContext {
+  return { user: null, req: { headers: {}, protocol: "https" } as TrpcContext["req"], res: {} as TrpcContext["res"] };
+}
+
 describe("revenue router integration", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -61,5 +65,22 @@ describe("revenue router integration", () => {
 
     await expect(caller.revenue.createApprovalDraft(input)).resolves.toEqual({ success: true });
     expect(db.createRevenueApprovalDraft).toHaveBeenCalledWith(7, input);
+  });
+
+  it("leitet KI-Influence- und Produktmarketing-Entwürfe unverändert an den geschützten Draft-Pfad weiter", async () => {
+    db.getRevenueWorkspaceByUser.mockResolvedValue({ id: 19, userId: 7 });
+    const caller = appRouter.createCaller(createAuthenticatedContext());
+    const influence = { actionType: "ai_influence_campaign_draft", target: "KI-Influence-Kampagne", payload: { externalExecution: false, consentRequired: true } };
+    const marketing = { actionType: "product_marketing_integration_draft", target: "Revenue OS Pro", payload: { externalExecution: false } };
+    await caller.revenue.createApprovalDraft(influence);
+    await caller.revenue.createApprovalDraft(marketing);
+    expect(db.createRevenueApprovalDraft).toHaveBeenCalledWith(7, influence);
+    expect(db.createRevenueApprovalDraft).toHaveBeenCalledWith(7, marketing);
+  });
+
+  it("verweigert nicht angemeldeten Aufrufen den Zugriff auf freigabepflichtige Autonomie-Entwürfe", async () => {
+    const caller = appRouter.createCaller(createAnonymousContext());
+    await expect(caller.revenue.createApprovalDraft({ actionType: "ai_influence_campaign_draft", target: "KI-Influence-Kampagne", payload: { externalExecution: false } })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    expect(db.createRevenueApprovalDraft).not.toHaveBeenCalled();
   });
 });

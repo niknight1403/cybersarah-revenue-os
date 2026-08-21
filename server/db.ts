@@ -138,21 +138,16 @@ export async function setRevenueAgentEnabled(userId: number, agentId: number, en
   await db.update(revenueAgents).set({ enabled, status: enabled ? "waiting" : "paused" }).where(eq(revenueAgents.id, agent.id));
 }
 
+export function buildRevenueApprovalDraftRecord(workspaceId: number, input: { actionType: string; target: string; payload: Record<string, unknown> }, actionKey: string) {
+  return { workspaceId, actionKey, actionType: input.actionType, target: input.target, payload: input.payload, status: "needs_approval" as const, requiresApproval: true, requestedAt: new Date() };
+}
+
 export async function createRevenueApprovalDraft(userId: number, input: { actionType: string; target: string; payload: Record<string, unknown> }) {
   const db = await getDb();
   if (!db) throw new Error("Datenbank ist nicht verfügbar.");
   const workspace = await getRevenueWorkspaceByUser(userId);
   if (!workspace) throw new Error("Arbeitsbereich wurde nicht gefunden.");
-  await db.insert(revenueExternalActions).values({
-    workspaceId: workspace.id,
-    actionKey: crypto.randomUUID(),
-    actionType: input.actionType,
-    target: input.target,
-    payload: input.payload,
-    status: "needs_approval",
-    requiresApproval: true,
-    requestedAt: new Date(),
-  });
+  await db.insert(revenueExternalActions).values(buildRevenueApprovalDraftRecord(workspace.id, input, crypto.randomUUID()));
 }
 
 async function getOrCreateStripeProviderConfig(workspaceId: number) {

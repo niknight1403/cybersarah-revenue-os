@@ -87,6 +87,10 @@
   .cyber-grid { background-image: linear-gradient(to_right, rgba(151,139,255,0.035) 1px, transparent 1px), linear-gradient(to_bottom, rgba(105,239,255,0.028) 1px, transparent 1px); background-size: 32px 32px; }
   .cyber-status-ready { @apply border border-emerald-300/25 bg-emerald-300/10 text-emerald-100; }
   .cyber-status-pending { @apply border border-amber-300/25 bg-amber-300/10 text-amber-100; }
+  .autonomy-hero { @apply relative overflow-hidden rounded-[1.75rem] border border-cyan-200/15 bg-slate-950/55 p-5 shadow-[0_24px_70px_rgba(7,18,44,0.35),inset_0_1px_0_rgba(224,251,255,0.1)] backdrop-blur-2xl sm:p-7; }
+  .autonomy-hero::after { content: ""; position: absolute; inset: auto -8rem -9rem auto; width: 18rem; height: 18rem; border-radius: 9999px; background: radial-gradient(circle, oklch(0.76 0.15 196 / 28%), transparent 67%); pointer-events: none; }
+  .autonomy-card { @apply rounded-2xl border border-white/10 bg-slate-950/35 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]; }
+  .autonomy-kicker { font-family: "JetBrains Mono", ui-monospace, monospace; @apply text-[10px] font-medium tracking-[0.16em] text-cyan-200; }
   @media (min-width: 640px) { .container { padding-inline: 1.5rem; } }
   @media (min-width: 1024px) { .container { max-width: 1280px; padding-inline: 2rem; } }
 }
