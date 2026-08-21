@@ -44,3 +44,48 @@
 - [x] Wiederverwendbare Fehlerzustands-Komponenten für Revenue-Abfragen und -Mutationen getestet
 - [x] Seitenbezogene tRPC-Fehlerzustände für Workspace, Agenten, Freigaben und Systemstatus getestet
 - [x] Seitenbezogenen Mutationsfehler für das Speichern eines Freigabeentwurfs getestet
+
+## Direkte Stripe-Integration im Hauptprojekt
+- [x] Bestehende Stripe-Backend-Routen, Webhook-Handling und Umgebungsvariablen im Hauptrepository verifiziert
+- [x] Bestehende Stripe-Integration ohne Projektkopie in den aktiven Revenue-OS-Stand überführt
+- [x] Provider-Freigabegate vor allen Stripe-seitigen Zahlungs- oder Auszahlungsaktionen ergänzt
+- [x] Stripe-Gates, Webhook-Verhalten und sicherheitsrelevante Tests validiert
+
+## Kontrollierter Growth-OS-Ausbau
+- [x] Stripe-Zahlungs- und Webhook-Flows für Einnahme-, Abo- und Kündigungsereignisse abgesichert
+- [x] Funnel-, Conversion-, CAC-, LTV-, MRR- und Churn-Telemetrie mit nachvollziehbaren Datenquellen modelliert
+- [x] Entwurfsbasierte SEO-, Landingpage-, Outreach- und Social-Growth-Workflows mit Freigabegate ergänzt
+- [x] A/B-Test- und Pricing-Experimentmodell mit Guardrails gegen unfreigegebene Live-Preisänderungen implementiert
+- [x] Dunning-, Retention- und Upsell-Entwürfe als freigabepflichtige Kundenkommunikation modelliert
+- [x] Kontrollierten Analyse-Loop für Empfehlungen und pausierbare Optimierungsvorschläge implementiert
+- [x] Payment-, Provider-, Telemetrie- und Freigabeflows mit Tests und Produktionschecks validiert
+
+## Ereignisse und periodische Growth-Analyse
+- [x] Stripe-Webhook-Ereignisse idempotent als Revenue- und Lifecycle-Signale erfassen
+- [x] Systemereignisse zentral protokollieren und für Growth-Analysen aggregieren
+- [x] Verwalteten periodischen Analysejob ohne In-Prozess-Timer implementiert
+- [x] Automatische Dunning-, A/B-Test- und Outreach-Entwürfe mit Audit-Trail generieren
+
+## Vollständigkeitsprüfung des Growth-Systems
+- [ ] Stripe-Checkout- und Payment-Link-Erstellung aus der Referenzintegration übernehmen und durch das Provider-Gate absichern
+- [ ] Client-Instrumentierung für Landing-View-, CTA- und Checkout-Start-Ereignisse an den Funnel-Endpoint anbinden
+- [ ] SEO-, Landingpage-, Outreach- und Social-Entwürfe mit konkretem Inhalt sowie Freigabefluss statt generischer Datensätze erzeugen
+- [ ] A/B-Framework um Variantenausspielung, Ergebnisaggregation und Guardrails für Preisänderungen ergänzen
+- [ ] Upsell-Entwurfspfad mit Audit-Log und Freigabeprozess ergänzen
+- [ ] Revenue-Success-Webhooks, Kündigungsfolgen, Schedule-Aktivierung/-Pause und Telemetrie-End-to-End abdecken
+
+## MCP-Server für autonome Revenue-OS-Agenten
+- [x] Offizielles MCP-SDK und sichere Modulstruktur im bestehenden Express-Backend eingerichtet
+- [x] MCP-Authentifizierung, Mandantenzuordnung und Tool-Berechtigungsgrenzen festgelegt
+- [x] Ressourcen für Revenue-Metriken, redigierte Systemlogs und A/B-Experimente implementiert
+- [x] Tools für Finanzzusammenfassung, Dunning-Entwürfe, Pricing-Experimente und Audit-Abfragen implementiert
+- [x] Jede MCP-Operation idempotent und nachvollziehbar im zentralen Audit-Trail protokolliert
+- [x] MCP-Transport in Express eingehängt und gegen unberechtigten Zugriff abgesichert
+- [x] Ressourcen, Tools, Auditierung und Geheimnisredaktion automatisiert getestet
+- [x] Verfügbare MCP-Schnittstellen und Betriebsgrenzen dokumentiert
+
+## MCP-Vollständigkeitsprüfung
+- [x] Stabile requestbezogene MCP-Idempotenzschlüssel und Duplicate-Handling im Audit-Trail implementiert
+- [x] Alle drei MCP-Ressourcen mit echten `readResource`-Tests abgedeckt
+- [x] Dunning- und Audit-Trail-Tools inklusive Audit-Assertions automatisiert abgedeckt
+- [x] Spezifische Audit-Assertions für Dunning- und Audit-Trail-Toolaufrufe ergänzt

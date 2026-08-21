@@ -22,6 +22,27 @@
       "when": 1787290279850,
       "tag": "0002_wild_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1787293240055,
+      "tag": "0003_sour_thunderbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1787293934606,
+      "tag": "0004_normal_brood",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1787294228710,
+      "tag": "0005_handy_anthem",
+      "breakpoints": true
     }
   ]
 }

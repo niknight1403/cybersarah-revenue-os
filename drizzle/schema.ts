@@ -323,7 +323,168 @@ export const revenueSystemAudits = mysqlTable(
   table => [index("revenue_system_audits_workspace_time_idx").on(table.workspaceId, table.createdAt)]
 );
 
+// Zahlungsprovider bleiben standardmäßig deaktiviert und werden erst nach Adminfreigabe aktiv.
+export const revenueProviderConfigs = mysqlTable(
+  "revenue_provider_configs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    provider: mysqlEnum("provider", ["stripe"]).notNull(),
+    status: mysqlEnum("status", ["disabled", "approval_requested", "active", "suspended"]).default("disabled").notNull(),
+    requestedAt: timestamp("requestedAt"),
+    requestedByUserId: int("requestedByUserId"),
+    approvedAt: timestamp("approvedAt"),
+    approvedByUserId: int("approvedByUserId"),
+    lastWebhookAt: timestamp("lastWebhookAt"),
+    lastWebhookEventType: varchar("lastWebhookEventType", { length: 120 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [uniqueIndex("revenue_provider_configs_workspace_provider_idx").on(table.workspaceId, table.provider)]
+);
+
+export const revenueProviderAudits = mysqlTable(
+  "revenue_provider_audits",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    provider: mysqlEnum("provider", ["stripe"]).notNull(),
+    eventType: mysqlEnum("eventType", ["approval_requested", "activated", "suspended", "webhook_received", "webhook_ignored"]).notNull(),
+    actorUserId: int("actorUserId"),
+    detail: json("detail").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("revenue_provider_audits_workspace_time_idx").on(table.workspaceId, table.createdAt)]
+);
+
+export const revenueEvents = mysqlTable(
+  "revenue_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    source: mysqlEnum("source", ["stripe", "system"]).notNull(),
+    externalEventId: varchar("externalEventId", { length: 180 }).notNull(),
+    eventType: varchar("eventType", { length: 140 }).notNull(),
+    subjectRef: varchar("subjectRef", { length: 180 }),
+    amountCents: int("amountCents").default(0).notNull(),
+    currency: varchar("currency", { length: 8 }).default("EUR").notNull(),
+    occurredAt: timestamp("occurredAt").notNull(),
+    metadata: json("metadata").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    uniqueIndex("revenue_events_source_external_idx").on(table.source, table.externalEventId),
+    index("revenue_events_workspace_time_idx").on(table.workspaceId, table.occurredAt),
+    index("revenue_events_workspace_type_idx").on(table.workspaceId, table.eventType),
+  ]
+);
+
+export const revenueDailyMetrics = mysqlTable(
+  "revenue_daily_metrics",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    metricDate: varchar("metricDate", { length: 10 }).notNull(),
+    revenueCents: int("revenueCents").default(0).notNull(),
+    mrrCents: int("mrrCents").default(0).notNull(),
+    checkoutStarted: int("checkoutStarted").default(0).notNull(),
+    checkoutCompleted: int("checkoutCompleted").default(0).notNull(),
+    paymentFailures: int("paymentFailures").default(0).notNull(),
+    cancellations: int("cancellations").default(0).notNull(),
+    activeSubscriptions: int("activeSubscriptions").default(0).notNull(),
+    marketingSpendCents: int("marketingSpendCents").default(0).notNull(),
+    cacCents: int("cacCents").default(0).notNull(),
+    estimatedLtvCents: int("estimatedLtvCents").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [uniqueIndex("revenue_daily_metrics_workspace_date_idx").on(table.workspaceId, table.metricDate)]
+);
+
+export const growthExperiments = mysqlTable(
+  "growth_experiments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    experimentType: mysqlEnum("experimentType", ["landing_page", "headline", "cta", "pricing"]).notNull(),
+    name: varchar("name", { length: 180 }).notNull(),
+    status: mysqlEnum("status", ["draft", "needs_approval", "active", "paused", "completed"]).default("draft").notNull(),
+    variants: json("variants").$type<Array<{ key: string; label: string; value: string }>>().notNull(),
+    maxTrafficPercent: int("maxTrafficPercent").default(0).notNull(),
+    requiresApproval: boolean("requiresApproval").default(true).notNull(),
+    approvedByUserId: int("approvedByUserId"),
+    approvedAt: timestamp("approvedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("growth_experiments_workspace_status_idx").on(table.workspaceId, table.status)]
+);
+
+export const retentionCases = mysqlTable(
+  "retention_cases",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    revenueEventId: int("revenueEventId").notNull(),
+    caseType: mysqlEnum("caseType", ["dunning", "retention", "upsell"]).notNull(),
+    status: mysqlEnum("status", ["draft", "needs_approval", "approved", "closed"]).default("draft").notNull(),
+    subjectRef: varchar("subjectRef", { length: 180 }),
+    recommendedAction: text("recommendedAction").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("retention_cases_event_type_idx").on(table.revenueEventId, table.caseType),
+    index("retention_cases_workspace_status_idx").on(table.workspaceId, table.status),
+  ]
+);
+
+export const growthLoopSettings = mysqlTable(
+  "growth_loop_settings",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    enabled: boolean("enabled").default(false).notNull(),
+    cadenceCron: varchar("cadenceCron", { length: 64 }).default("0 0 7 * * *").notNull(),
+    scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }),
+    analyticsWriteKey: varchar("analyticsWriteKey", { length: 64 }).unique(),
+    lastRunAt: timestamp("lastRunAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("growth_loop_settings_workspace_idx").on(table.workspaceId),
+    index("growth_loop_settings_task_uid_idx").on(table.scheduleCronTaskUid),
+  ]
+);
+
+export const growthAuditEvents = mysqlTable(
+  "growth_audit_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    idempotencyKey: varchar("idempotencyKey", { length: 190 }).notNull(),
+    actor: mysqlEnum("actor", ["user", "system", "cron", "webhook"]).notNull(),
+    eventType: varchar("eventType", { length: 140 }).notNull(),
+    status: mysqlEnum("status", ["accepted", "skipped", "completed", "failed"]).notNull(),
+    detail: json("detail").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    uniqueIndex("growth_audit_events_idempotency_idx").on(table.idempotencyKey),
+    index("growth_audit_events_workspace_time_idx").on(table.workspaceId, table.createdAt),
+  ]
+);
+
 export type RevenueWorkspace = typeof revenueWorkspaces.$inferSelect;
 export type RevenueAgent = typeof revenueAgents.$inferSelect;
 export type RevenueExternalAction = typeof revenueExternalActions.$inferSelect;
 export type RevenueSystemAudit = typeof revenueSystemAudits.$inferSelect;
+export type RevenueProviderConfig = typeof revenueProviderConfigs.$inferSelect;
+export type RevenueProviderAudit = typeof revenueProviderAudits.$inferSelect;
+export type RevenueEvent = typeof revenueEvents.$inferSelect;
+export type RevenueDailyMetric = typeof revenueDailyMetrics.$inferSelect;
+export type GrowthExperiment = typeof growthExperiments.$inferSelect;
+export type RetentionCase = typeof retentionCases.$inferSelect;
+export type GrowthLoopSetting = typeof growthLoopSettings.$inferSelect;
+export type GrowthAuditEvent = typeof growthAuditEvents.$inferSelect;

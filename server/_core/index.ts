@@ -10,6 +10,11 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { configureHttpSecurity } from "./httpSecurity";
 import { runtimeHealth } from "../services/runtimeResilience";
+import { handleStripeWebhook } from "../services/stripeWebhook";
+import { handleGrowthAnalysisSchedule } from "../services/growthSchedule";
+import { handleFunnelTracking } from "../services/funnelTracking";
+import { requireMcpBearer, registerMcpHealthProbe } from "../mcp/auth";
+import { handleMcpRequest } from "../mcp/server";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -61,8 +66,13 @@ async function startServer() {
     return res.status(health.ok ? 200 : 503).json({ ok: health.ok, status: health.status });
   });
 
+  app.post("/api/stripe/webhook", express.raw({ type: "application/json", limit: "1mb" }), handleStripeWebhook);
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ limit: "2mb", extended: true }));
+  app.post("/api/events/funnel", handleFunnelTracking);
+  app.post("/api/scheduled/growth-analysis", handleGrowthAnalysisSchedule);
+  registerMcpHealthProbe(app);
+  app.all("/api/mcp", requireMcpBearer, handleMcpRequest);
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   app.use(

@@ -3,7 +3,12 @@ import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Activity, ArrowRight, Bot, CircleDollarSign, ShieldCheck, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+function sendFunnelEvent(key: string, eventType: "landing_view" | "cta_click" | "checkout.session.created") {
+  const payload = JSON.stringify({ key, eventId: crypto.randomUUID(), eventType });
+  navigator.sendBeacon("/api/events/funnel", new Blob([payload], { type: "application/json" }));
+}
 
 const operatingAreas = [
   {
@@ -28,6 +33,7 @@ export default function RevenueHome() {
   const [draftActionType, setDraftActionType] = useState("Campaign review");
   const [draftTarget, setDraftTarget] = useState("");
   const appInfo = trpc.app.info.useQuery();
+  const tracking = trpc.app.tracking.useQuery();
   const overview = trpc.revenue.overview.useQuery(undefined, { enabled: isAuthenticated });
   const utils = trpc.useUtils();
   const initializeWorkspace = trpc.revenue.initialize.useMutation({
@@ -43,6 +49,14 @@ export default function RevenueHome() {
     },
   });
   const title = appInfo.data?.title ?? "CyberSarah Revenue OS";
+  const trackingKey = tracking.data?.key ?? null;
+  const sessionKey = useMemo(() => `revenue-landing-tracked:${trackingKey ?? "none"}`, [trackingKey]);
+
+  useEffect(() => {
+    if (!trackingKey || sessionStorage.getItem(sessionKey)) return;
+    sendFunnelEvent(trackingKey, "landing_view");
+    sessionStorage.setItem(sessionKey, "1");
+  }, [sessionKey, trackingKey]);
 
   return (
     <main className="cyber-grid min-h-screen pb-14 pt-6 sm:pt-10">
@@ -65,7 +79,7 @@ export default function RevenueHome() {
                 <Button variant="outline" onClick={() => void logout()} disabled={loading}>Abmelden</Button>
               </>
             ) : (
-              <Button onClick={() => window.location.assign(getLoginUrl())} disabled={loading} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">
+              <Button onClick={() => { if (trackingKey) sendFunnelEvent(trackingKey, "cta_click"); window.location.assign(getLoginUrl()); }} disabled={loading} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">
                 Mit Manus anmelden <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             )}

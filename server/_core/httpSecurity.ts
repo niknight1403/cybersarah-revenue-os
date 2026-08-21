@@ -26,7 +26,8 @@ export function resolveHttpSecurityConfig(env: Record<string, string | undefined
 }
 
 function skipRateLimit(request: Request) {
-  return (request.originalUrl.split("?", 1)[0] ?? request.path) === "/api/oauth/callback";
+  const path = request.originalUrl.split("?", 1)[0] ?? request.path;
+  return path === "/api/oauth/callback" || path === "/api/stripe/webhook";
 }
 
 export function configureHttpSecurity(app: Express, env: Record<string, string | undefined> = process.env) {
