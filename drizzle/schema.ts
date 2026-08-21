@@ -1,4 +1,4 @@
-import { decimal, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, decimal, index, int, json, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
 
 /**
@@ -251,3 +251,79 @@ export const diplomacyRelations = relations(diplomacy, ({ one }) => ({
   civ2: one(civilizations, { fields: [diplomacy.civ2Id], references: [civilizations.id] }),
   game: one(games, { fields: [diplomacy.gameId], references: [games.id] }),
 }));
+
+// CyberSarah Revenue OS – additive Kernmodelle. Bestehende Tabellen bleiben unverändert.
+export const revenueWorkspaces = mysqlTable(
+  "revenue_workspaces",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    status: mysqlEnum("status", ["setup", "active", "paused"]).default("setup").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [uniqueIndex("revenue_workspaces_user_idx").on(table.userId)]
+);
+
+export const revenueAgents = mysqlTable(
+  "revenue_agents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    agentKey: varchar("agentKey", { length: 80 }).notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    status: mysqlEnum("status", ["waiting", "active", "paused", "error"]).default("waiting").notNull(),
+    enabled: boolean("enabled").default(true).notNull(),
+    lastRunAt: timestamp("lastRunAt"),
+    lastError: text("lastError"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    uniqueIndex("revenue_agents_workspace_key_idx").on(table.workspaceId, table.agentKey),
+    index("revenue_agents_status_idx").on(table.status),
+  ]
+);
+
+export const revenueExternalActions = mysqlTable(
+  "revenue_external_actions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    actionKey: varchar("actionKey", { length: 120 }).notNull().unique(),
+    actionType: varchar("actionType", { length: 100 }).notNull(),
+    target: varchar("target", { length: 240 }).notNull(),
+    payload: json("payload").$type<Record<string, unknown>>().notNull(),
+    status: mysqlEnum("status", ["draft", "needs_approval", "approved", "rejected", "executed", "failed"]).default("draft").notNull(),
+    requiresApproval: boolean("requiresApproval").default(true).notNull(),
+    requestedAt: timestamp("requestedAt"),
+    decidedAt: timestamp("decidedAt"),
+    decidedByUserId: int("decidedByUserId"),
+    errorMessage: text("errorMessage"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("revenue_external_actions_workspace_status_idx").on(table.workspaceId, table.status),
+  ]
+);
+
+export const revenueSystemAudits = mysqlTable(
+  "revenue_system_audits",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    source: mysqlEnum("source", ["runtime", "manual", "integration"]).notNull(),
+    score: int("score").notNull(),
+    summary: text("summary").notNull(),
+    findings: json("findings").$type<Array<{ priority: "low" | "medium" | "high"; title: string; detail: string }>>().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [index("revenue_system_audits_workspace_time_idx").on(table.workspaceId, table.createdAt)]
+);
+
+export type RevenueWorkspace = typeof revenueWorkspaces.$inferSelect;
+export type RevenueAgent = typeof revenueAgents.$inferSelect;
+export type RevenueExternalAction = typeof revenueExternalActions.$inferSelect;
+export type RevenueSystemAudit = typeof revenueSystemAudits.$inferSelect;

@@ -8,35 +8,63 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { configureHttpSecurity } from "./httpSecurity";
+import { runtimeHealth } from "../services/runtimeResilience";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();
-    server.listen(port, () => {
-      server.close(() => resolve(true));
-    });
+    server.listen(port, () => server.close(() => resolve(true)));
     server.on("error", () => resolve(false));
   });
 }
 
-async function findAvailablePort(startPort: number = 3000): Promise<number> {
-  for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
+async function findAvailablePort(startPort = 3000): Promise<number> {
+  for (let port = startPort; port < startPort + 20; port += 1) {
+    if (await isPortAvailable(port)) return port;
   }
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
 async function startServer() {
   const app = express();
+  const httpSecurity = configureHttpSecurity(app);
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  let shutdownStarted = false;
+
+  const shutdown = (signal: string) => {
+    if (shutdownStarted) return;
+    shutdownStarted = true;
+    runtimeHealth.markDraining();
+    console.info(`[Runtime] ${signal} empfangen; kontrollierter Shutdown wird gestartet.`);
+    const forceExit = setTimeout(() => process.exit(1), 10_000);
+    forceExit.unref();
+    server.close(error => {
+      clearTimeout(forceExit);
+      process.exit(error ? 1 : 0);
+    });
+  };
+
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
+  process.once("SIGINT", () => shutdown("SIGINT"));
+
+  app.get("/healthz", (_req, res) => {
+    const health = runtimeHealth.snapshot();
+    return res.status(health.ok ? 200 : 503).json(health);
+  });
+  app.get("/readyz", (_req, res) => {
+    const health = runtimeHealth.snapshot();
+    return res.status(health.ok ? 200 : 503).json(health);
+  });
+  app.get("/health", (_req, res) => {
+    const health = runtimeHealth.snapshot();
+    return res.status(health.ok ? 200 : 503).json({ ok: health.ok, status: health.status });
+  });
+
+  app.use(express.json({ limit: "2mb" }));
+  app.use(express.urlencoded({ limit: "2mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
-  // tRPC API
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -44,23 +72,34 @@ async function startServer() {
       createContext,
     })
   );
-  // development mode uses Vite, production mode uses static files
+
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
+  app.use((error: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (res.headersSent) return next(error);
+    console.error("[HTTP] Unbehandelter Request-Fehler", error);
+    return res.status(500).json({ ok: false, error: "Interner Serverfehler" });
+  });
 
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+  const preferredPort = Number.parseInt(process.env.PORT || "3000", 10);
+  const isProduction = process.env.NODE_ENV === "production";
+  const port = isProduction ? preferredPort : await findAvailablePort(preferredPort);
+  const host = process.env.HOST || "0.0.0.0";
+
+  if (!isProduction && port !== preferredPort) {
+    console.info(`[Runtime] Bevorzugter Port ${preferredPort} belegt; nutze Port ${port}.`);
   }
-
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+  console.info(`[Security] HTTP-Schutz aktiv: RateLimit=${httpSecurity.rateLimitMax}/${httpSecurity.rateLimitWindowMs}ms.`);
+  server.listen(port, host, () => {
+    console.log(`Server running on http://${host}:${port}/`);
   });
 }
 
-startServer().catch(console.error);
+startServer().catch(error => {
+  console.error("[Runtime] Serverstart fehlgeschlagen", error);
+  process.exit(1);
+});

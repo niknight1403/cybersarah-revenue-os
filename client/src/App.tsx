@@ -1,48 +1,22 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import DashboardLayout from "@/components/DashboardLayout";
 import NotFound from "@/pages/NotFound";
-import GameDashboard from "@/pages/GameDashboard";
-import UnitsManagement from "@/pages/UnitsManagement";
-import CitiesManagement from "@/pages/CitiesManagement";
+import RevenueAgents from "@/pages/RevenueAgents";
+import RevenueApprovals from "@/pages/RevenueApprovals";
+import RevenueHome from "@/pages/RevenueHome";
+import RevenueSystem from "@/pages/RevenueSystem";
+import RevenueWorkspace from "@/pages/RevenueWorkspace";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
 
-function Router() {
-  // make sure to consider if you need authentication for certain routes
-  return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/game" component={GameDashboard} />
-      <Route path="/units" component={UnitsManagement} />
-      <Route path="/cities" component={CitiesManagement} />
-      <Route path="/404" component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
+function ProtectedRoute({ children }: { children: React.ReactNode }) { return <DashboardLayout>{children}</DashboardLayout>; }
+function WorkspaceRoute() { return <ProtectedRoute><RevenueWorkspace /></ProtectedRoute>; }
+function AgentsRoute() { return <ProtectedRoute><RevenueAgents /></ProtectedRoute>; }
+function ApprovalsRoute() { return <ProtectedRoute><RevenueApprovals /></ProtectedRoute>; }
+function SystemRoute() { return <ProtectedRoute><RevenueSystem /></ProtectedRoute>; }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
+function Router() { return <Switch><Route path="/" component={RevenueHome} /><Route path="/app" component={WorkspaceRoute} /><Route path="/agents" component={AgentsRoute} /><Route path="/approvals" component={ApprovalsRoute} /><Route path="/system" component={SystemRoute} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch>; }
 
-function App() {
-  return (
-    <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="dark"
-        // switchable
-      >
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
-  );
-}
-
-export default App;
+export default function App() { return <ErrorBoundary><ThemeProvider defaultTheme="dark"><TooltipProvider><Toaster /><Router /></TooltipProvider></ThemeProvider></ErrorBoundary>; }

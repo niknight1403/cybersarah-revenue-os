@@ -27,244 +27,74 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 :root {
-  /* Civilization Game Theme - Light Mode (fallback) */
-  --primary: oklch(0.45 0.3 45); /* Gold */
-  --primary-foreground: oklch(0.1 0 0); /* Dark */
-  --sidebar-primary: oklch(0.4 0.25 45);
-  --sidebar-primary-foreground: oklch(0.95 0 0);
-  --chart-1: oklch(0.6 0.2 45);
-  --chart-2: oklch(0.5 0.25 45);
-  --chart-3: oklch(0.45 0.3 45);
-  --chart-4: oklch(0.4 0.25 45);
-  --chart-5: oklch(0.35 0.2 45);
-  --radius: 0.65rem;
-  /* Light backgrounds */
-  --background: oklch(0.98 0 0);
-  --foreground: oklch(0.2 0 0);
-  --card: oklch(0.95 0 0);
-  --card-foreground: oklch(0.2 0 0);
-  --popover: oklch(0.95 0 0);
-  --popover-foreground: oklch(0.2 0 0);
-  --secondary: oklch(0.85 0.05 45);
-  --secondary-foreground: oklch(0.2 0 0);
-  --muted: oklch(0.8 0.02 0);
-  --muted-foreground: oklch(0.5 0 0);
-  --accent: oklch(0.45 0.3 45); /* Gold */
-  --accent-foreground: oklch(0.1 0 0);
-  --destructive: oklch(0.6 0.25 25);
-  --destructive-foreground: oklch(0.95 0 0);
-  --border: oklch(0.85 0.02 0);
-  --input: oklch(0.9 0.01 0);
-  --ring: oklch(0.45 0.3 45);
-  --sidebar: oklch(0.95 0 0);
-  --sidebar-foreground: oklch(0.2 0 0);
-  --sidebar-accent: oklch(0.45 0.3 45);
-  --sidebar-accent-foreground: oklch(0.1 0 0);
-  --sidebar-border: oklch(0.85 0.02 0);
-  --sidebar-ring: oklch(0.45 0.3 45);
+  --radius: 1rem;
+  --background: oklch(0.975 0.018 280);
+  --foreground: oklch(0.20 0.035 282);
+  --card: oklch(0.99 0.012 280 / 82%);
+  --card-foreground: oklch(0.20 0.035 282);
+  --popover: oklch(0.99 0.012 280 / 96%);
+  --popover-foreground: oklch(0.20 0.035 282);
+  --primary: oklch(0.57 0.18 260);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.94 0.035 280 / 82%);
+  --secondary-foreground: oklch(0.31 0.04 282);
+  --muted: oklch(0.93 0.024 280 / 72%);
+  --muted-foreground: oklch(0.43 0.035 280);
+  --accent: oklch(0.90 0.075 285 / 72%);
+  --accent-foreground: oklch(0.20 0.04 282);
+  --destructive: oklch(0.57 0.20 25);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.77 0.07 280 / 28%);
+  --input: oklch(0.80 0.06 280 / 32%);
+  --ring: oklch(0.57 0.18 260);
 }
 
 .dark {
-  /* Civilization Game Theme - Dark Mode (Primary) */
-  --primary: oklch(0.55 0.35 45); /* Bright Gold */
-  --primary-foreground: oklch(0.08 0 0); /* Very Dark */
-  --sidebar-primary: oklch(0.5 0.3 45);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --chart-1: oklch(0.65 0.35 45);
-  --chart-2: oklch(0.55 0.35 45);
-  --chart-3: oklch(0.5 0.3 45);
-  --chart-4: oklch(0.45 0.25 45);
-  --chart-5: oklch(0.4 0.2 45);
-  /* Dark backgrounds */
-  --background: oklch(0.08 0.01 0); /* Almost black */
-  --foreground: oklch(0.92 0.01 0); /* Off-white */
-  --card: oklch(0.12 0.01 0); /* Very dark gray */
-  --card-foreground: oklch(0.92 0.01 0);
-  --popover: oklch(0.12 0.01 0);
-  --popover-foreground: oklch(0.92 0.01 0);
-  --secondary: oklch(0.15 0.02 45); /* Dark gold */
-  --secondary-foreground: oklch(0.85 0.01 0);
-  --muted: oklch(0.25 0.02 0); /* Dark gray */
-  --muted-foreground: oklch(0.75 0.01 0);
-  --accent: oklch(0.55 0.35 45); /* Bright Gold */
-  --accent-foreground: oklch(0.08 0 0);
-  --destructive: oklch(0.65 0.25 25); /* Red */
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.2 0.02 0); /* Dark border */
-  --input: oklch(0.15 0.02 0); /* Dark input */
-  --ring: oklch(0.55 0.35 45); /* Gold ring */
-  --sidebar: oklch(0.1 0.01 0); /* Very dark sidebar */
-  --sidebar-foreground: oklch(0.92 0.01 0);
-  --sidebar-accent: oklch(0.55 0.35 45);
-  --sidebar-accent-foreground: oklch(0.08 0 0);
-  --sidebar-border: oklch(0.2 0.02 0);
-  --sidebar-ring: oklch(0.55 0.35 45);
+  --background: oklch(0.13 0.04 285);
+  --foreground: oklch(0.94 0.012 280);
+  --card: oklch(0.23 0.045 285 / 64%);
+  --card-foreground: oklch(0.94 0.012 280);
+  --popover: oklch(0.22 0.05 285 / 92%);
+  --popover-foreground: oklch(0.94 0.012 280);
+  --primary: oklch(0.79 0.15 196);
+  --primary-foreground: oklch(0.16 0.03 280);
+  --secondary: oklch(0.28 0.055 285 / 72%);
+  --secondary-foreground: oklch(0.82 0.024 275);
+  --muted: oklch(0.29 0.045 285 / 62%);
+  --muted-foreground: oklch(0.75 0.026 275);
+  --accent: oklch(0.36 0.10 280 / 74%);
+  --accent-foreground: oklch(0.96 0.008 280);
+  --destructive: oklch(0.69 0.19 22);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.86 0.075 250 / 18%);
+  --input: oklch(0.88 0.06 260 / 20%);
+  --ring: oklch(0.76 0.15 196);
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]),
-  [type="button"]:not(:disabled),
-  [type="submit"]:not(:disabled),
-  [type="reset"]:not(:disabled),
-  a[href],
-  select:not(:disabled),
-  input[type="checkbox"]:not(:disabled),
-  input[type="radio"]:not(:disabled) {
-    @apply cursor-pointer;
-  }
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground; }
+  button:not(:disabled), a[href], select:not(:disabled), input:not(:disabled) { @apply cursor-pointer; }
 }
 
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
-  .container {
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
-    padding-right: 1rem;
-  }
-
-  .flex {
-    min-height: 0;
-    min-width: 0;
-  }
-
-  @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
-      padding-right: 1.5rem;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .container {
-      padding-left: 2rem; /* 32px - desktop padding */
-      padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
-    }
-  }
+  .container { width: 100%; margin-inline: auto; padding-inline: 1rem; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .cyber-panel { @apply rounded-2xl border border-violet-200/15 bg-card/70 shadow-[0_20px_60px_rgba(6,8,32,0.34),inset_0_1px_0_rgba(225,245,255,0.08)] backdrop-blur-2xl; }
+  .cyber-grid { background-image: linear-gradient(to_right, rgba(151,139,255,0.035) 1px, transparent 1px), linear-gradient(to_bottom, rgba(105,239,255,0.028) 1px, transparent 1px); background-size: 32px 32px; }
+  .cyber-status-ready { @apply border border-emerald-300/25 bg-emerald-300/10 text-emerald-100; }
+  .cyber-status-pending { @apply border border-amber-300/25 bg-amber-300/10 text-amber-100; }
+  @media (min-width: 640px) { .container { padding-inline: 1.5rem; } }
+  @media (min-width: 1024px) { .container { max-width: 1280px; padding-inline: 2rem; } }
 }
 
-  /* Civilization-specific components */
-  .civ-header {
-    @apply bg-gradient-to-r from-background via-card to-background border-b border-accent/30 backdrop-blur-sm;
-  }
-
-  .civ-resource-bar {
-    @apply flex gap-2 sm:gap-4 p-3 sm:p-4 bg-card/50 rounded-lg border border-accent/20 backdrop-blur-sm;
-  }
-
-  .civ-resource-item {
-    @apply flex items-center gap-1 sm:gap-2 text-foreground text-xs sm:text-sm;
-  }
-
-  .civ-resource-value {
-    @apply text-accent font-bold text-sm sm:text-lg;
-  }
-
-  .civ-button-primary {
-    @apply bg-accent hover:bg-accent/90 text-accent-foreground font-semibold px-3 sm:px-4 py-2 rounded-md transition-colors duration-200 active:scale-95;
-  }
-
-  .civ-button-secondary {
-    @apply bg-card hover:bg-card/80 text-foreground border border-accent/50 font-semibold px-3 sm:px-4 py-2 rounded-md transition-colors duration-200 active:scale-95;
-  }
-
-  .civ-card {
-    @apply bg-card border border-accent/20 rounded-lg p-4 shadow-lg hover:border-accent/40 transition-colors;
-  }
-
-  .civ-title {
-    @apply text-xl sm:text-2xl font-bold text-accent mb-4;
-  }
-
-  .civ-subtitle {
-    @apply text-lg font-semibold text-foreground mb-2;
-  }
-
-  /* Hex grid styling */
-  .hex-tile {
-    @apply fill-card stroke-accent/30 stroke-1 transition-all hover:fill-card/80 hover:stroke-accent/60 cursor-pointer;
-  }
-
-  .hex-tile.selected {
-    @apply fill-accent/30 stroke-accent stroke-2;
-  }
-
-  .hex-tile.unit {
-    @apply fill-blue-600/40 stroke-blue-400 stroke-1;
-  }
-
-  .hex-tile.city {
-    @apply fill-yellow-600/40 stroke-yellow-400 stroke-1;
-  }
-
-  .hex-tile.mountain {
-    @apply fill-gray-600/40 stroke-gray-400 stroke-1;
-  }
-
-  .hex-tile.water {
-    @apply fill-blue-900/40 stroke-blue-500 stroke-1;
-  }
-
-  .hex-tile.forest {
-    @apply fill-green-900/40 stroke-green-500 stroke-1;
-  }
-
-  /* Progress bar styling */
-  .civ-progress {
-    @apply h-2 bg-card rounded-full overflow-hidden border border-accent/20;
-  }
-
-  .civ-progress-fill {
-    @apply h-full bg-gradient-to-r from-accent to-accent/70 transition-all duration-300;
-  }
-
-  /* Scrollbar styling */
-  ::-webkit-scrollbar {
-    @apply w-2 h-2;
-  }
-
-  ::-webkit-scrollbar-track {
-    @apply bg-card;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-accent/50 rounded hover:bg-accent/70;
-  }
+.dark body {
+  min-height: 100vh;
+  background-attachment: fixed;
+  background-image: radial-gradient(circle at 12% 8%, oklch(0.52 0.17 283 / 30%), transparent 27rem), radial-gradient(circle at 92% 6%, oklch(0.65 0.16 195 / 25%), transparent 25rem), linear-gradient(145deg, oklch(0.12 0.05 285), oklch(0.16 0.045 272) 48%, oklch(0.12 0.04 285));
 }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }

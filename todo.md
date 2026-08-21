@@ -1,126 +1,46 @@
-# Civilization App - Feature TODO
+# CyberSarah Revenue OS – Projekt-Checkliste
 
-## Datenbankschema & Backend
-- [ ] Zivilisationen-Tabelle (name, leader, farbe, ressourcen)
-- [ ] Ressourcen-Tracking (Gold, Nahrung, Produktion, Wissenschaft, Kultur pro Zivilisation)
-- [ ] Runden-Management (aktuelle Runde, Spielstatus)
-- [ ] Einheiten-Tabelle (typ, position, gesundheit, zivilisation)
-- [ ] Städte-Tabelle (name, position, bevölkerung, gebäude, produktion)
-- [ ] Gebäude-Tabelle (typ, stadt, effekte)
-- [ ] Technologien-Tabelle (name, kosten, abhängigkeiten, effekte)
-- [ ] Technologie-Fortschritt (zivilisation, technologie, fortschritt)
-- [ ] Diplomatie-Tabelle (beziehungen, handelsabkommen, bündnisse)
-- [ ] Spielstand-Tabelle (spieler, spielstatus, metadaten)
-- [ ] Leaderboard-Daten (punkte, siege, statistiken)
+> **Scope-Entscheidung:** Mit der Festlegung von CyberSarah Revenue OS als Hauptprojekt wurden alle Civilization-Aufgaben bewusst abgelöst. Die bestehenden Tabellen bleiben migrationssicher erhalten, werden jedoch nicht mehr über die aktive Produktschnittstelle exponiert.
 
-## Backend-API (tRPC)
-- [ ] Zivilisations-Verwaltung (erstellen, aktualisieren, abrufen)
-- [ ] Ressourcen-API (aktualisieren, berechnen, regenerieren)
-- [ ] Runden-System (nächste Runde, Runde abschließen)
-- [ ] Einheiten-Verwaltung (erstellen, bewegen, angreifen, löschen)
-- [ ] Städte-Verwaltung (erstellen, aktualisieren, bevölkerung)
-- [ ] Gebäude-System (bauen, effekte anwenden)
-- [ ] Technologie-Forschung (starten, fortschritt, abschließen)
-- [ ] Diplomatie-API (beziehungen abrufen, handelsangebote, bündnisse)
-- [ ] Spielstand-Persistierung (speichern, laden, löschen)
-- [ ] Leaderboard-API (top spieler abrufen, statistiken)
+## Archivierter Civilization-Umfang
+- [x] Abgelöst: Zivilisationen-, Ressourcen-, Runden-, Einheiten-, Städte-, Gebäude- und Technologieverwaltung
+- [x] Abgelöst: Diplomatie, Spielstände und Civilization-Leaderboard
+- [x] Abgelöst: Civilization-spezifische tRPC-APIs und Dashboard-Flows
+- [x] Abgelöst: Hex-Karte, Einheitenansichten, Technologiebaum und Städteansichten
+- [x] Abgelöst: Civilization-spezifische Responsive- und Performance-Aufgaben
+- [x] Abgelöst: Civilization-spezifische Authentifizierungs-, Profil- und Spielhistorienansichten
 
-## Frontend - Layout & Design
-- [x] Dark Theme mit goldenen Akzenten implementieren (CSS-Variablen)
-- [x] Responsive Navigation (Mobile-First)
-- [x] Haupt-Dashboard-Layout
-- [ ] Sidebar für Schnellzugriff
-- [x] Ressourcen-Anzeige (Header/Top-Bar)
-- [x] Runden-Anzeige und Fortschrittsbalken
+## Repository-Konsolidierung
+- [x] Strukturellen und funktionalen Vergleich von `cybersarah-revenue-os`, `cybersarah-revenue-os-app` und dem Ausgangsprojekt dokumentiert
+- [x] Wiederverwendbare Produkt-, Datenmodell-, Sicherheits- und Betriebsbausteine aus beiden Repositories identifiziert
+- [x] Zielarchitektur mit der Fullstack-App als Basis und selektiven Betriebsbausteinen aus dem Monorepo festgelegt
+- [x] Fehlerhafte CSS-Syntax behoben und den Produktionsbuild wiederhergestellt
+- [x] CyberSarah Revenue OS als Produkt-, Navigations- und visuellen Hauptkontext eingerichtet
 
-## Frontend - Startbildschirm / Dashboard
-- [x] Zivilisationsübersicht mit Namen und Leader
-- [x] Ressourcen-Anzeige (Gold, Nahrung, Produktion, Wissenschaft, Kultur)
-- [x] Aktuelle Rundenanzeige
-- [ ] Fortschrittsbalken für aktuelle Ziele
-- [x] Schnellzugriff zu Hauptfunktionen (Karte, Einheiten, Städte, Tech)
-- [ ] Benachrichtigungen (neue Technologie, Angriff, etc.)
+## Stabiler Revenue-OS-Kern
+- [x] Manus OAuth als einziges Anmeldesystem beibehalten und sicheren Anwendungs-Info-Endpunkt ergänzt
+- [x] Additives, benutzergebundenes Datenmodell für Revenue-Arbeitsbereiche, Agenten, Freigabeentwürfe und Audits migriert
+- [x] Persönlichen Revenue-Arbeitsbereich mit persistenter Initialisierung umgesetzt
+- [x] Interne Revenue-Agenten mit sicherer Aktivieren-/Pausieren-Steuerung umgesetzt
+- [x] Freigabepflichtige Entwürfe als persistente Queue umgesetzt, ohne externe Ausführung zu aktivieren
+- [x] Nicht mehr relevante Civilization-Endpunkte aus dem aktiven API-Hauptpfad entfernt
 
-## Frontend - Einheitenverwaltung
-- [x] Einheiten-Liste mit Stats (HP, Angriff, Verteidigung, Bewegung)
-- [x] Einheiten-Detailansicht
-- [x] Aktionsmöglichkeiten (Bewegen, Angreifen, Warten, Auflösen)
-- [x] Zustandsanzeige (verletzt, müde, etc.)
-- [ ] Einheiten-Filterung (nach Typ, Status, Position)
+## Laufzeit, Sicherheit und Qualität
+- [x] Readiness-, Liveness- und öffentliche Health-Endpunkte ergänzt
+- [x] Kontrollierten Shutdown mit Draining-Status implementiert
+- [x] HTTP-Sicherheitsheader, CSP in Produktion und begrenztes API-Rate-Limiting integriert
+- [x] Zentralen JSON-Fehlerpfad und begrenzte Request-Payloads konfiguriert
+- [x] Regressionstests für Produkttitel, Auth-Logout, geschützte Revenue-Prozeduren, HTTP-Konfiguration, Laufzeitstatus und Agentenkatalog ergänzt
+- [x] Datenbankmigration geprüft und erfolgreich angewendet
+- [x] Vollständige Test-Suite, TypeScript-Prüfung, Produktionsbuild und Health-Endpunkte erfolgreich validiert
 
-## Frontend - Städte- und Gebäudeverwaltung
-- [x] Städte-Liste mit Übersicht
-- [x] Stadtdetail-Ansicht
-- [x] Bevölkerungsanzeige und -verwaltung
-- [x] Gebäudeliste mit Effekten
-- [x] Produktionswarteschlange (Gebäude, Einheiten)
-- [ ] Gebäude-Bauen-Dialog (erweitert)
-- [x] Produktions-Fortschrittsbalken
+## Dokumentation
+- [x] Architekturvergleich und Konsolidierungsentscheidung unter `docs/repository-comparison.md` dokumentiert
 
-## Frontend - Technologiebaum
-- [ ] Interaktiver Technologiebaum (Grafik)
-- [ ] Abhängigkeiten zwischen Technologien visualisieren
-- [ ] Technologie-Detailansicht (Kosten, Effekte, Abhängigkeiten)
-- [ ] Forschungs-Fortschrittsanzeige
-- [ ] Forschung starten/pausieren
-- [ ] Freischaltbare Technologien hervorheben
-
-## Frontend - Spielfeld / Karte
-- [ ] Hexagonales oder kachelbasiertes Spielfeld rendern
-- [ ] Verschiedene Terrain-Typen (Gras, Wald, Berg, Wasser, Wüste, etc.)
-- [ ] Einheiten auf der Karte anzeigen
-- [ ] Städte auf der Karte anzeigen
-- [ ] Kamera-Steuerung (Pan, Zoom)
-- [ ] Hex/Tile-Auswahl und Markierungen
-- [ ] Bewegungs-Vorschau
-- [ ] Angriffs-Bereich-Anzeige
-
-## Frontend - Diplomatiesystem
-- [ ] Zivilisations-Übersicht (andere Spieler/KI)
-- [ ] Beziehungsstatus-Anzeige (Freund, Neutral, Feind)
-- [ ] Handelsangebote-Dialog
-- [ ] Bündnis-Optionen
-- [ ] Diplomatie-Historie
-- [ ] Nachrichtenhistorie
-
-## Frontend - Spielstand-System
-- [ ] Spielstand speichern (Auto-Save + Manuell)
-- [ ] Spielstand laden
-- [ ] Spielstand löschen
-- [ ] Spielstand-Liste mit Metadaten (Datum, Runde, Fortschritt)
-
-## Frontend - Authentifizierung & Profil
-- [ ] Manus OAuth Integration
-- [ ] Profil-Seite (Benutzerdaten, Statistiken)
-- [ ] Spielhistorie anzeigen
-- [ ] Persönliche Statistiken (Siege, Niederlagen, Durchschnittliche Runden)
-
-## Frontend - Leaderboard
-- [ ] Globale Bestenliste
-- [ ] Sortierung (Punkte, Siege, Runden)
-- [ ] Spieler-Details anzeigen
-- [ ] Persönliche Platzierung hervorheben
-- [ ] Filter (zeitlich, nach Zivilisation)
-
-## Frontend - Responsive Design
-- [ ] Mobile-Navigation (Hamburger-Menü)
-- [ ] Touch-Steuerung für Karte
-- [ ] Responsive Dialoge und Modals
-- [ ] Tablet-Optimierung
-- [ ] Desktop-Optimierung
-
-## Testing & Optimierung
-- [ ] Unit-Tests für Backend-Logik
-- [ ] Integration-Tests für API
-- [ ] UI-Tests für kritische Flows
-- [ ] Performance-Optimierung (Lazy Loading, Caching)
-- [ ] Mobile-Performance-Tests
-- [ ] Accessibility-Tests
-
-## Deployment & Finalisierung
-- [ ] Fehlerbehandlung und Logging
-- [ ] Sicherheitsprüfung (Input-Validierung, SQL-Injection)
-- [ ] Datenbank-Migrationen
-- [ ] Umgebungsvariablen konfigurieren
-- [ ] Deployment-Checkliste
-- [ ] Dokumentation
+## Nachschärfung aus der Qualitätsprüfung
+- [x] Revenue-OS-Dashboard- und Navigationskontext mit mehreren Kernrouten und gemeinsamer App-Shell ergänzt
+- [x] Integrationstests für Arbeitsbereichsinitialisierung, Agentensteuerung und Freigabeentwürfe ergänzt
+- [x] Health-Endpunkte vollständig validiert
+- [x] Wiederverwendbare Fehlerzustands-Komponenten für Revenue-Abfragen und -Mutationen getestet
+- [x] Seitenbezogene tRPC-Fehlerzustände für Workspace, Agenten, Freigaben und Systemstatus getestet
+- [x] Seitenbezogenen Mutationsfehler für das Speichern eines Freigabeentwurfs getestet
