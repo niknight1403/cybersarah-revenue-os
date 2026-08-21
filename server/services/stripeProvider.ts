@@ -66,3 +66,34 @@ export async function createStripePaymentLink(input: {
   }, { idempotencyKey: `${input.idempotencyKey}:payment-link` });
   return { id: paymentLink.id, url: paymentLink.url, productId: product.id, priceId: price.id, mode: getStripeProviderReadiness().mode };
 }
+
+export async function createStripeCheckoutSession(input: {
+  productName: string;
+  unitAmount: number;
+  currency: string;
+  recurring: boolean;
+  origin: string;
+  workspaceId: number;
+  createdBy: number;
+  idempotencyKey: string;
+}) {
+  const configuredOrigin = process.env.PUBLIC_APP_ORIGIN || process.env.VITE_APP_URL;
+  if (!configuredOrigin) throw new Error("PUBLIC_APP_ORIGIN ist für sichere Checkout-Redirects nicht konfiguriert.");
+  const safeOrigin = configuredOrigin.replace(/\/$/, "");
+  if (input.origin.replace(/\/$/, "") !== safeOrigin) throw new Error("Checkout-Redirect-Origin stimmt nicht mit PUBLIC_APP_ORIGIN überein.");
+
+  const stripe = getStripeClient();
+  const metadata = { source: "cybersarah-revenue-os", workspace_id: String(input.workspaceId), created_by_user_id: String(input.createdBy) };
+  const product = await stripe.products.create({ name: input.productName, metadata }, { idempotencyKey: `${input.idempotencyKey}:product` });
+  const price = await stripe.prices.create({ product: product.id, unit_amount: input.unitAmount, currency: input.currency.toLowerCase(), ...(input.recurring ? { recurring: { interval: "month" as const } } : {}) }, { idempotencyKey: `${input.idempotencyKey}:price` });
+  const checkoutSession = await stripe.checkout.sessions.create({
+    mode: input.recurring ? "subscription" : "payment",
+    line_items: [{ price: price.id, quantity: 1 }],
+    success_url: `${safeOrigin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${safeOrigin}/?checkout=cancelled`,
+    metadata,
+    ...(input.recurring ? { subscription_data: { metadata } } : { payment_intent_data: { metadata } }),
+  }, { idempotencyKey: `${input.idempotencyKey}:checkout-session` });
+  if (!checkoutSession.url) throw new Error("Stripe hat keine Checkout-URL zurückgegeben.");
+  return { id: checkoutSession.id, url: checkoutSession.url, productId: product.id, priceId: price.id, mode: getStripeProviderReadiness().mode };
+}

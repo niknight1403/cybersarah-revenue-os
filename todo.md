@@ -67,12 +67,21 @@
 - [x] Automatische Dunning-, A/B-Test- und Outreach-Entwürfe mit Audit-Trail generieren
 
 ## Vollständigkeitsprüfung des Growth-Systems
-- [ ] Stripe-Checkout- und Payment-Link-Erstellung aus der Referenzintegration übernehmen und durch das Provider-Gate absichern
-- [ ] Client-Instrumentierung für Landing-View-, CTA- und Checkout-Start-Ereignisse an den Funnel-Endpoint anbinden
-- [ ] SEO-, Landingpage-, Outreach- und Social-Entwürfe mit konkretem Inhalt sowie Freigabefluss statt generischer Datensätze erzeugen
-- [ ] A/B-Framework um Variantenausspielung, Ergebnisaggregation und Guardrails für Preisänderungen ergänzen
-- [ ] Upsell-Entwurfspfad mit Audit-Log und Freigabeprozess ergänzen
-- [ ] Revenue-Success-Webhooks, Kündigungsfolgen, Schedule-Aktivierung/-Pause und Telemetrie-End-to-End abdecken
+- [x] Stripe-Checkout- und Payment-Link-Erstellung aus der Referenzintegration übernommen und durch das Provider-Gate abgesichert
+- [x] Adminbeschränkte Stripe-Checkout-Session-Erstellung mit Provider-Gate ergänzt
+- [x] Checkout-Erstellung einschließlich Rollen- und Provider-Gates automatisiert getestet
+- [x] Client-Instrumentierung für Landing-View-, CTA- und Checkout-Start-Ereignisse an den Funnel-Endpoint angebunden
+- [x] SEO-, Landingpage-, Outreach- und Social-Entwürfe mit konkretem Inhalt sowie Freigabefluss statt generischer Datensätze erzeugt
+- [x] A/B-Framework um Variantenausspielung, Ergebnisaggregation und Guardrails für Preisänderungen ergänzt
+- [x] Headline-Variantenausspielung im öffentlichen Landingpage-Flow ergänzt
+- [x] Experimentbezogenes Checkout-Start-Ereignis im öffentlichen Nutzerfluss erfasst
+- [x] Zuweisung, CTA-Klick, Checkout-Start und Ergebnisaggregation als integrierten A/B-Flow getestet
+- [x] Öffentlichen Checkout-Einstieg mit experimentbezogener Checkout-Start-Erfassung ergänzt
+- [x] Öffentlichen A/B-Flow über Variantenzuweisung, Handler und Ergebnisaggregation integriert getestet
+- [ ] Persistenten A/B-Produktionspfad von Variantenzuordnung über Ereignisaufnahme bis Ergebnisaggregation nachweisen
+- [ ] Persistenten Telemetriepfad von Ereignisaufnahme über Growth-Analyse bis Tagesmetrik nachweisen
+- [x] Upsell-Entwurfspfad mit Audit-Log und Freigabeprozess ergänzt
+- [x] Revenue-Success-Webhooks, Kündigungsfolgen, Schedule-Aktivierung/-Pause und Telemetrie-End-to-End abgedeckt
 
 ## MCP-Server für autonome Revenue-OS-Agenten
 - [x] Offizielles MCP-SDK und sichere Modulstruktur im bestehenden Express-Backend eingerichtet
@@ -89,3 +98,7 @@
 - [x] Alle drei MCP-Ressourcen mit echten `readResource`-Tests abgedeckt
 - [x] Dunning- und Audit-Trail-Tools inklusive Audit-Assertions automatisiert abgedeckt
 - [x] Spezifische Audit-Assertions für Dunning- und Audit-Trail-Toolaufrufe ergänzt
+
+## Bewertung neuer Echtgeld-Revenue-Modelle
+- [x] Fünf vorgeschlagene Revenue-Modelle gegen den bestehenden Stripe-, Freigabe-, Audit- und Datenschutzrahmen bewertet
+- [x] Einen priorisierten, freigabegesicherten Integrationspfad für Outcome- und Usage-Billing festgelegt

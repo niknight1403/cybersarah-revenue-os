@@ -65,4 +65,38 @@ describe("Stripe-Webhook-Gate", () => {
     expect(result.statusCode).toBe(200);
     expect(createRetentionDraft).toHaveBeenCalledWith(13, 9, "dunning", "cus_123", expect.stringContaining("Dunning-Entwurf"));
   });
+
+  it("erfasst einen erfolgreichen Checkout als Umsatzsignal ohne Kundenkommunikation auszulösen", async () => {
+    const recordEvent = vi.fn(async () => ({ event: { id: 41 }, inserted: true }));
+    const createRetentionDraft = vi.fn();
+    const handler = createStripeWebhookHandler({
+      constructEvent: vi.fn(() => ({ id: "evt_success", type: "checkout.session.completed", created: 1_700_000_001, data: { object: { amount_total: 49900, currency: "eur", customer: "cus_success", metadata: { workspace_id: "9" } } } })),
+      isProviderActive: vi.fn(async () => true),
+      recordWebhook: vi.fn(async () => undefined),
+      recordEvent,
+      recordAudit: vi.fn(async () => true),
+      createRetentionDraft,
+    });
+    const { response, result } = createResponse();
+    await handler({ headers: { "stripe-signature": "valid" }, body: Buffer.from("{}") } as unknown as Request, response);
+    expect(result.statusCode).toBe(200);
+    expect(recordEvent).toHaveBeenCalledWith(expect.objectContaining({ eventType: "checkout.session.completed", amountCents: 49900, subjectRef: "cus_success" }));
+    expect(createRetentionDraft).not.toHaveBeenCalled();
+  });
+
+  it("erfasst eine Kündigung und erzeugt ausschließlich einen freigabepflichtigen Retention-Entwurf", async () => {
+    const createRetentionDraft = vi.fn(async () => ({ id: 51, created: true }));
+    const handler = createStripeWebhookHandler({
+      constructEvent: vi.fn(() => ({ id: "evt_cancel", type: "customer.subscription.deleted", created: 1_700_000_002, data: { object: { subscription: "sub_cancel", customer: "cus_cancel", metadata: { workspace_id: "9" } } } })),
+      isProviderActive: vi.fn(async () => true),
+      recordWebhook: vi.fn(async () => undefined),
+      recordEvent: vi.fn(async () => ({ event: { id: 52 }, inserted: true })),
+      recordAudit: vi.fn(async () => true),
+      createRetentionDraft,
+    });
+    const { response, result } = createResponse();
+    await handler({ headers: { "stripe-signature": "valid" }, body: Buffer.from("{}") } as unknown as Request, response);
+    expect(result.statusCode).toBe(200);
+    expect(createRetentionDraft).toHaveBeenCalledWith(52, 9, "retention", "sub_cancel", expect.stringContaining("Retention-Angebot"));
+  });
 });

@@ -6,7 +6,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { createStripePaymentLink, getStripeProviderReadiness } from "./services/stripeProvider";
+import { createStripeCheckoutSession, createStripePaymentLink, getStripeProviderReadiness } from "./services/stripeProvider";
 import { createHeartbeatJob, updateHeartbeatJob } from "./_core/heartbeat";
 
 export const appRouter = router({
@@ -25,6 +25,9 @@ export const appRouter = router({
       product: "revenue-os" as const,
     })),
     tracking: publicProcedure.query(async () => ({ key: await db.getOwnerAnalyticsWriteKey() })),
+    experimentVariant: publicProcedure
+      .input(z.object({ subjectKey: z.string().trim().min(16).max(128) }))
+      .query(({ input }) => db.getPublicExperimentVariant(input.subjectKey)),
   }),
   revenue: router({
     overview: protectedProcedure.query(({ ctx }) => db.getRevenueOverview(ctx.user.id)),
@@ -79,6 +82,14 @@ export const appRouter = router({
         await db.recordGrowthAudit({ workspaceId: input.workspaceId, idempotencyKey: `stripe-link-audit:${paymentLink.id}`, actor: "user", eventType: "stripe.payment_link_created", status: "completed", detail: { paymentLinkId: paymentLink.id, productId: paymentLink.productId, priceId: paymentLink.priceId, mode: paymentLink.mode } });
         return paymentLink;
       }),
+    createCheckoutSession: adminProcedure
+      .input(z.object({ workspaceId: z.number().int().positive(), productName: z.string().trim().min(2).max(180), unitAmount: z.number().int().min(50).max(10_000_000), currency: z.string().trim().length(3), recurring: z.boolean(), origin: z.string().url() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!await db.isStripeProviderActive(input.workspaceId)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe ist für diesen Arbeitsbereich nicht freigegeben." });
+        const checkout = await createStripeCheckoutSession({ ...input, createdBy: ctx.user.id, idempotencyKey: `stripe-checkout:${input.workspaceId}:${input.productName}:${input.unitAmount}:${input.recurring}` });
+        await db.recordGrowthAudit({ workspaceId: input.workspaceId, idempotencyKey: `stripe-checkout-audit:${checkout.id}`, actor: "user", eventType: "stripe.checkout_session_created", status: "completed", detail: { checkoutSessionId: checkout.id, productId: checkout.productId, priceId: checkout.priceId, mode: checkout.mode } });
+        return checkout;
+      }),
   }),
   growth: router({
     status: protectedProcedure.query(({ ctx }) => db.getGrowthLoopStatus(ctx.user.id)),
@@ -95,6 +106,12 @@ export const appRouter = router({
         await db.setMarketingSpend(ctx.user.id, input.cents);
         return { success: true } as const;
       }),
+    activateExperiment: adminProcedure
+      .input(z.object({ experimentId: z.number().int().positive(), maxTrafficPercent: z.number().int().min(1).max(25) }))
+      .mutation(({ ctx, input }) => db.activateGrowthExperiment(ctx.user.id, input)),
+    pauseExperiment: adminProcedure
+      .input(z.object({ experimentId: z.number().int().positive() }))
+      .mutation(({ ctx, input }) => db.pauseGrowthExperiment(ctx.user.id, input.experimentId)),
     enableSchedule: protectedProcedure
       .input(z.object({ cron: z.string().trim().regex(/^(\S+\s+){5}\S+$/, "Cron benötigt sechs UTC-Felder.") }))
       .mutation(async ({ ctx, input }) => {

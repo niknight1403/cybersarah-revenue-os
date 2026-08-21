@@ -13,6 +13,7 @@ import { runtimeHealth } from "../services/runtimeResilience";
 import { handleStripeWebhook } from "../services/stripeWebhook";
 import { handleGrowthAnalysisSchedule } from "../services/growthSchedule";
 import { handleFunnelTracking } from "../services/funnelTracking";
+import { handleExperimentOutcome } from "../services/experimentTracking";
 import { requireMcpBearer, registerMcpHealthProbe } from "../mcp/auth";
 import { handleMcpRequest } from "../mcp/server";
 
@@ -70,6 +71,7 @@ async function startServer() {
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ limit: "2mb", extended: true }));
   app.post("/api/events/funnel", handleFunnelTracking);
+  app.post("/api/events/experiment", handleExperimentOutcome);
   app.post("/api/scheduled/growth-analysis", handleGrowthAnalysisSchedule);
   registerMcpHealthProbe(app);
   app.all("/api/mcp", requireMcpBearer, handleMcpRequest);

@@ -3,11 +3,16 @@ import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Activity, ArrowRight, Bot, CircleDollarSign, ShieldCheck, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 function sendFunnelEvent(key: string, eventType: "landing_view" | "cta_click" | "checkout.session.created") {
   const payload = JSON.stringify({ key, eventId: crypto.randomUUID(), eventType });
   navigator.sendBeacon("/api/events/funnel", new Blob([payload], { type: "application/json" }));
+}
+
+function sendExperimentOutcome(subjectKey: string, experimentId: number, eventType: "cta_click" | "checkout_start") {
+  const payload = JSON.stringify({ subjectKey, experimentId, eventType });
+  navigator.sendBeacon("/api/events/experiment", new Blob([payload], { type: "application/json" }));
 }
 
 const operatingAreas = [
@@ -34,6 +39,16 @@ export default function RevenueHome() {
   const [draftTarget, setDraftTarget] = useState("");
   const appInfo = trpc.app.info.useQuery();
   const tracking = trpc.app.tracking.useQuery();
+  const [experimentSubjectKey] = useState(() => {
+    if (typeof window === "undefined") return "server-render-experiment-subject";
+    const storageKey = "revenue-experiment-subject";
+    const existing = sessionStorage.getItem(storageKey);
+    if (existing) return existing;
+    const created = crypto.randomUUID();
+    sessionStorage.setItem(storageKey, created);
+    return created;
+  });
+  const experiment = trpc.app.experimentVariant.useQuery({ subjectKey: experimentSubjectKey });
   const overview = trpc.revenue.overview.useQuery(undefined, { enabled: isAuthenticated });
   const utils = trpc.useUtils();
   const initializeWorkspace = trpc.revenue.initialize.useMutation({
@@ -51,6 +66,8 @@ export default function RevenueHome() {
   const title = appInfo.data?.title ?? "CyberSarah Revenue OS";
   const trackingKey = tracking.data?.key ?? null;
   const sessionKey = useMemo(() => `revenue-landing-tracked:${trackingKey ?? "none"}`, [trackingKey]);
+  const displayTitle = experiment.data?.experimentType === "headline" ? experiment.data.variant.value : title;
+  const loginLabel = experiment.data?.experimentType === "cta" ? experiment.data.variant.value : "Mit Manus anmelden";
 
   useEffect(() => {
     if (!trackingKey || sessionStorage.getItem(sessionKey)) return;
@@ -64,7 +81,7 @@ export default function RevenueHome() {
         <header className="cyber-panel flex flex-col gap-5 p-5 sm:p-7 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="mono text-[10px] font-semibold tracking-[0.22em] text-cyan-200">COMMAND CENTER // REVENUE OPERATIONS</p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-5xl">{title}</h1>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-5xl">{displayTitle}</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
               Der konsolidierte Kontrollraum für nachvollziehbare Umsatzprozesse, verantwortungsvolle Automatisierung und operative Freigaben.
             </p>
@@ -79,8 +96,8 @@ export default function RevenueHome() {
                 <Button variant="outline" onClick={() => void logout()} disabled={loading}>Abmelden</Button>
               </>
             ) : (
-              <Button onClick={() => { if (trackingKey) sendFunnelEvent(trackingKey, "cta_click"); window.location.assign(getLoginUrl()); }} disabled={loading} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">
-                Mit Manus anmelden <ArrowRight className="ml-2 h-4 w-4" />
+              <Button onClick={() => { if (trackingKey) sendFunnelEvent(trackingKey, "cta_click"); if (experiment.data) sendExperimentOutcome(experimentSubjectKey, experiment.data.experimentId, "cta_click"); window.location.assign(getLoginUrl()); }} disabled={loading} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">
+                {loginLabel} <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             )}
           </div>

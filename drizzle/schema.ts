@@ -420,6 +420,24 @@ export const growthExperiments = mysqlTable(
   table => [index("growth_experiments_workspace_status_idx").on(table.workspaceId, table.status)]
 );
 
+export const growthExperimentEvents = mysqlTable(
+  "growth_experiment_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    experimentId: int("experimentId").notNull(),
+    subjectKey: varchar("subjectKey", { length: 128 }).notNull(),
+    variantKey: varchar("variantKey", { length: 64 }).notNull(),
+    eventType: mysqlEnum("eventType", ["impression", "cta_click", "checkout_start"]).notNull(),
+    occurredAt: timestamp("occurredAt").defaultNow().notNull(),
+  },
+  table => [
+    uniqueIndex("growth_experiment_events_subject_event_idx").on(table.experimentId, table.subjectKey, table.eventType),
+    index("growth_experiment_events_experiment_variant_idx").on(table.experimentId, table.variantKey),
+    index("growth_experiment_events_workspace_time_idx").on(table.workspaceId, table.occurredAt),
+  ]
+);
+
 export const retentionCases = mysqlTable(
   "retention_cases",
   {
@@ -485,6 +503,7 @@ export type RevenueProviderAudit = typeof revenueProviderAudits.$inferSelect;
 export type RevenueEvent = typeof revenueEvents.$inferSelect;
 export type RevenueDailyMetric = typeof revenueDailyMetrics.$inferSelect;
 export type GrowthExperiment = typeof growthExperiments.$inferSelect;
+export type GrowthExperimentEvent = typeof growthExperimentEvents.$inferSelect;
 export type RetentionCase = typeof retentionCases.$inferSelect;
 export type GrowthLoopSetting = typeof growthLoopSettings.$inferSelect;
 export type GrowthAuditEvent = typeof growthAuditEvents.$inferSelect;

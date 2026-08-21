@@ -4,6 +4,20 @@ import { trpc } from "@/lib/trpc";
 import { ShieldCheck } from "lucide-react";
 import React, { useState } from "react";
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function approvalDetails(payload: unknown) {
+  const draft = asRecord(payload);
+  if (!draft) return [];
+  const content = asRecord(draft.content);
+  const details = [draft.recommendation, content?.title, content?.headline, content?.metaDescription, content?.socialCopy, content?.outreachAngle, content?.offer, content?.guardrail]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+  const sections = Array.isArray(content?.sections) ? content.sections.filter((value): value is string => typeof value === "string" && value.trim().length > 0) : [];
+  return [...details, ...sections];
+}
+
 export default function RevenueApprovals() {
   const [actionType, setActionType] = useState("Campaign review");
   const [target, setTarget] = useState("");
@@ -26,7 +40,13 @@ export default function RevenueApprovals() {
         <h1 className="mt-2 text-3xl font-bold text-white">Freigabeentwürfe</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">Ein Entwurf löst keine externe Aktion aus. Er bleibt bis zu einem expliziten künftigen Freigabeschritt in der Queue.</p>
         <div className="mt-6 space-y-3">
-          {overview.data.approvalActions.length ? overview.data.approvalActions.map(action => <article key={action.id} className="rounded-xl border border-amber-300/20 bg-amber-300/[0.04] p-4"><p className="font-medium text-white">{action.actionType}</p><p className="mt-1 text-sm text-muted-foreground">{action.target}</p></article>) : <p className="rounded-xl border border-dashed border-border/70 p-4 text-sm text-muted-foreground">Keine ausstehenden Freigabeentwürfe.</p>}
+          {overview.data.approvalActions.length ? overview.data.approvalActions.map(action => {
+            const details = approvalDetails(action.payload);
+            const payload = asRecord(action.payload);
+            const consentRequired = payload?.consentRequired === true;
+            const externallyBlocked = payload?.externalExecution === false;
+            return <article key={action.id} className="rounded-xl border border-amber-300/20 bg-amber-300/[0.04] p-4"><p className="font-medium text-white">{action.actionType}</p><p className="mt-1 text-sm text-muted-foreground">{action.target}</p>{details.length ? <div className="mt-3 space-y-2 border-t border-amber-200/10 pt-3"><p className="mono text-[10px] tracking-[0.12em] text-amber-200">ENTWURFSINHALT</p>{details.map((detail, index) => <p key={`${action.id}-${index}`} className="text-xs leading-5 text-slate-200">{detail}</p>)}</div> : null}<div className="mt-3 flex flex-wrap gap-2 text-[10px]">{consentRequired ? <span className="rounded-full border border-violet-200/20 bg-violet-200/10 px-2 py-1 text-violet-100">Einwilligung erforderlich</span> : null}{externallyBlocked ? <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-2 py-1 text-cyan-100">Externe Ausführung gesperrt</span> : null}<span className="rounded-full border border-amber-200/20 bg-amber-200/10 px-2 py-1 text-amber-100">Freigabe ausstehend</span></div></article>;
+          }) : <p className="rounded-xl border border-dashed border-border/70 p-4 text-sm text-muted-foreground">Keine ausstehenden Freigabeentwürfe.</p>}
         </div>
       </section>
       <aside className="cyber-panel p-6">

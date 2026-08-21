@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
   growthAuditEvents,
+  growthExperimentEvents,
   growthExperiments,
   growthLoopSettings,
   retentionCases,
@@ -115,6 +116,7 @@ export async function getRevenueOverview(userId: number) {
       id: action.id,
       actionType: action.actionType,
       target: action.target,
+      payload: action.payload,
       status: action.status,
       createdAt: action.createdAt,
     })),
@@ -317,18 +319,178 @@ async function createGrowthActionDraft(workspaceId: number, actionKey: string, a
   return true;
 }
 
+type GrowthRecommendation = { type: "dunning" | "retention" | "experiment" | "upsell"; message: string };
+
+export function buildGrowthActionDrafts(input: { workspaceId: number; currentDay: string; recommendation: GrowthRecommendation }) {
+  const { workspaceId, currentDay, recommendation } = input;
+  if (recommendation.type === "experiment") {
+    return [
+      {
+        actionKey: `growth-seo-draft:${workspaceId}:${currentDay}`,
+        actionType: "seo_landing_draft",
+        target: "SEO-Landingpage-Entwurf",
+        payload: {
+          source: "funnel_analysis",
+          recommendation: recommendation.message,
+          externalExecution: false,
+          content: {
+            title: "Revenue Operations ohne blinde Automatisierung",
+            metaDescription: "CyberSarah Revenue OS verbindet Revenue Intelligence, nachvollziehbare Freigaben und kontrollierte Growth-Loops.",
+            headline: "Wachstum messbar steuern statt blind skalieren.",
+            sections: ["Revenue-Signale konsolidieren", "Funnel-Reibung sichtbar machen", "Freigaben und Audit-Trail erhalten"],
+          },
+        },
+      },
+      {
+        actionKey: `growth-outreach-draft:${workspaceId}:${currentDay}`,
+        actionType: "outreach_draft",
+        target: "Outreach- und Social-Entwurf",
+        payload: {
+          source: "funnel_analysis",
+          recommendation: recommendation.message,
+          externalExecution: false,
+          consentRequired: true,
+          content: {
+            socialCopy: "Revenue-Wachstum braucht Transparenz: Signale verstehen, Experimente begrenzen und Entscheidungen nachvollziehbar machen.",
+            outreachAngle: "Relevanz zuerst: Eine kurze, kontextbezogene Kontaktaufnahme erst nach dokumentierter Einwilligung und Freigabe.",
+          },
+        },
+      },
+    ];
+  }
+  if (recommendation.type === "upsell") {
+    return [{
+      actionKey: `growth-upsell-draft:${workspaceId}:${currentDay}`,
+      actionType: "upsell_draft",
+      target: "Wertbasierter Upsell-Entwurf",
+      payload: {
+        source: "revenue_analysis",
+        recommendation: recommendation.message,
+        externalExecution: false,
+        consentRequired: true,
+        content: {
+          headline: "Mehr Kontrolle für Ihren Revenue-Prozess",
+          offer: "Optionales Upgrade mit erweitertem Audit- und Experimentumfang.",
+          guardrail: "Nur für berechtigte, einwilligende Empfänger; keine automatische Zustellung.",
+        },
+      },
+    }];
+  }
+  return [];
+}
+
+type GrowthMetricEvent = { eventType: string; amountCents: number };
+
+export function aggregateGrowthMetrics(events: GrowthMetricEvent[], marketingSpendCents: number) {
+  const revenueCents = events.filter(event => ["invoice.payment_succeeded", "checkout.session.completed", "payment_intent.succeeded"].includes(event.eventType)).reduce((total, event) => total + event.amountCents, 0);
+  const checkoutStarted = events.filter(event => event.eventType === "checkout.session.created").length;
+  const checkoutCompleted = events.filter(event => event.eventType === "checkout.session.completed").length;
+  const paymentFailures = events.filter(event => event.eventType === "invoice.payment_failed").length;
+  const cancellations = events.filter(event => event.eventType === "customer.subscription.deleted").length;
+  const activeSubscriptions = Math.max(0, events.filter(event => event.eventType === "customer.subscription.created").length - cancellations);
+  return { revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, cacCents: checkoutCompleted > 0 ? Math.round(marketingSpendCents / checkoutCompleted) : 0, estimatedLtvCents: activeSubscriptions > 0 ? Math.round(revenueCents / activeSubscriptions) : 0 };
+}
+
 export async function getGrowthLoopStatus(userId: number) {
   const workspace = await getRevenueWorkspaceByUser(userId);
   if (!workspace) return { workspace: null, setting: null, metrics: null, experiments: [], retention: [] };
   const db = await getDb();
   if (!db) throw new Error("Datenbank ist nicht verfügbar.");
   const setting = await getOrCreateGrowthLoopSettings(workspace.id);
-  const [metrics, experiments, retention] = await Promise.all([
+  const [metrics, experiments, retention, experimentEvents] = await Promise.all([
     db.select().from(revenueDailyMetrics).where(eq(revenueDailyMetrics.workspaceId, workspace.id)).orderBy(desc(revenueDailyMetrics.metricDate)).limit(1),
     db.select().from(growthExperiments).where(eq(growthExperiments.workspaceId, workspace.id)).orderBy(desc(growthExperiments.updatedAt)).limit(6),
     db.select().from(retentionCases).where(eq(retentionCases.workspaceId, workspace.id)).orderBy(desc(retentionCases.updatedAt)).limit(6),
+    db.select().from(growthExperimentEvents).where(eq(growthExperimentEvents.workspaceId, workspace.id)),
   ]);
-  return { workspace, setting, metrics: metrics[0] ?? null, experiments, retention };
+  return { workspace, setting, metrics: metrics[0] ?? null, experiments: experiments.map(experiment => ({ ...experiment, results: summarizeExperimentResults(experiment, experimentEvents) })), retention };
+}
+
+type ExperimentWithVariants = { id: number; variants: Array<{ key: string; label: string; value: string }> };
+type ExperimentEvent = { experimentId: number; variantKey: string; eventType: "impression" | "cta_click" | "checkout_start" };
+
+export function summarizeExperimentResults(experiment: ExperimentWithVariants, events: ExperimentEvent[]) {
+  const experimentEvents = events.filter(event => event.experimentId === experiment.id);
+  return experiment.variants.map(variant => {
+    const variantEvents = experimentEvents.filter(event => event.variantKey === variant.key);
+    const impressions = variantEvents.filter(event => event.eventType === "impression").length;
+    const ctaClicks = variantEvents.filter(event => event.eventType === "cta_click").length;
+    const checkoutStarts = variantEvents.filter(event => event.eventType === "checkout_start").length;
+    return { variantKey: variant.key, impressions, ctaClicks, checkoutStarts, ctaRate: impressions ? ctaClicks / impressions : 0, checkoutRate: impressions ? checkoutStarts / impressions : 0 };
+  });
+}
+
+function deterministicBucket(subjectKey: string) {
+  let hash = 0;
+  for (let index = 0; index < subjectKey.length; index += 1) hash = ((hash << 5) - hash + subjectKey.charCodeAt(index)) | 0;
+  return Math.abs(hash) % 100;
+}
+
+export function selectExperimentVariant(experiment: { id: number; maxTrafficPercent: number; variants: Array<{ key: string; label: string; value: string }> }, subjectKey: string) {
+  const control = experiment.variants.find(variant => variant.key === "control") ?? experiment.variants[0];
+  const treatment = experiment.variants.find(variant => variant.key !== control?.key) ?? control;
+  if (!control || !treatment) return null;
+  const bucket = deterministicBucket(`${experiment.id}:${subjectKey}`);
+  return bucket < Math.min(experiment.maxTrafficPercent, 25) ? treatment : control;
+}
+
+async function getOwnerWorkspaceForPublicExperiment() {
+  if (!ENV.ownerOpenId) return undefined;
+  const owner = await getUserByOpenId(ENV.ownerOpenId);
+  return owner ? getRevenueWorkspaceByUser(owner.id) : undefined;
+}
+
+export async function getPublicExperimentVariant(subjectKey: string) {
+  const workspace = await getOwnerWorkspaceForPublicExperiment();
+  if (!workspace) return null;
+  const db = await getDb();
+  if (!db) throw new Error("Datenbank ist nicht verfügbar.");
+  const [experiment] = await db.select().from(growthExperiments).where(and(eq(growthExperiments.workspaceId, workspace.id), eq(growthExperiments.status, "active"))).orderBy(desc(growthExperiments.updatedAt)).limit(1);
+  if (!experiment || experiment.experimentType === "pricing" || experiment.maxTrafficPercent < 1 || experiment.requiresApproval || experiment.variants.length < 2) return null;
+  const variant = selectExperimentVariant(experiment, subjectKey);
+  if (!variant) return null;
+  await db.insert(growthExperimentEvents).values({ workspaceId: workspace.id, experimentId: experiment.id, subjectKey, variantKey: variant.key, eventType: "impression" }).onDuplicateKeyUpdate({ set: { subjectKey } });
+  return { experimentId: experiment.id, experimentType: experiment.experimentType, variant };
+}
+
+export async function recordPublicExperimentOutcome(input: { subjectKey: string; experimentId: number; eventType: "cta_click" | "checkout_start" }) {
+  const workspace = await getOwnerWorkspaceForPublicExperiment();
+  if (!workspace) throw new Error("Kein öffentlicher Revenue-Arbeitsbereich verfügbar.");
+  const db = await getDb();
+  if (!db) throw new Error("Datenbank ist nicht verfügbar.");
+  const [experiment] = await db.select().from(growthExperiments).where(and(eq(growthExperiments.id, input.experimentId), eq(growthExperiments.workspaceId, workspace.id))).limit(1);
+  if (!experiment || experiment.status !== "active" || experiment.experimentType === "pricing" || experiment.requiresApproval) throw new Error("Experiment ist nicht für öffentliche Ergebniserfassung freigegeben.");
+  const [assignment] = await db.select().from(growthExperimentEvents).where(and(eq(growthExperimentEvents.experimentId, experiment.id), eq(growthExperimentEvents.subjectKey, input.subjectKey), eq(growthExperimentEvents.eventType, "impression"))).limit(1);
+  if (!assignment) throw new Error("Keine Variantenzuordnung für dieses pseudonymisierte Ereignis gefunden.");
+  await db.insert(growthExperimentEvents).values({ workspaceId: workspace.id, experimentId: experiment.id, subjectKey: input.subjectKey, variantKey: assignment.variantKey, eventType: input.eventType }).onDuplicateKeyUpdate({ set: { subjectKey: input.subjectKey } });
+  return { recorded: true } as const;
+}
+
+export async function activateGrowthExperiment(userId: number, input: { experimentId: number; maxTrafficPercent: number }) {
+  const workspace = await getRevenueWorkspaceByUser(userId);
+  if (!workspace) throw new Error("Bitte richten Sie zuerst einen Arbeitsbereich ein.");
+  const db = await getDb();
+  if (!db) throw new Error("Datenbank ist nicht verfügbar.");
+  const [experiment] = await db.select().from(growthExperiments).where(and(eq(growthExperiments.id, input.experimentId), eq(growthExperiments.workspaceId, workspace.id))).limit(1);
+  if (!experiment) throw new Error("Experiment im eigenen Arbeitsbereich wurde nicht gefunden.");
+  if (experiment.experimentType === "pricing") throw new Error("Pricing-Experimente bleiben als Freigabeentwurf gesperrt und werden nicht öffentlich ausgespielt.");
+  if (experiment.status !== "needs_approval") throw new Error("Nur freigabebereite Experimente können aktiviert werden.");
+  const maxTrafficPercent = Math.min(Math.max(input.maxTrafficPercent, 1), 25);
+  await db.update(growthExperiments).set({ status: "active", maxTrafficPercent, requiresApproval: false, approvedByUserId: userId, approvedAt: new Date() }).where(eq(growthExperiments.id, experiment.id));
+  await recordGrowthAudit({ workspaceId: workspace.id, idempotencyKey: `growth-experiment-active:${experiment.id}:${maxTrafficPercent}`, actor: "user", eventType: "growth.experiment.activated", status: "completed", detail: { experimentId: experiment.id, experimentType: experiment.experimentType, maxTrafficPercent } });
+  return { experimentId: experiment.id, status: "active" as const, maxTrafficPercent };
+}
+
+export async function pauseGrowthExperiment(userId: number, experimentId: number) {
+  const workspace = await getRevenueWorkspaceByUser(userId);
+  if (!workspace) throw new Error("Bitte richten Sie zuerst einen Arbeitsbereich ein.");
+  const db = await getDb();
+  if (!db) throw new Error("Datenbank ist nicht verfügbar.");
+  const [experiment] = await db.select().from(growthExperiments).where(and(eq(growthExperiments.id, experimentId), eq(growthExperiments.workspaceId, workspace.id))).limit(1);
+  if (!experiment || experiment.status !== "active") throw new Error("Aktives Experiment im eigenen Arbeitsbereich wurde nicht gefunden.");
+  await db.update(growthExperiments).set({ status: "paused" }).where(eq(growthExperiments.id, experiment.id));
+  await recordGrowthAudit({ workspaceId: workspace.id, idempotencyKey: `growth-experiment-paused:${experiment.id}`, actor: "user", eventType: "growth.experiment.paused", status: "completed", detail: { experimentId: experiment.id, experimentType: experiment.experimentType } });
+  return { experimentId: experiment.id, status: "paused" as const };
 }
 
 export async function getOwnerAnalyticsWriteKey() {
@@ -462,20 +624,12 @@ export async function runGrowthAnalysis(workspaceId: number, actor: "user" | "cr
   const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const events = await db.select().from(revenueEvents).where(and(eq(revenueEvents.workspaceId, workspaceId), gte(revenueEvents.occurredAt, since)));
   const currentDay = now.toISOString().slice(0, 10);
-  const revenueEventsForMonth = events.filter(event => ["invoice.payment_succeeded", "checkout.session.completed", "payment_intent.succeeded"].includes(event.eventType));
-  const revenueCents = revenueEventsForMonth.reduce((total, event) => total + event.amountCents, 0);
-  const checkoutStarted = events.filter(event => event.eventType === "checkout.session.created").length;
-  const checkoutCompleted = events.filter(event => event.eventType === "checkout.session.completed").length;
-  const paymentFailures = events.filter(event => event.eventType === "invoice.payment_failed").length;
-  const cancellations = events.filter(event => event.eventType === "customer.subscription.deleted").length;
-  const activeSubscriptions = Math.max(0, events.filter(event => event.eventType === "customer.subscription.created").length - cancellations);
   const [previousMetric] = await db.select().from(revenueDailyMetrics).where(and(eq(revenueDailyMetrics.workspaceId, workspaceId), eq(revenueDailyMetrics.metricDate, currentDay))).limit(1);
   const marketingSpendCents = previousMetric?.marketingSpendCents ?? 0;
-  const cacCents = checkoutCompleted > 0 ? Math.round(marketingSpendCents / checkoutCompleted) : 0;
-  const estimatedLtvCents = activeSubscriptions > 0 ? Math.round(revenueCents / activeSubscriptions) : 0;
+  const { revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, cacCents, estimatedLtvCents } = aggregateGrowthMetrics(events, marketingSpendCents);
   await db.insert(revenueDailyMetrics).values({ workspaceId, metricDate: currentDay, revenueCents, mrrCents: revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, marketingSpendCents, cacCents, estimatedLtvCents }).onDuplicateKeyUpdate({ set: { revenueCents, mrrCents: revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, cacCents, estimatedLtvCents, updatedAt: now } });
 
-  const recommendations: Array<{ type: "dunning" | "retention" | "experiment" | "upsell"; message: string }> = [];
+  const recommendations: GrowthRecommendation[] = [];
   if (paymentFailures > 0) recommendations.push({ type: "dunning", message: `${paymentFailures} fehlgeschlagene Zahlungsversuche benötigen eine einwilligungsbasierte Dunning-Sequenz als Entwurf.` });
   if (cancellations > 0) recommendations.push({ type: "retention", message: `${cancellations} Kündigungen deuten auf eine Retention-Analyse und ein freiwilliges Rückgewinnungsangebot hin.` });
   if (checkoutStarted > checkoutCompleted) recommendations.push({ type: "experiment", message: "Checkout-Abbrüche erkannt: CTA- und Onboarding-Varianten als begrenztes Experiment vorbereiten." });
@@ -488,13 +642,12 @@ export async function runGrowthAnalysis(workspaceId: number, actor: "user" | "cr
     const created = await recordGrowthAudit({ workspaceId, idempotencyKey: key, actor, eventType: `growth.${recommendation.type}.recommendation`, status: "completed", detail: { message: recommendation.message } });
     if (!created) continue;
     if (recommendation.type === "experiment") {
-      await db.insert(growthExperiments).values({ workspaceId, experimentType: "cta", name: `Checkout-Reibung ${currentDay}`, status: "needs_approval", variants: [{ key: "control", label: "Kontrolle", value: "Bestehender CTA" }, { key: "variant", label: "Variante", value: "Klarer Nutzen-CTA" }], maxTrafficPercent: 0, requiresApproval: true });
+      await db.insert(growthExperiments).values({ workspaceId, experimentType: "cta", name: `Checkout-Reibung ${currentDay}`, status: "needs_approval", variants: [{ key: "control", label: "Kontrolle", value: "Mit Manus anmelden" }, { key: "variant", label: "Variante", value: "Revenue-Prozess einrichten" }], maxTrafficPercent: 0, requiresApproval: true });
+      await db.insert(growthExperiments).values({ workspaceId, experimentType: "headline", name: `Value-Headline ${currentDay}`, status: "needs_approval", variants: [{ key: "control", label: "Kontrolle", value: "CyberSarah Revenue OS" }, { key: "variant", label: "Variante", value: "Revenue Operations, die nachvollziehbar wachsen" }], maxTrafficPercent: 0, requiresApproval: true });
       await db.insert(growthExperiments).values({ workspaceId, experimentType: "pricing", name: `Pricing-Review ${currentDay}`, status: "needs_approval", variants: [{ key: "control", label: "Kontrolle", value: "Bestehendes Pricing" }, { key: "variant", label: "Variante", value: "Wertbasierte Preispositionierung" }], maxTrafficPercent: 0, requiresApproval: true });
-      await createGrowthActionDraft(workspaceId, `growth-seo-draft:${workspaceId}:${currentDay}`, "seo_landing_draft", "SEO-Landingpage-Entwurf", { source: "funnel_analysis", recommendation: recommendation.message, externalExecution: false, content: { title: "Revenue Operations ohne blinde Automatisierung", metaDescription: "CyberSarah Revenue OS verbindet Revenue Intelligence, nachvollziehbare Freigaben und kontrollierte Growth-Loops.", headline: "Wachstum messbar steuern statt blind skalieren.", sections: ["Revenue-Signale konsolidieren", "Funnel-Reibung sichtbar machen", "Freigaben und Audit-Trail erhalten"] } });
-      await createGrowthActionDraft(workspaceId, `growth-outreach-draft:${workspaceId}:${currentDay}`, "outreach_draft", "Outreach- und Social-Entwurf", { source: "funnel_analysis", recommendation: recommendation.message, externalExecution: false, consentRequired: true, content: { socialCopy: "Revenue-Wachstum braucht Transparenz: Signale verstehen, Experimente begrenzen und Entscheidungen nachvollziehbar machen.", outreachAngle: "Relevanz zuerst: Eine kurze, kontextbezogene Kontaktaufnahme erst nach dokumentierter Einwilligung und Freigabe." } });
     }
-    if (recommendation.type === "upsell") {
-      await createGrowthActionDraft(workspaceId, `growth-upsell-draft:${workspaceId}:${currentDay}`, "upsell_draft", "Wertbasierter Upsell-Entwurf", { source: "revenue_analysis", recommendation: recommendation.message, externalExecution: false, consentRequired: true, content: { headline: "Mehr Kontrolle für Ihren Revenue-Prozess", offer: "Optionales Upgrade mit erweitertem Audit- und Experimentumfang.", guardrail: "Nur für berechtigte, einwilligende Empfänger; keine automatische Zustellung." } });
+    for (const draft of buildGrowthActionDrafts({ workspaceId, currentDay, recommendation })) {
+      await createGrowthActionDraft(workspaceId, draft.actionKey, draft.actionType, draft.target, draft.payload);
     }
   }
   const setting = await getOrCreateGrowthLoopSettings(workspaceId);

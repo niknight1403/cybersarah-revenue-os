@@ -9,13 +9,17 @@ const funnelEventSchema = z.object({
   occurredAt: z.coerce.date().optional(),
 });
 
-export async function handleFunnelTracking(req: Request, res: Response) {
-  const parsed = funnelEventSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "Ungültiges Funnel-Ereignis." });
-  try {
-    const result = await recordFunnelEvent({ analyticsWriteKey: parsed.data.key, eventId: parsed.data.eventId, eventType: parsed.data.eventType, occurredAt: parsed.data.occurredAt ?? new Date() });
-    return res.status(202).json({ accepted: result.inserted });
-  } catch (error) {
-    return res.status(404).json({ error: error instanceof Error ? error.message : "Tracking-Schlüssel nicht gefunden." });
-  }
+export function createFunnelTrackingHandler(dependencies: { recordEvent: typeof recordFunnelEvent }) {
+  return async (req: Request, res: Response) => {
+    const parsed = funnelEventSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Ungültiges Funnel-Ereignis." });
+    try {
+      const result = await dependencies.recordEvent({ analyticsWriteKey: parsed.data.key, eventId: parsed.data.eventId, eventType: parsed.data.eventType, occurredAt: parsed.data.occurredAt ?? new Date() });
+      return res.status(202).json({ accepted: result.inserted });
+    } catch (error) {
+      return res.status(404).json({ error: error instanceof Error ? error.message : "Tracking-Schlüssel nicht gefunden." });
+    }
+  };
 }
+
+export const handleFunnelTracking = createFunnelTrackingHandler({ recordEvent: recordFunnelEvent });
