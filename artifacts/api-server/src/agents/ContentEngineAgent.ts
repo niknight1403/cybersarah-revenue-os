@@ -14,7 +14,12 @@ import {
 } from "@workspace/db/schema/contentEngine";
 import { eq, desc, and, sql, inArray, isNull } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import type { NewContentCharacter, NewContentTemplate } from "@workspace/db/schema/contentEngine";
 import { openai, openaiVerfuegbar } from "../lib/openaiClient";
+
+function numericThreshold(value: number | boolean | null | undefined, fallback: number): number {
+  return typeof value === "number" ? value : fallback;
+}
 
 interface ContentGenerationResult {
   title: string;
@@ -52,7 +57,7 @@ export class ContentEngineAgent extends AgentBase {
     const existing = await db.select().from(contentCharactersTable).limit(1);
     if (existing.length > 0) return;
 
-    const defaultCharacters = [
+    const defaultCharacters: NewContentCharacter[] = [
       {
         name: "Sarah — Die Strategin",
         archetype: "expert_mentor" as const,
@@ -178,7 +183,7 @@ FORMAT: Blog/Newsletter mit sofort umsetzbaren Schritten`,
     const existing = await db.select().from(contentTemplatesTable).limit(1);
     if (existing.length > 0) return;
 
-    const templates = [
+    const templates: NewContentTemplate[] = [
       {
         name: "Blog: Problem-Lösung-Deep-Dive",
         description: "Klassischer Blog-Artikel: Problem → Analyse → Lösung → Beweis → CTA",
@@ -233,7 +238,7 @@ FORMAT: Blog/Newsletter mit sofort umsetzbaren Schritten`,
             { name: "CTA (45-60s)", prompt: "Eine klare Aktion: 'Folge für mehr', 'Link in Bio', 'Kommentiere X'", required: true },
           ],
           cta: "In Caption: Link in Bio / Folge für Part 2",
-          hashtagStrategt: "3-5 Nischen-Hashtags + 2 breite",
+          hashtagStrategy: "3-5 Nischen-Hashtags + 2 breite",
         },
         suitableArchetypes: ["curious_explorer", "inspiring_visionary", "friendly_peer"],
         isActive: true,
@@ -338,10 +343,10 @@ Liefere JSON Array:
 
     try {
       const response = await openai.chat.completions.create({
-        model: char.modelPreference,
-        temperature: char.temperature / 100,
+        model: char.modelPreference ?? "gpt-4o-mini",
+        temperature: Number(char.temperature ?? 60) / 100,
         messages: [
-          { role: "system", content: char.systemPrompt },
+          { role: "system", content: char.systemPrompt ?? "Du bist eine transparente KI-Content-Persona." },
           { role: "user", content: prompt },
         ],
         response_format: { type: "json_object" },
@@ -423,8 +428,8 @@ CHARAKTER-STIL:
 
 QUALITÄTSZIELE:
 - Readability > ${character.qualityThresholds?.minReadabilityScore || 60}
-- Marketing-Speak < ${(character.qualityThresholds?.maxMarketingSpeak || 0.3) * 100}%
-- Personal Voice > ${(character.qualityThresholds?.minPersonalVoice || 0.7) * 100}%
+- Marketing-Speak < ${numericThreshold(character.qualityThresholds?.maxMarketingSpeak, 0.3) * 100}%
+- Personal Voice > ${numericThreshold(character.qualityThresholds?.minPersonalVoice, 0.7) * 100}%
 - Transparenz-Label: ${character.qualityThresholds?.requireTransparencyLabel ? "JA" : "NEIN"}
 
 Liefere JSON:
@@ -446,10 +451,10 @@ Liefere JSON:
 
     try {
       const response = await openai.chat.completions.create({
-        model: character.modelPreference,
-        temperature: character.temperature / 100,
+        model: character.modelPreference ?? "gpt-4o-mini",
+        temperature: Number(character.temperature ?? 60) / 100,
         messages: [
-          { role: "system", content: character.systemPrompt },
+          { role: "system", content: character.systemPrompt ?? "Du bist eine transparente KI-Content-Persona." },
           { role: "user", content: prompt },
         ],
         response_format: { type: "json_object" },
@@ -476,12 +481,12 @@ Liefere JSON:
         marketingSpeakScore: result.qualityScores?.marketingSpeak,
         transparencyScore: result.qualityScores?.transparency,
         overallQualityScore: result.qualityScores?.overall,
-        generatedByModel: character.modelPreference,
+        generatedByModel: character.modelPreference ?? "gpt-4o-mini",
         generationPrompt: prompt,
         generationTokens: response.usage?.total_tokens,
         generationCost: Math.round((response.usage?.total_tokens || 0) * 0.00015 * 100), // ca. Kosten in cents
         aiTransparencyLabel: character.qualityThresholds?.requireTransparencyLabel ? "🤖 KI-generiert & menschlich geprüft" : "",
-        showTransparencyLabel: character.qualityThresholds?.requireTransparencyLabel ?? true,
+        showTransparencyLabel: character.qualityThresholds?.requireTransparencyLabel === true,
       }).returning();
 
       // Idee als verwendet markieren
@@ -520,9 +525,9 @@ Liefere JSON:
       overall: item.overallQualityScore || 0,
     };
 
-    const minReadability = character.qualityThresholds?.minReadabilityScore || 60;
-    const maxMarketingSpeak = character.qualityThresholds?.maxMarketingSpeak || 0.3;
-    const minPersonalVoice = character.qualityThresholds?.minPersonalVoice || 0.7;
+    const minReadability = numericThreshold(character.qualityThresholds?.minReadabilityScore, 60);
+    const maxMarketingSpeak = numericThreshold(character.qualityThresholds?.maxMarketingSpeak, 0.3);
+    const minPersonalVoice = numericThreshold(character.qualityThresholds?.minPersonalVoice, 0.7);
 
     const passed =
       scores.readability >= minReadability &&
@@ -641,7 +646,7 @@ Liefere JSON:
     const avgQuality = items.reduce((sum, i) => sum + (i.overallQualityScore || 0), 0) / items.length;
 
     // Top performer
-    const topByEngagement = [...items].sort((a, b) => (b.likes + b.comments + b.shares) - (a.likes + a.comments + a.shares)).slice(0, 3);
+    const topByEngagement = [...items].sort((a, b) => (Number(b.likes ?? 0) + Number(b.comments ?? 0) + Number(b.shares ?? 0)) - (Number(a.likes ?? 0) + Number(a.comments ?? 0) + Number(a.shares ?? 0))).slice(0, 3);
     const topByConversions = [...items].sort((a, b) => (b.conversions || 0) - (a.conversions || 0)).slice(0, 3);
 
     return {
@@ -652,7 +657,7 @@ Liefere JSON:
         totalItems: items.length,
         totals,
         avgQuality,
-        topByEngagement: topByEngagement.map(i => ({ id: i.id, title: i.title, engagement: i.likes + i.comments + i.shares, platform: i.platform })),
+        topByEngagement: topByEngagement.map(i => ({ id: i.id, title: i.title, engagement: Number(i.likes ?? 0) + Number(i.comments ?? 0) + Number(i.shares ?? 0), platform: i.platform })),
         topByConversions: topByConversions.map(i => ({ id: i.id, title: i.title, conversions: i.conversions, platform: i.platform })),
       },
     };

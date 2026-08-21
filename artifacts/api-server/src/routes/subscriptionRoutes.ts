@@ -155,8 +155,9 @@ router.get("/subscriptions/invoices", async (req, res) => {
   const subId = req.query.subscriptionId ? parseInt(req.query.subscriptionId as string) : undefined;
   const limit = Math.min(parseInt(String(req.query.limit ?? "50")), 200);
 
-  let query = db.select().from(subscriptionInvoicesTable).orderBy(desc(subscriptionInvoicesTable.createdAt));
-  if (subId) query = query.where(eq(subscriptionInvoicesTable.subscriptionId, subId));
+  const query = subId
+    ? db.select().from(subscriptionInvoicesTable).where(eq(subscriptionInvoicesTable.subscriptionId, subId)).orderBy(desc(subscriptionInvoicesTable.createdAt))
+    : db.select().from(subscriptionInvoicesTable).orderBy(desc(subscriptionInvoicesTable.createdAt));
 
   const invoices = await query.limit(limit);
   res.json({ invoices, anzahl: invoices.length });

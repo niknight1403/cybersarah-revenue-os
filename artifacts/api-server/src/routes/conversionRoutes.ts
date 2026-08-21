@@ -23,7 +23,7 @@ router.get("/conversion/tests", async (_req, res) => {
   const tests = await db.select()
     .from(abTestCampaignsTable)
     .orderBy(desc(abTestCampaignsTable.createdAt));
-  res.json({ tests, anzahl: tests.length });
+  return res.json({ tests, anzahl: tests.length });
 });
 
 // Aktive Tests
@@ -32,7 +32,7 @@ router.get("/conversion/tests/active", async (_req, res) => {
     .from(abTestCampaignsTable)
     .where(eq(abTestCampaignsTable.status, "aktiv"))
     .orderBy(desc(abTestCampaignsTable.createdAt));
-  res.json({ tests, anzahl: tests.length });
+  return res.json({ tests, anzahl: tests.length });
 });
 
 // Einzelner Test mit Ergebnissen
@@ -48,7 +48,7 @@ router.get("/conversion/tests/:id", async (req, res) => {
     .from(abTestResultsTable)
     .where(eq(abTestResultsTable.campaignId, Number(req.params.id)));
 
-  res.json({ test: test[0], ergebnisse });
+  return res.json({ test: test[0], ergebnisse });
 });
 
 // Neuen Test erstellen

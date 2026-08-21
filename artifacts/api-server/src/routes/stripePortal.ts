@@ -13,6 +13,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 import { Router } from "express";
+import type Stripe from "stripe";
 import { getStripeClient } from "../lib/stripeClient";
 import { db } from "@workspace/db";
 import { transactionsTable, agentLogsTable } from "@workspace/db";
@@ -20,6 +21,16 @@ import { eq, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
 const router = Router();
+
+type ExpandedCustomer = Pick<Stripe.Customer, "id" | "email" | "name">;
+function expandedCustomer(value: string | Stripe.Customer | Stripe.DeletedCustomer | null): ExpandedCustomer | undefined {
+  if (!value || typeof value === "string" || ("deleted" in value && value.deleted)) return undefined;
+  return value;
+}
+function subscriptionTimestamp(value: Stripe.Subscription, key: "current_period_start" | "current_period_end"): number | undefined {
+  const candidate = (value as unknown as Record<string, unknown>)[key];
+  return typeof candidate === "number" ? candidate : undefined;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // POST /api/stripe/customer — Kunden in Stripe anlegen/suchen
@@ -104,17 +115,17 @@ router.get("/stripe/abos", async (req, res) => {
       abos: subscriptions.data.map(sub => ({
         id: sub.id,
         kunde: {
-          id: sub.customer?.id,
-          email: (sub.customer as any)?.email,
-          name: (sub.customer as any)?.name,
+          id: expandedCustomer(sub.customer)?.id,
+          email: expandedCustomer(sub.customer)?.email,
+          name: expandedCustomer(sub.customer)?.name,
         },
         status: sub.status,
         produkt: (sub.items.data[0]?.plan?.product as any)?.name ?? "Unbekannt",
         betrag: sub.items.data.reduce((s, item) => s + (item.price?.unit_amount ?? 0), 0) / 100,
         waehrung: sub.currency?.toUpperCase(),
         intervall: sub.items.data[0]?.price?.recurring?.interval,
-        aktuellerZyklusStart: sub.current_period_start ? new Date(sub.current_period_start * 1000).toISOString() : null,
-        aktuellerZyklusEnde: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+        aktuellerZyklusStart: subscriptionTimestamp(sub, "current_period_start") ? new Date(subscriptionTimestamp(sub, "current_period_start")! * 1000).toISOString() : null,
+        aktuellerZyklusEnde: subscriptionTimestamp(sub, "current_period_end") ? new Date(subscriptionTimestamp(sub, "current_period_end")! * 1000).toISOString() : null,
         probeAb: sub.trial_start ? new Date(sub.trial_start * 1000).toISOString() : null,
         probeBis: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
         abgeschlossen: sub.ended_at ? new Date(sub.ended_at * 1000).toISOString() : null,
@@ -167,7 +178,7 @@ router.post("/stripe/abos/:id/kuendigen", async (req, res) => {
         abo: {
           id: updated.id,
           status: updated.status,
-          endDatum: new Date(updated.current_period_end * 1000).toISOString(),
+          endDatum: subscriptionTimestamp(updated, "current_period_end") ? new Date(subscriptionTimestamp(updated, "current_period_end")! * 1000).toISOString() : null,
         },
       });
     }

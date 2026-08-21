@@ -201,7 +201,7 @@ Antworte NUR als JSON:
         inhalt: parsed.inhalt ?? `Falls du Fragen hast, melde dich gerne.\n\nViele Grüße,\nDein ${lead.marke}-Team`,
       };
     } catch (err) {
-      handleOpenAIFehler(err, 0, AGENT_NAME);
+      handleOpenAIFehler(err, AGENT_NAME);
       return { betreff: "Kurz nachgefragt", inhalt: `Falls du Fragen hast, melde dich gerne.\n\nViele Grüße,\nDein ${lead.marke}-Team` };
     }
   }

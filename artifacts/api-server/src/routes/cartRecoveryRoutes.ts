@@ -17,11 +17,9 @@ router.get("/cart-recovery", async (req, res) => {
   const status = req.query.status as string | undefined;
   const limit = Math.min(parseInt(String(req.query.limit ?? "50")), 200);
 
-  let query = db.select().from(abandonedCartsTable).orderBy(desc(abandonedCartsTable.createdAt));
-
-  if (status) {
-    query = query.where(eq(abandonedCartsTable.status, status as any));
-  }
+  const query = status
+    ? db.select().from(abandonedCartsTable).where(eq(abandonedCartsTable.status, status)).orderBy(desc(abandonedCartsTable.createdAt))
+    : db.select().from(abandonedCartsTable).orderBy(desc(abandonedCartsTable.createdAt));
 
   const carts = await query.limit(limit);
   res.json({ carts, anzahl: carts.length });

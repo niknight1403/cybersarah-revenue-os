@@ -100,7 +100,7 @@ export class VoiceAgentServiceAgent extends AgentBase {
         ergebnis = parsed.ergebnis ?? ergebnis;
         hoheDringlichkeit = parsed.hoheDringlichkeit ?? false;
       } catch (err) {
-        handleOpenAIFehler(err, 0, AGENT_NAME);
+        handleOpenAIFehler(err, AGENT_NAME);
       }
     }
 

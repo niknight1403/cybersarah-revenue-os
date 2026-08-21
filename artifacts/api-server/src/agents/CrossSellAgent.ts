@@ -324,11 +324,11 @@ export class CrossSellAgent extends AgentBase {
           // Auch Push-Benachrichtigung bei hoher Wahrscheinlichkeit
           if (Number(regel.wahrscheinlichkeit) > 0.5) {
             try {
-              await sendPushNotification(
-                lead.email,
-                `🔥 ${regel.zielProdukt}${rabattText}`,
-                `Basierend auf deinem Kauf von ${regel.quellProdukt}`
-              );
+              await sendPushNotification({
+                token: lead.email,
+                title: `🔥 ${regel.zielProdukt}${rabattText}`,
+                body: `Basierend auf deinem Kauf von ${regel.quellProdukt}`,
+              });
             } catch {}
           }
         } catch (err) {

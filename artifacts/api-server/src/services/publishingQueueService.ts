@@ -1,6 +1,6 @@
 import { and, asc, eq, lte, or, isNull } from "drizzle-orm";
 import { db, publishingQueueTable, type NewPublishingQueueEntry, type PublishingQueueEntry } from "@workspace/db";
-import { maxAttemptsReached, preflightPublishing, publishWithProvider, retryDelayMs, type PublishingProvider } from "./socialPublishingService";
+import { maxAttemptsReached, preflightPublishing, publishWithProvider, retryDelayMs, type PublishingProvider, type PublishingJob } from "./socialPublishingService";
 import { emitHaraSignal } from "./haraSignalService";
 
 function requireDb() {
@@ -58,7 +58,23 @@ export async function processPublishingQueue(limit = 10): Promise<{ processed: n
   let failed = 0;
   let blocked = 0;
   for (const job of jobs) {
-    const preflight = preflightPublishing(job);
+    if (job.provider !== "tiktok" && job.provider !== "instagram") {
+      await database.update(publishingQueueTable).set({ status: "failed", lastError: `Nicht unterstützter Provider: ${job.provider}` }).where(eq(publishingQueueTable.id, job.id));
+      failed++;
+      continue;
+    }
+    const publishingJob: PublishingJob = {
+      id: job.id,
+      idempotencyKey: job.idempotencyKey,
+      provider: job.provider,
+      caption: job.caption,
+      title: job.title,
+      mediaUrl: job.mediaUrl,
+      approvalId: job.approvalId,
+      governanceApproved: job.governanceApproved,
+      attemptCount: job.attemptCount,
+    };
+    const preflight = preflightPublishing(publishingJob);
     if (!preflight.allowed) {
       await database.update(publishingQueueTable).set({ status: "blocked", lastError: preflight.reason }).where(eq(publishingQueueTable.id, job.id));
       blocked++;
@@ -66,7 +82,7 @@ export async function processPublishingQueue(limit = 10): Promise<{ processed: n
     }
     const attemptCount = job.attemptCount + 1;
     await database.update(publishingQueueTable).set({ status: "processing", attemptCount, lastError: null }).where(eq(publishingQueueTable.id, job.id));
-    const result = await publishWithProvider({ ...job, attemptCount });
+    const result = await publishWithProvider({ ...publishingJob, attemptCount });
     if (result.success) {
       await database.update(publishingQueueTable).set({ status: "published", providerPostId: result.postId ?? null, providerUrl: result.url ?? null, nextAttemptAt: null }).where(eq(publishingQueueTable.id, job.id));
       await emitHaraSignal({

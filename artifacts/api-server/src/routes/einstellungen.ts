@@ -227,7 +227,7 @@ export function defaultAffiliateLinks(): AffiliateLink[] {
 }
 
 export async function ladeAffiliateLinksAusDB(): Promise<AffiliateLink[]> {
-    if (!db) { res.json([]); return; }
+  if (!db) return defaultAffiliateLinks();
   try {
     const rows = await db.select().from(systemConfigTable)
       .where(eq(systemConfigTable.schluessel, "affiliate_links"));
@@ -239,7 +239,7 @@ export async function ladeAffiliateLinksAusDB(): Promise<AffiliateLink[]> {
 }
 
 export async function ladeWebhookUrlAusDB(): Promise<string | null> {
-    if (!db) { res.json([]); return; }
+  if (!db) return null;
   try {
     const rows = await db.select().from(systemConfigTable)
       .where(eq(systemConfigTable.schluessel, "webhook_url"));

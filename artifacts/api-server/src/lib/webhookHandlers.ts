@@ -418,8 +418,7 @@ const eventHandlers: Record<string, EventHandler> = {
     logger.error(
       {
         earlyFraudWarningId: efw.id,
-        chargeId: efw.charge,
-        betrag: efw.amount,
+        chargeId: typeof efw.charge === "string" ? efw.charge : efw.charge.id,
       },
       "🚨 Stripe FRÜH-FAUD-WARNUNG — Zahlung überprüfen!"
     );
@@ -455,7 +454,7 @@ export class WebhookHandlers {
 
     if (handler) {
       try {
-        await handler(event, ipAdresse);
+        await handler(event, ipAdresse ?? "unbekannt");
 
         // Erfolgreiche Verarbeitung audit-loggen
         await markStripeEventProcessed(event.id);

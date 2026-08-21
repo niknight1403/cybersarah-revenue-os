@@ -123,7 +123,7 @@ export class RevenueAnalystAgent extends AgentBase {
         aktion: "auto_action_all_v5",
         status: fehlgeschlagen > 0 ? "warning" : "ok",
         nachricht: `${erfolgreich}/7 Aktionen erfolgreich, ${fehlgeschlagen} fehlgeschlagen`,
-        details: { erfolgreich, fehlgeschlagen, timestamp: new Date().toISOString() },
+        metadaten: JSON.stringify({ erfolgreich, fehlgeschlagen, timestamp: new Date().toISOString() }),
       });
     }
 
@@ -228,10 +228,10 @@ export class RevenueAnalystAgent extends AgentBase {
         });
 
         await db.insert(revenueOpportunitiesTable).values({
-          titel: crossSellName, typ: "cross_sell", kanal: "eigenes_produkt",
+          titel: crossSellName, kanal: "eigenes_produkt",
           status: "aktiv", geschaetzterMonatsumsatz: "500",
           stripePaymentLink: "", beschreibung: `Cross-Sell: ${produkt.name} Upgrade`,
-          quelle: "RevenueAnalyst-V5-CrossSell",
+          gefundenVon: "RevenueAnalyst-V5-CrossSell",
         }).onConflictDoNothing();
         crossSells++;
       } catch { /* überspringe Konflikte */ }
@@ -276,10 +276,10 @@ export class RevenueAnalystAgent extends AgentBase {
           });
 
           await db.insert(revenueOpportunitiesTable).values({
-            titel: discountName, typ: "discount", kanal: "eigenes_produkt",
+            titel: discountName, kanal: "eigenes_produkt",
             status: "aktiv", geschaetzterMonatsumsatz: (prog.geschaetzt * 0.5).toString(),
             beschreibung: `Auto-Rabatt: ${prog.beschreibung}`,
-            quelle: "RevenueAnalyst-V5-Discount",
+            gefundenVon: "RevenueAnalyst-V5-Discount",
           }).onConflictDoNothing();
           discounts++;
         } catch { /* überspringe Konflikte */ }
@@ -331,11 +331,11 @@ export class RevenueAnalystAgent extends AgentBase {
 
               await db.insert(revenueOpportunitiesTable).values({
                 titel: `🔄 Recovery: ${pi.description ?? "Abgebrochener Kauf"}`,
-                typ: "recovery", kanal: "email",
+                kanal: "email",
                 status: "aktiv", geschaetzterMonatsumsatz: (pi.amount / 100).toString(),
                 stripePaymentLink: recoveryLink.url,
                 beschreibung: `Auto-Recovery für abgebrochenen Kauf (€${(pi.amount / 100).toFixed(2)})`,
-                quelle: "RevenueAnalyst-V5-Recovery",
+                gefundenVon: "RevenueAnalyst-V5-Recovery",
               }).onConflictDoNothing();
               abgebrochen++;
             } catch { /* überspringe Fehler */ }
@@ -359,7 +359,7 @@ export class RevenueAnalystAgent extends AgentBase {
   private async syncAffiliateProgramme(): Promise<AufgabeErgebnis> {
     const bestehende = await db.select({ titel: revenueOpportunitiesTable.titel })
       .from(revenueOpportunitiesTable)
-      .where(eq(revenueOpportunitiesTable.quelle, "RevenueAnalyst-AffiliateSync"));
+      .where(eq(revenueOpportunitiesTable.gefundenVon, "RevenueAnalyst-AffiliateSync"));
 
     const bestehendeTitel = new Set(bestehende.map(b => b.titel));
     let neueProgramme = 0;
@@ -368,9 +368,9 @@ export class RevenueAnalystAgent extends AgentBase {
       if (bestehendeTitel.has(prog.name)) continue;
       try {
         await db.insert(revenueOpportunitiesTable).values({
-          titel: prog.name, typ: "affiliate", kanal: prog.kanal,
+          titel: prog.name, kanal: prog.kanal,
           status: "aktiv", geschaetzterMonatsumsatz: prog.geschaetzt.toString(),
-          beschreibung: prog.beschreibung, quelle: "RevenueAnalyst-AffiliateSync",
+          beschreibung: prog.beschreibung, gefundenVon: "RevenueAnalyst-AffiliateSync",
         }).onConflictDoNothing();
         neueProgramme++;
       } catch { /* ignore conflicts */ }
@@ -462,7 +462,7 @@ export class RevenueAnalystAgent extends AgentBase {
         agentId: this.agentId, agentName: "Revenue Analyst Agent",
         aktion: "revenue_anomaly_v5", status: anomalien.length > 0 ? "warning" : "ok",
         nachricht: anomalien.length > 0 ? anomalien[0] : "✅ Keine Anomalien",
-        details: { heuteSumme, gesternSumme, wochenSumme, anomalien, aktionAusgeloest },
+        metadaten: JSON.stringify({ heuteSumme, gesternSumme, wochenSumme, anomalien, aktionAusgeloest }),
       });
     }
 

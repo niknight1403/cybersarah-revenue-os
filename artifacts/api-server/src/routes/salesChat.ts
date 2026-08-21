@@ -99,8 +99,7 @@ Sei hilfreich, kurz, professionell.`;
     if (emailMatch) {
       try {
         await db.insert(leadsTable).values({
-          email: emailMatch[0], quelle: "sales_chat", status: "neu",
-          notizen: `Chat-Session: ${sessionId}`,
+          email: emailMatch[0], marke: "CyberSarah", quelle: "sales_chat", status: "neu",
         });
         reply += "\n\n📧 E-Mail gespeichert! Du bekommst exklusive KI-Tipps.";
       } catch {}

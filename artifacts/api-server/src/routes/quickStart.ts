@@ -32,7 +32,7 @@ router.post("/quick-start", async (_req: Request, res: Response) => {
     results.push(`📊 Agenten: ${allAgents.length} Gesamt, ${aktiv} Aktiv/Wartend, ${fehler} Fehler`);
 
     // 3. Create demo products if none exist
-    const prodCount = await db.select({ count: () => 0 }).from(produkteTable);
+    const prodCount = await db.select({ id: produkteTable.id }).from(produkteTable);
     if (prodCount.length === 0) {
       results.push("📦 Keine Produkte — überspringe (wird von HARA erstellt)");
     }

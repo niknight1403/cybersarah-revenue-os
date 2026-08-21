@@ -127,7 +127,7 @@ router.post("/email/bestellbestaetigung", async (req, res) => {
       return;
     }
 
-    const email = orderConfirmation(body);
+    const email = orderConfirmation({ ...body, waehrung: "EUR" });
     const result = await sendEmail({
       to: body.to,
       subject: email.subject,

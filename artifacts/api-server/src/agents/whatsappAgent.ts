@@ -218,8 +218,6 @@ export async function verarbeiteWhatsAppWebhook(payload: unknown): Promise<void>
         email: `whatsapp_${msg.from}@placeholder.de`, // Platzhalter
         marke: "CyberSarah",
         quelle: "whatsapp",
-        telefon: msg.from,
-        name: contactName ?? null,
       }).onConflictDoNothing().catch(() => null);
 
       // Antworten

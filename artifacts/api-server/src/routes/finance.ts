@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { transactionsTable, campaignsTable } from "@workspace/db";
-import { desc, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -9,12 +9,9 @@ router.get("/finance/transactions", async (req, res) => {
   const limitNum = Math.min(parseInt(String(req.query.limit ?? "100")), 500);
   const quelle = req.query.quelle as string | undefined;
 
-  let query = db.select().from(transactionsTable);
-
-  if (quelle) {
-    const { eq } = await import("drizzle-orm");
-    query = query.where(eq(transactionsTable.quelle, quelle));
-  }
+  const query = quelle
+    ? db.select().from(transactionsTable).where(eq(transactionsTable.quelle, quelle))
+    : db.select().from(transactionsTable);
 
   const transactions = await query
     .orderBy(desc(transactionsTable.createdAt))

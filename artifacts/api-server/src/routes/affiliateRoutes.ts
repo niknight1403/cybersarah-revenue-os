@@ -162,8 +162,9 @@ router.get("/affiliates/payouts", async (req, res) => {
   const partnerId = req.query.partnerId ? parseInt(req.query.partnerId as string) : undefined;
   const limit = Math.min(parseInt(String(req.query.limit ?? "100")), 200);
 
-  let query = db.select().from(affiliatePayoutsTable).orderBy(desc(affiliatePayoutsTable.createdAt));
-  if (partnerId) query = query.where(eq(affiliatePayoutsTable.partnerId, partnerId));
+  const query = partnerId
+    ? db.select().from(affiliatePayoutsTable).where(eq(affiliatePayoutsTable.partnerId, partnerId)).orderBy(desc(affiliatePayoutsTable.createdAt))
+    : db.select().from(affiliatePayoutsTable).orderBy(desc(affiliatePayoutsTable.createdAt));
 
   const payouts = await query.limit(limit);
   res.json({ payouts, anzahl: payouts.length });

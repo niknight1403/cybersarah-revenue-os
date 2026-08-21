@@ -299,7 +299,6 @@ router.post("/stripe/produkte", async (req, res) => {
           beschreibung: body.beschreibung ?? "",
           preis: body.preis.toFixed(2),
           kategorie: body.kategorie ?? "allgemein",
-          slug: `${slug}-${Date.now()}`,
           stripeProduktId: produkt.id,
           stripePreisId: preis.id,
           stripePaymentLink: paymentLink,

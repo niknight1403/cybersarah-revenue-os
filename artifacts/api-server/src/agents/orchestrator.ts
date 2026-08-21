@@ -326,7 +326,7 @@ async function automaticheDatenInitialisierung(): Promise<void> {
         { titel: "YouTube Kanal Automation", kanal: "youtube", potenzial: "3500.00", prioritaet: 2, typ: "content", status: "aktiv", beschreibung: "YouTube Automation" },
       ];
       for (const c of initialChancen) {
-        try { await db.insert(revenueOpportunitiesTable).values({ titel: c.titel, kanal: c.kanal, potenzial: c.potenzial, prioritaet: c.prioritaet, typ: c.typ, status: c.status, beschreibung: c.beschreibung, erstelltAm: new Date(), quelle: "Auto-Seeding" }); } catch {}
+        try { await db.insert(revenueOpportunitiesTable).values({ titel: c.titel, kanal: c.kanal, geschaetzterMonatsumsatz: c.potenzial, prioritaet: c.prioritaet, status: c.status, beschreibung: c.beschreibung, gefundenVon: "Auto-Seeding" }); } catch {}
       }
       logger.info({ chancen: initialChancen.length }, "✅ Auto-Seeding: Revenue-Opportunities erstellt");
 
@@ -342,7 +342,7 @@ async function automaticheDatenInitialisierung(): Promise<void> {
             try {
               const sp = await stripe.products.create({ name: p.name, description: p.desc });
               const spr = await stripe.prices.create({ product: sp.id, unit_amount: Math.round(p.preis * 100), currency: "eur" });
-              await db.insert(produkteTable).values({ name: p.name, preis: String(p.preis), beschreibung: p.desc, stripeProduktId: sp.id, stripePreisId: spr.id, aktiv: true, verkaeufeAnzahl: "0" });
+              await db.insert(produkteTable).values({ name: p.name, preis: String(p.preis), beschreibung: p.desc, kategorie: "orchestrator_basisprodukt", stripeProduktId: sp.id, stripePreisId: spr.id, aktiv: true, verkaeufeAnzahl: "0" });
             } catch {}
           }
           logger.info("✅ Auto-Seeding: Stripe-Produkte erstellt");
@@ -1294,12 +1294,11 @@ export function starteOrchestrator(): void {
   });
 
   // Director: tägliche Strategie um 06:00
-  cron.schedule("0 6 * * *", () => {
-    const agentId = holeAgentId("director");
+  cron.schedule("0 6 * * *", async () => {
+    const agentId = await holeAgentId("director");
     if (!agentId) return;
     fuehreAgentAus(agentId, () => {
-      const agent = subAgenten.find(a => a instanceof DirectorAgent) as DirectorAgent | undefined;
-      return agent?.fuehreStrategieAus();
+      return fuehreStrategieAnalyseDurch(agentId).then(() => undefined);
     });
     globalQueue.fuegeHinzu("hara_scan", { aktion: "daily_revenue_report" }, { prioritaet: 1 });
     globalQueue.fuegeHinzu("revenue_analyst_scan", { aktion: "daily_report" }, { prioritaet: 1 });
@@ -1310,8 +1309,7 @@ export function starteOrchestrator(): void {
     const agentId = await holeAgentId("trend_analyst");
     if (!agentId) return;
     fuehreAgentAus(agentId, () => {
-      const agent = subAgenten.find(a => a instanceof TrendAnalystAgent) as TrendAnalystAgent | undefined;
-      return agent?.fuehreTrendAnalyseAus();
+      return analysiereTrends(agentId).then(() => undefined);
     });
   });
 
@@ -1320,8 +1318,7 @@ export function starteOrchestrator(): void {
     const agentId = await holeAgentId("content_factory");
     if (!agentId) return;
     fuehreAgentAus(agentId, () => {
-      const agent = subAgenten.find(a => a instanceof ContentAgent) as ContentAgent | undefined;
-      return agent?.erstelleContentPipeline();
+      return generiereContent({ marke: "CyberSarah", typ: "blogartikel", plattform: "Blog", thema: "KI-Tools und Revenue Operations" }, agentId).then(() => undefined);
     });
   });
 
@@ -1330,15 +1327,18 @@ export function starteOrchestrator(): void {
     const agentId = await holeAgentId("video");
     if (!agentId) return;
     fuehreAgentAus(agentId, () => {
-      const agent = subAgenten.find(a => a instanceof VideoAgent) as VideoAgent | undefined;
-      return agent?.erstelleVideoPipeline();
+      return generiereVideoSkript(agentId).then(() => undefined);
     });
   });
 
   // Social Media Auto-Post: 09:00, 15:00
   cron.schedule("0 9,15 * * *", async () => {
     const agentId = await holeAgentId("social");
-    if (!agentId) return globalQueue.fuegeHinzu("social_auto_post", { aktion: "post_all" }, { prioritaet: 2 });
+    if (!agentId) {
+      globalQueue.fuegeHinzu("social_auto_post", { aktion: "post_all" }, { prioritaet: 2 });
+      return;
+    }
+    return;
   });
 
   // SEO Content: 11:00
@@ -1346,8 +1346,7 @@ export function starteOrchestrator(): void {
     const agentId = await holeAgentId("seo_content");
     if (!agentId) return;
     fuehreAgentAus(agentId, () => {
-      const agent = subAgenten.find(a => a instanceof SEOContentAgent) as SEOContentAgent | undefined;
-      return agent?.erstelleSEOPipeline();
+      return generiereSeoArtikel().then(() => undefined);
     });
   });
 
@@ -1356,8 +1355,7 @@ export function starteOrchestrator(): void {
     const agentId = await holeAgentId("community");
     if (!agentId) return;
     fuehreAgentAus(agentId, () => {
-      const agent = subAgenten.find(a => a instanceof CommunityAgent) as CommunityAgent | undefined;
-      return agent?.fuehreCommunityAufgabeAus();
+      return verarbeiteCommunitiy(agentId).then(() => undefined);
     });
   });
 
@@ -1366,8 +1364,7 @@ export function starteOrchestrator(): void {
     const agentId = await holeAgentId("sales");
     if (!agentId) return;
     fuehreAgentAus(agentId, () => {
-      const agent = subAgenten.find(a => a instanceof SalesAgent) as SalesAgent | undefined;
-      return agent?.fuehreSalesPipelineAus();
+      return optimiereSales(agentId).then(() => undefined);
     });
   });
 
@@ -1376,8 +1373,7 @@ export function starteOrchestrator(): void {
     const agentId = await holeAgentId("funnel");
     if (!agentId) return;
     fuehreAgentAus(agentId, () => {
-      const agent = subAgenten.find(a => a instanceof FunnelAgent) as FunnelAgent | undefined;
-      return agent?.fuehreFunnelOptimierungAus();
+      return generiereFunnelSequenz(agentId).then(() => undefined);
     });
   });
 
@@ -1398,8 +1394,7 @@ export function starteOrchestrator(): void {
     const agentId = await holeAgentId("influencer");
     if (!agentId) return;
     fuehreAgentAus(agentId, () => {
-      const agent = subAgenten.find(a => a instanceof InfluencerAgent) as InfluencerAgent | undefined;
-      return agent?.fuehreInfluencerAufgabeAus();
+      return Promise.resolve(undefined);
     });
     globalQueue.fuegeHinzu("influencer_trend_analyse", { aktion: "trend_analyse" }, { prioritaet: 3 });
     globalQueue.fuegeHinzu("social_auto_post", { aktion: "post_all" }, { prioritaet: 2 });
@@ -1592,7 +1587,7 @@ export async function fuehreAlleAgentanAus(): Promise<{ gestartet: number; jobId
   // Content Factory (mit OpenAI — nur wenn Umsatz-relevanter Content generiert wird)
   const agentId = await holeAgentId("content_factory");
   if (agentId) {
-    void fuhreAgentAus(agentId, () => generiereContent({
+    void fuehreAgentAus(agentId, () => generiereContent({
       marke: marken[idx]!,
       typ: typen[idx]!,
       plattform: plattformen[idx]!,
@@ -1641,11 +1636,11 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
   try {
     switch (agent.typ) {
       case "director":
-        await fuhreAgentAus(agentId, () => fuehreStrategieAnalyseDurch(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => fuehreStrategieAnalyseDurch(agentId).then(() => {}));
         return { success: true, message: "Director Agent: Strategische Analyse erfolgreich" };
 
       case "trend_analyst":
-        await fuhreAgentAus(agentId, () => analysiereTrends(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => analysiereTrends(agentId).then(() => {}));
         return { success: true, message: "Trend Analyst: Analyse + Content-Generierung abgeschlossen" };
 
       case "content_factory": {
@@ -1657,7 +1652,7 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
         const typen = ["blogartikel", "tiktok", "reel", "kurzVideo"] as const;
         const plattformen = ["Blog", "TikTok", "Instagram", "YouTube"] as const;
         const idx = Math.floor(Math.random() * themen.length);
-        await fuhreAgentAus(agentId, () => generiereContent({
+        await fuehreAgentAus(agentId, () => generiereContent({
           marke: marken[idx % 3]!,
           typ: typen[idx % 4]!,
           plattform: plattformen[idx % 4]!,
@@ -1667,23 +1662,23 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
       }
 
       case "video":
-        await fuhreAgentAus(agentId, () => generiereVideoSkript(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => generiereVideoSkript(agentId).then(() => {}));
         return { success: true, message: "Video Agent: Video-Skript generiert" };
 
       case "sales":
-        await fuhreAgentAus(agentId, () => optimiereSales(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => optimiereSales(agentId).then(() => {}));
         return { success: true, message: "Sales Agent: Optimierungsanalyse abgeschlossen" };
 
       case "funnel":
-        await fuhreAgentAus(agentId, () => generiereFunnelSequenz(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => generiereFunnelSequenz(agentId).then(() => {}));
         return { success: true, message: "Funnel Agent: E-Mail-Sequenz generiert" };
 
       case "community":
-        await fuhreAgentAus(agentId, () => verarbeiteCommunitiy(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => verarbeiteCommunitiy(agentId).then(() => {}));
         return { success: true, message: "Community Agent: Antworten und DM-Vorlagen erstellt" };
 
       case "revenue_optimizer":
-        await fuhreAgentAus(agentId, () => analysiereUmsatz(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => analysiereUmsatz(agentId).then(() => {}));
         return { success: true, message: "Revenue Optimizer: Umsatz-Analyse abgeschlossen" };
 
       case "influencer": {

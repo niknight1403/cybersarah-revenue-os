@@ -178,8 +178,7 @@ export async function platziereLiveOrder(params: {
       gesamt: ausgefuehrtesVolumen.toString(),
       grund: `[LIVE] ${params.grund}`,
       strategyVersion: params.strategyVersion,
-      isLive: true,
-      binanceOrderId: String(order.orderId),
+      erfolgreich: order.status === "FILLED",
     });
 
     logger.info(
@@ -208,8 +207,7 @@ export async function platziereLiveOrder(params: {
       gesamt: "0",
       grund: `[LIVE-FEHLER] ${params.grund}: ${fehler}`,
       strategyVersion: params.strategyVersion,
-      isLive: true,
-      fehler: fehler,
+      erfolgreich: false,
     }).catch(() => {});
 
     return { erfolg: false, fehler };

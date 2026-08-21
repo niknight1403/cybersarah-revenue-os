@@ -38,6 +38,14 @@ export interface PlatformConfig {
   bestTimes: string[];
 }
 
+type ApiErrorPayload = { error?: { message?: string } };
+type TikTokApiResponse = ApiErrorPayload & {
+  data?: { publish_id?: string; creator_username?: string };
+};
+type InstagramApiResponse = ApiErrorPayload & { id?: string };
+type OAuthTokenResponse = ApiErrorPayload & { access_token?: string };
+type YouTubeUploadResponse = { id?: string };
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // KONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -117,7 +125,7 @@ async function postToTikTok(
         }),
       });
 
-      const uploadData = await uploadResp.json();
+      const uploadData = await uploadResp.json() as TikTokApiResponse;
       if (!uploadResp.ok) {
         return { platform: "tiktok", success: false, error: `Upload-Fehler: ${uploadData?.error?.message ?? uploadResp.status}` };
       }
@@ -144,7 +152,7 @@ async function postToTikTok(
       }),
     });
 
-    const textData = await textResp.json();
+    const textData = await textResp.json() as TikTokApiResponse;
     if (!textResp.ok) {
       return { platform: "tiktok", success: false, error: `Text-Post-Fehler: ${textData?.error?.message ?? textResp.status}` };
     }
@@ -185,7 +193,7 @@ async function postToInstagram(
         }),
       });
 
-      const containerData = await containerResp.json();
+      const containerData = await containerResp.json() as InstagramApiResponse;
       if (!containerResp.ok) {
         return { platform: "instagram", success: false, error: `Container-Fehler: ${containerData?.error?.message ?? containerResp.status}` };
       }
@@ -208,7 +216,7 @@ async function postToInstagram(
         }),
       });
 
-      const publishData = await publishResp.json();
+      const publishData = await publishResp.json() as InstagramApiResponse;
       if (!publishResp.ok) {
         return { platform: "instagram", success: false, error: `Publish-Fehler: ${publishData?.error?.message ?? publishResp.status}` };
       }
@@ -249,12 +257,12 @@ async function refreshYouTubeToken(): Promise<string | null> {
       }),
     });
 
-    const data = await resp.json();
+    const data = await resp.json() as OAuthTokenResponse;
     if (!resp.ok) {
       logger.warn({ error: data?.error }, "YouTube Token-Refresh fehlgeschlagen");
       return YOUTUBE_API_KEY || null;
     }
-    return data.access_token;
+    return data.access_token ?? (YOUTUBE_API_KEY || null);
   } catch {
     return YOUTUBE_API_KEY || null;
   }
@@ -334,7 +342,7 @@ async function postToYouTube(
       return { platform: "youtube", success: false, error: `Video-Upload-Fehler: ${errText.slice(0, 200)}` };
     }
 
-    const videoId = await uploadResp.json().then(d => d?.id).catch(() => null);
+    const videoId = await uploadResp.json().then((data: YouTubeUploadResponse) => data.id ?? null).catch(() => null);
 
     return {
       platform: "youtube",

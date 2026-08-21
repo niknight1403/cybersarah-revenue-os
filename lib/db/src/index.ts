@@ -1,6 +1,7 @@
 import * as schema from "./schema";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
-let db: any = null;
+let db: NodePgDatabase<typeof schema> = null!;
 const DATABASE_URL = process.env["DATABASE_URL"];
 
 if (DATABASE_URL && (DATABASE_URL.startsWith("postgres") || DATABASE_URL.startsWith("postgresql"))) {

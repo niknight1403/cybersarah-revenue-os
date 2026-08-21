@@ -2,15 +2,18 @@ import { Router, type IRouter, type Request, type Response } from "express";
 
 const router: IRouter = Router();
 
+type StoreProduct = { price?: { unitAmount?: number | null }; url?: string; images?: string[]; name?: string; description?: string };
+type StoreResponse = { products?: StoreProduct[] };
+
 // GET /api/store — Product showcase + Stripe checkout
 router.get("/store", async (_req: Request, res: Response) => {
   try {
     const stripeUrl = "http://167.233.196.20:3000/api/stripe/products";
     const response = await fetch(stripeUrl);
-    const data = await response.json();
-    const products = data.products || [];
+    const data = await response.json() as StoreResponse;
+    const products = data.products ?? [];
 
-    const productCards = products.map((p: any) => {
+    const productCards = products.map(p => {
       const price = (p.price?.unitAmount || 0) / 100;
       const buyUrl = p.url || "#";
       const img = p.images?.[0] || "";
