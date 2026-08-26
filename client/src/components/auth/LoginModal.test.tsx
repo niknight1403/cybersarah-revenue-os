@@ -18,5 +18,7 @@ describe("LoginModal", () => {
     expect(markup).toContain("Mit Microsoft anmelden");
     expect(markup).toContain("disabled=\"\"");
     expect(markup).toContain("Passwörter werden von CyberSarah nicht gespeichert");
+    expect(markup).toContain("Hilfe &amp; Support bei Login-Problemen");
+    expect(markup).toContain("https://help.manus.im");
   });
 });

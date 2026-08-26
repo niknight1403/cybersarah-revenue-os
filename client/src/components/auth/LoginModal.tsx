@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { AlertCircle, ArrowRight, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowRight, LifeBuoy, Loader2 } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
@@ -49,7 +49,7 @@ export default function LoginModal() {
           <p className="mt-1 text-xs leading-5 text-muted-foreground">Wählen Sie einen konfigurierten Identitätsanbieter. Passwörter werden von CyberSarah nicht gespeichert.</p>
         </div>
       </div>
-      {error && <div className="mt-3 flex items-start gap-2 rounded-xl border border-rose-300/20 bg-rose-300/10 p-3 text-xs leading-5 text-rose-50" role="alert"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><span>{error}</span></div>}
+      {error && <div className="mt-3 rounded-xl border border-rose-300/20 bg-rose-300/10 p-3 text-xs leading-5 text-rose-50" role="alert"><div className="flex items-start gap-2"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><span>{error}</span></div><div className="mt-3 flex flex-wrap items-center gap-3"><Button type="button" variant="outline" className="min-h-10 border-rose-200/25 bg-transparent text-xs text-rose-50 hover:bg-rose-100/10" onClick={() => { setError(null); setLoadingProvider(null); }}>Erneut versuchen</Button><a className="inline-flex min-h-10 items-center gap-1.5 text-xs text-rose-100 underline underline-offset-4" href="https://help.manus.im" target="_blank" rel="noreferrer"><LifeBuoy className="h-3.5 w-3.5" aria-hidden="true" />Hilfe &amp; Support bei Login-Problemen</a></div></div>}
       <div className="mt-4 grid gap-2 sm:grid-cols-3">
         {(["manus", "google", "microsoft"] as Provider[]).map(provider => {
           const enabled = provider === "manus" || providers.data?.[provider] === true;
@@ -58,6 +58,7 @@ export default function LoginModal() {
         })}
       </div>
       {!providers.isLoading && !providers.data?.google && !providers.data?.microsoft && <p className="mt-3 text-[11px] text-amber-100/80">Google und Microsoft sind derzeit nicht verfügbar, weil die Provider-Konfiguration fehlt.</p>}
+      <a className="mt-4 inline-flex min-h-10 items-center gap-1.5 text-xs text-cyan-200 underline underline-offset-4" href="https://help.manus.im" target="_blank" rel="noreferrer"><LifeBuoy className="h-3.5 w-3.5" aria-hidden="true" />Hilfe &amp; Support bei Login-Problemen</a>
     </section>
   );
 }

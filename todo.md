@@ -374,3 +374,9 @@
 - [x] Providerstatus und nicht konfigurierte Microsoft-Anmeldung transparent darstellen
 - [x] UI-Regression, TypeScript, Build, Preview und Health validieren
 - [x] Login-UX dokumentieren und Release-Checkpoint aktualisieren
+
+## Finaler Login-UX-Polish
+- [x] OAuth-Abbruch- und Fehlerfälle mit verständlicher Meldung und Retry-Option prüfen/verbessern
+- [x] Hilfe-&-Support-Link im Login-Modal ergänzen
+- [x] Vollständige Testsuite, TypeScript, Produktionsbuild und Port-3000-Healthchecks ausführen
+- [x] Angeforderten Git-Commit erstellen und Release-Checkpoint speichern
