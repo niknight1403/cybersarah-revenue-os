@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { Activity, ArrowRight, Bot, CircleDollarSign, ShieldCheck, Sparkles } from "lucide-react";
+import { Activity, ArrowRight, Bot, Cable, CircleDollarSign, CreditCard, ShieldCheck, ShoppingBag, Sparkles } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 
 function sendFunnelEvent(key: string, eventType: "landing_view" | "cta_click" | "checkout.session.created") {
@@ -14,6 +14,13 @@ function sendExperimentOutcome(subjectKey: string, experimentId: number, eventTy
   const payload = JSON.stringify({ subjectKey, experimentId, eventType });
   navigator.sendBeacon("/api/events/experiment", new Blob([payload], { type: "application/json" }));
 }
+
+const connectorStates = [
+  { name: "Stripe", detail: "Checkout, Webhooks & Dunning", status: "Providerfreigabe erforderlich", tone: "amber", icon: CreditCard },
+  { name: "Shopify", detail: "Katalog & Storefront", status: "Storefront konfiguriert · Claim erforderlich", tone: "cyan", icon: ShoppingBag },
+  { name: "RevenueCat", detail: "In-App-Abos & MRR", status: "Connector verfügbar · nicht aktiviert", tone: "violet", icon: Cable },
+  { name: "HubSpot", detail: "CRM & Deals", status: "Connector verfügbar · nicht aktiviert", tone: "violet", icon: Cable },
+] as const;
 
 const operatingAreas = [
   {
@@ -111,6 +118,16 @@ export default function RevenueHome() {
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
             </article>
           ))}
+        </section>
+
+        <section className="cyber-panel mt-6 p-5 sm:p-6" aria-label="Connector-Status">
+          <div className="flex items-start justify-between gap-4">
+            <div><p className="mono text-[10px] tracking-[0.16em] text-cyan-200">CONNECTOR HUB // READ ONLY</p><h2 className="mt-2 text-xl font-semibold text-white">Verbindungen mit Freigabegrenze</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">HARA kann Daten für Analyse und Entwürfe vorbereiten. Zahlungen, Nachrichten, Posts und Veröffentlichungen bleiben bis zur expliziten Einzel-Freigabe blockiert.</p></div>
+            <Cable className="hidden h-5 w-5 shrink-0 text-cyan-200 sm:block" aria-hidden="true" />
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {connectorStates.map(({ name, detail, status, tone, icon: Icon }) => <div key={name} className={`rounded-xl border p-4 ${tone === "amber" ? "border-amber-300/20 bg-amber-300/[0.04]" : tone === "cyan" ? "border-cyan-300/20 bg-cyan-300/[0.04]" : "border-violet-300/20 bg-violet-300/[0.04]"}`}><Icon className="h-4 w-4 text-cyan-200" aria-hidden="true" /><p className="mt-3 text-sm font-semibold text-white">{name}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p><p className="mt-3 text-[11px] leading-4 text-amber-100">{status}</p></div>)}
+          </div>
         </section>
 
         <section className="mt-6 grid gap-4 lg:grid-cols-[1.45fr_1fr]">

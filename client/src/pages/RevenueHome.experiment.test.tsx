@@ -31,5 +31,8 @@ describe("RevenueHome headline experiment", () => {
     const markup = renderToStaticMarkup(<RevenueHome />);
     expect(markup).toContain("Revenue Operations, die nachvollziehbar wachsen");
     expect(markup).not.toContain(">CyberSarah Revenue OS</h1>");
+    expect(markup).toContain("Verbindungen mit Freigabegrenze");
+    expect(markup).toContain("Providerfreigabe erforderlich");
+    expect(markup).toContain("Zahlungen, Nachrichten, Posts und Veröffentlichungen bleiben bis zur expliziten Einzel-Freigabe blockiert.");
   });
 });

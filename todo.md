@@ -183,3 +183,13 @@
 - [x] Attribution aus `aggregateGrowthMetrics` in `runGrowthAnalysis` und/oder relevante Overview-Ausgaben durchgereicht und mit Router-/Integrationstests verifiziert
 - [x] Attribution aus `aggregateGrowthMetrics` in `runGrowthAnalysis` durchgereicht und im Rückgabeobjekt exponiert
 - [x] Attribution in einer relevanten Overview-/Router-Antwort sichtbar gemacht und per Router-/Integrationstest verifiziert
+
+## Neue Arbeitsvorgabe: Connector-Integration und Revenue-Engine
+- [x] Connector-Anforderungen gegen den bestehenden Projektpfad statt gegen `/opt/cybersarah` abgeglichen und nicht vorhandene Repositories/Connectoren transparent abgegrenzt
+- [x] Verfügbare Payment-, Shopify-, CRM- und MCP-Integrationen inventarisiert; nicht konfigurierte Provider werden nicht als aktiv ausgegeben
+- [x] Globalen Semi-Autopilot-/Approval-first-Vertrag auf alle neuen Connector-Drafts und externen Aktionspfade angewendet
+- [x] Sichere Provider-Fallbacks für konfigurierbare Integrationen mit Retry-Hinweis, Audit und ohne automatische Außenwirkung ergänzt
+- [x] Attribution, Funnel- und Connector-Signale in Revenue-Overview und HARA-Analyse sichtbar gemacht
+- [x] Connector-Status-, Approval- und Fehlerzustände im mobilen Dashboard verständlich dargestellt
+- [x] Neue Connector-Verträge, Sicherheitsgrenzen, TypeScript und Produktionsbuild vollständig getestet
+- [x] Finalen Connector-Stand als Checkpoint zur Veröffentlichung vorbereitet und den Status je Connector dokumentiert
