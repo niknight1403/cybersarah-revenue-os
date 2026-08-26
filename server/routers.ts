@@ -72,6 +72,9 @@ export const appRouter = router({
   subscriptions: router({
     readiness: protectedProcedure.query(() => ({ subscription: getSubscriptionReadiness(), production: getProductionReadiness(), stagingSecrets: resolveStagingSecrets() })),
   }),
+  account: router({
+    identityLinks: protectedProcedure.query(({ ctx }) => db.getAccountIdentityLinks(ctx.user.id)),
+  }),
   monetization: router({
     overview: protectedProcedure.query(({ ctx }) => db.getMonetizationOverview(ctx.user.id)),
     createDraft: protectedProcedure

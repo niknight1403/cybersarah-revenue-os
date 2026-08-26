@@ -324,3 +324,11 @@
 ## Scope-Änderung: Microsoft-Login entfernt
 - [x] Microsoft OAuth aus dem aktiven Login-Flow herauslassen; Manus OAuth und Google OAuth bleiben die vorgesehenen Provider
 - [x] Google-/Manus-Login, Onboarding-Einstieg, Tests, Build und verwalteten Release final verifiziert
+
+## Neue Arbeitsvorgabe: Sichere Google-Account-Verknüpfung
+- [x] Bestehende User-, OAuth- und Dashboard-Verträge für Account-Linking geprüft
+- [x] Geschützten Google-Linking-Flow mit State-/PKCE-Schutz und bestehender Session implementiert
+- [x] Konfliktprüfung gegen bereits verknüpfte Google-Identitäten und Audit-Eintrag ergänzt
+- [x] Dashboard-UI für Verknüpfung, Status und Fehlerzustände integriert
+- [x] Linking-Tests, TypeScript, Produktionsbuild und Health validiert
+- [x] Dokumentation und Release-Checkpoint aktualisiert

@@ -29,6 +29,19 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
+export const accountIdentityLinks = mysqlTable("accountIdentityLinks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  provider: mysqlEnum("provider", ["google"]).notNull(),
+  providerSubject: varchar("providerSubject", { length: 191 }).notNull(),
+  providerEmail: varchar("providerEmail", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({ providerSubjectUnique: uniqueIndex("accountIdentityLinks_provider_subject_unique").on(table.provider, table.providerSubject), userProviderUnique: uniqueIndex("accountIdentityLinks_user_provider_unique").on(table.userId, table.provider) }));
+
+export type AccountIdentityLink = typeof accountIdentityLinks.$inferSelect;
+export type InsertAccountIdentityLink = typeof accountIdentityLinks.$inferInsert;
+
 // Zivilisationen
 export const civilizations = mysqlTable("civilizations", {
   id: int("id").autoincrement().primaryKey(),

@@ -22,6 +22,43 @@ function readCookie(req: Request, name: string) {
 }
 
 export function registerOAuthRoutes(app: Express) {
+  app.get("/api/oauth/google/link", async (req: Request, res: Response) => {
+    try {
+      const currentUser = await sdk.authenticateRequest(req);
+      if (!currentUser?.openId) { res.status(401).json({ error: "authentication-required" }); return; }
+      const authorization = createGoogleAuthorization({ redirectUri: `${requestOrigin(req)}/api/oauth/google/link/callback` });
+      if (!authorization) { res.status(503).json({ error: "google-oauth-not-configured" }); return; }
+      res.cookie("google_oauth_link_state", JSON.stringify({ state: authorization.state, verifier: authorization.verifier, sessionOpenId: currentUser.openId }), { httpOnly: true, sameSite: "lax", secure: req.secure || req.headers["x-forwarded-proto"] === "https", maxAge: 10 * 60 * 1000, path: "/api/oauth/google/link" });
+      res.redirect(302, authorization.url);
+    } catch { res.status(401).json({ error: "authentication-required" }); }
+  });
+
+  app.get("/api/oauth/google/link/callback", async (req: Request, res: Response) => {
+    const code = getQueryParam(req, "code");
+    const state = getQueryParam(req, "state");
+    const stored = readCookie(req, "google_oauth_link_state");
+    res.clearCookie("google_oauth_link_state", { path: "/api/oauth/google/link" });
+    if (!code || !state || !stored) { res.status(400).json({ error: "google-link-code-state-required" }); return; }
+    try {
+      const currentUser = await sdk.authenticateRequest(req);
+      if (!currentUser?.openId) { res.status(401).json({ error: "authentication-required" }); return; }
+      const parsed = JSON.parse(stored) as { state?: string; verifier?: string; sessionOpenId?: string };
+      if (parsed.state !== state || !parsed.verifier || parsed.sessionOpenId !== currentUser.openId) { res.status(400).json({ error: "google-link-state-mismatch" }); return; }
+      const googleUser = await exchangeGoogleCode({ code, verifier: parsed.verifier, redirectUri: `${requestOrigin(req)}/api/oauth/google/link/callback` });
+      const existingUser = await db.getUserByOpenId(currentUser.openId);
+      if (!existingUser) { res.status(404).json({ error: "current-user-not-found" }); return; }
+      const result = await db.linkGoogleIdentity({ userId: existingUser.id, providerSubject: googleUser.openId.slice("google:".length), providerEmail: googleUser.email });
+      const workspace = await db.getRevenueWorkspaceByUser(existingUser.id);
+      if (workspace) await db.recordGrowthAudit({ workspaceId: workspace.id, idempotencyKey: `google-account-link:${existingUser.id}:${googleUser.openId}`, actor: "user", eventType: result.status === "linked" ? "account.google.linked" : "account.google.link.rejected", status: result.status === "linked" || result.status === "already_linked" ? "completed" : "failed", detail: { provider: "google", result: result.status, externalExecution: false, approvalRequired: false } });
+      if (result.status === "identity_conflict") { res.status(409).json({ error: "google-identity-already-linked", externalExecution: false }); return; }
+      if (result.status === "provider_already_linked") { res.status(409).json({ error: "google-provider-already-linked", externalExecution: false }); return; }
+      res.redirect(302, "/account?linked=google");
+    } catch (error) {
+      console.error("[OAuth] Google link callback failed", error);
+      res.status(502).json({ error: "google-link-failed", externalExecution: false });
+    }
+  });
+
   app.get("/api/oauth/google", (req: Request, res: Response) => {
     if (!googleOAuthConfigured()) { res.status(503).json({ error: "google-oauth-not-configured" }); return; }
     const redirectUri = `${requestOrigin(req)}/api/oauth/google/callback`;

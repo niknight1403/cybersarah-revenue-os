@@ -17,6 +17,7 @@ import {
   revenueSystemAudits,
   revenueWorkspaces,
   users,
+  accountIdentityLinks,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { DEFAULT_REVENUE_AGENTS } from "./services/revenueCatalog";
@@ -60,6 +61,30 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const [user] = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return user;
+}
+
+export async function getUserById(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  return user;
+}
+
+export async function getAccountIdentityLinks(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ provider: accountIdentityLinks.provider, providerEmail: accountIdentityLinks.providerEmail, createdAt: accountIdentityLinks.createdAt }).from(accountIdentityLinks).where(eq(accountIdentityLinks.userId, userId));
+}
+
+export async function linkGoogleIdentity(input: { userId: number; providerSubject: string; providerEmail?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Datenbank ist nicht verfügbar.");
+  const [existingIdentity] = await db.select().from(accountIdentityLinks).where(and(eq(accountIdentityLinks.provider, "google"), eq(accountIdentityLinks.providerSubject, input.providerSubject))).limit(1);
+  if (existingIdentity) return { status: existingIdentity.userId === input.userId ? "already_linked" as const : "identity_conflict" as const, userId: existingIdentity.userId };
+  const [existingProvider] = await db.select().from(accountIdentityLinks).where(and(eq(accountIdentityLinks.provider, "google"), eq(accountIdentityLinks.userId, input.userId))).limit(1);
+  if (existingProvider) return { status: "provider_already_linked" as const, userId: input.userId };
+  await db.insert(accountIdentityLinks).values({ userId: input.userId, provider: "google", providerSubject: input.providerSubject, providerEmail: input.providerEmail ?? null });
+  return { status: "linked" as const, userId: input.userId };
 }
 
 export async function getComplianceStatus(userId: number) {
