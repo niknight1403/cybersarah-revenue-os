@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.7] — 2026-08-26
+
+### Added
+
+- Mobiler Release Center unter `/release` mit Quality-Gate, GitHub-Branch-/Checkpoint-Status, Android-Readiness und direktem Approval-Queue-Einstieg.
+- Sprint-Dokumentation unter `docs/release-sprint-01.md`.
+
+### Validation
+
+- 61 Testdateien und 130 Tests, TypeScript, Produktionsbuild sowie `healthz`, `readyz` und `livez` auf Port 3000 erfolgreich.
+- Vorhandenes AAB dokumentiert; ein debug-signiertes Universal-APK wurde separat als GitHub-Release-Artefakt erzeugt. Private Produktionsschlüssel bleiben außerhalb des Repositorys.
+
+
 ## [1.0.6] — 2026-08-26
 
 ### Added

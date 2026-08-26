@@ -34,7 +34,7 @@ export default function ReleaseCenter() {
               <GitBranch className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-semibold text-white">Version 1.0.6</p>
+              <p className="font-semibold text-white">Version 1.0.7</p>
               <p className="mt-1 text-xs text-muted-foreground">Branch main · Approval-first Release</p>
             </div>
           </div>
