@@ -332,3 +332,10 @@
 - [x] Dashboard-UI für Verknüpfung, Status und Fehlerzustände integriert
 - [x] Linking-Tests, TypeScript, Produktionsbuild und Health validiert
 - [x] Dokumentation und Release-Checkpoint aktualisiert
+
+## Bugfix: Google redirect_uri_mismatch
+- [x] Tatsächliche öffentliche Callback-URI aus dem Managed-Proxy reproduzierbar ermittelt
+- [x] Redirect-URI-Ermittlung für Login und Account-Linking deploymentfest vereinheitlicht
+- [x] Diagnosehinweis und Google-Cloud-Konfigurationsanleitung im Projektbericht ergänzt
+- [x] Redirect-Regression, TypeScript, Build, Health und Preview validiert
+- [x] Fehlerbehebung dokumentiert und neuen Release-Checkpoint vorbereitet
