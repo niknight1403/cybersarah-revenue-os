@@ -32,6 +32,7 @@ const menuItems = [
   { icon: Sparkles, label: "KI Influence", path: "/influence" },
   { icon: CheckSquare, label: "Tasks", path: "/tasks" },
   { icon: Megaphone, label: "Vermarktung", path: "/marketing" },
+  { icon: ShieldCheck, label: "Compliance", path: "/compliance" },
   { icon: LayoutDashboard, label: "Workspace", path: "/app" },
   { icon: Bot, label: "Agenten", path: "/agents" },
   { icon: ShieldCheck, label: "Freigaben", path: "/approvals" },
@@ -40,6 +41,7 @@ const menuItems = [
 ];
 
 export const MOBILE_AUTONOMY_NAV = menuItems.slice(0, 4).concat({ icon: ChartNoAxesCombined, label: "Growth", path: "/growth" });
+export const MOBILE_UTILITY_NAV = [{ icon: ShieldCheck, label: "Compliance", path: "/compliance" }];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -266,6 +268,7 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
+            {MOBILE_UTILITY_NAV.map(item => <button key={item.path} onClick={() => setLocation(item.path)} aria-label={`${item.label} öffnen`} className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${location === item.path ? "bg-cyan-300/15 text-cyan-100" : "text-slate-300 hover:bg-white/5"}`}><item.icon className="h-5 w-5" /></button>)}
           </div>
         )}
         <main className="flex-1 p-4 pb-24 sm:p-6 sm:pb-6">{children}</main>

@@ -8,6 +8,7 @@ import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_
 import * as db from "./db";
 import { createStripeCheckoutSession, createStripePaymentLink, getStripeProviderReadiness } from "./services/stripeProvider";
 import { createHeartbeatJob, updateHeartbeatJob } from "./_core/heartbeat";
+import { buildMonetizationApprovalDraft } from "./services/marketingCompliance";
 
 export const appRouter = router({
   system: systemRouter,
@@ -57,6 +58,64 @@ export const appRouter = router({
         }
         await db.createRevenueApprovalDraft(ctx.user.id, input);
         return { success: true } as const;
+      }),
+  }),
+  monetization: router({
+    overview: protectedProcedure.query(({ ctx }) => db.getMonetizationOverview(ctx.user.id)),
+    createDraft: protectedProcedure
+      .input(z.object({
+        channel: z.enum(["affiliate", "social", "ads"]),
+        target: z.string().trim().min(2).max(240),
+        title: z.string().trim().min(2).max(180),
+        content: z.string().trim().min(8).max(4_000),
+        affiliate: z.boolean().default(false),
+        sponsored: z.boolean().default(false),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const workspace = await db.getRevenueWorkspaceByUser(ctx.user.id);
+        if (!workspace) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Bitte richten Sie zuerst einen Arbeitsbereich ein." });
+        const draft = buildMonetizationApprovalDraft(input);
+        await db.createRevenueApprovalDraft(ctx.user.id, draft);
+        await db.recordGrowthAudit({
+          workspaceId: workspace.id,
+          idempotencyKey: `monetization-draft:${workspace.id}:${input.channel}:${input.target.trim().toLowerCase()}`,
+          actor: "user",
+          eventType: "monetization.draft.created",
+          status: "accepted",
+          detail: { channel: input.channel, actionType: draft.actionType, externalExecution: false, disclosure: draft.payload.compliance.aiDisclosure },
+        });
+        return { success: true as const, actionType: draft.actionType, disclosure: draft.payload.compliance.aiDisclosure };
+      }),
+  }),
+  compliance: router({
+    status: protectedProcedure.query(({ ctx }) => db.getComplianceStatus(ctx.user.id)),
+    requestVerificationProviderSetup: protectedProcedure
+      .input(z.object({ method: z.enum(["id_check", "credit_card", "third_party_kyc"]) }))
+      .mutation(async ({ ctx, input }) => {
+        const workspace = await db.getRevenueWorkspaceByUser(ctx.user.id);
+        if (!workspace) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Bitte richten Sie zuerst einen Arbeitsbereich ein." });
+        await db.createRevenueApprovalDraft(ctx.user.id, {
+          actionType: "age_verification_provider_setup_draft",
+          target: "21+ Verifikationsprovider",
+          payload: {
+            source: "compliance_center",
+            externalExecution: false,
+            consentRequired: true,
+            verificationMethod: input.method,
+            storesKycDocuments: false,
+            vaultAccess: false,
+            guardrail: "Nur Provider-Setup als Entwurf. Keine Altersfreischaltung, KYC-Prüfung oder Speicherung von Ausweisdokumenten ohne explizite Freigabe und konfigurierte Anbieterintegration.",
+          },
+        });
+        await db.recordGrowthAudit({
+          workspaceId: workspace.id,
+          idempotencyKey: `compliance-provider-setup:${workspace.id}:${input.method}`,
+          actor: "user",
+          eventType: "compliance.verification_provider_setup_draft",
+          status: "accepted",
+          detail: { method: input.method, externalExecution: false, storesKycDocuments: false },
+        });
+        return { success: true as const, verified: false as const };
       }),
   }),
   stripe: router({

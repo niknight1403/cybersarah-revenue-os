@@ -117,3 +117,19 @@
 - [x] Routenschutz der HARA-, KI-Influence-, Tasks- und Produktmarketing-Module ohne Sitzung automatisiert nachgewiesen
 - [x] Für neue Autonomie-Aktionen den Entwurfsstatus ohne direkte Außenwirkung im Router und UI regressiv nachgewiesen
 - [x] KI-Influence- und Produktmarketing-Aktionen über den produktiven Router als reine Freigabeentwürfe nachgewiesen
+
+## Nutzerauftrag: Prompt-Übernahme und Repository-Übertragung
+- [x] Beigefügte Arbeitsvorgabe ausgewertet und gegen den aktuellen CyberSarah-Stand abgeglichen
+- [ ] Geprüften Hauptbranch-Stand in das konfigurierte Zielrepository übertragen
+
+## Freigabegesicherte Monetarisierung und Compliance
+- [x] Bestehende Stripe-Only-, Freigabe- und Audit-Grenzen gegen Multi-Gateway-, Affiliate- und Social-Promptanforderungen dokumentiert abgeglichen
+- [x] Transparenzkennzeichnung für KI-, Affiliate- und Sponsoring-Entwürfe zentral und testbar ergänzt
+- [x] Affiliate-, Social- und Anzeigen-Aktionen ausschließlich als auditierbare Freigabeentwürfe modelliert
+- [x] Aggregierte Einnahmenübersicht über verbundene Quellen als konfigurationssicheren Lesestatus ergänzt
+- [x] Compliance-Status für altersbeschränkte Inhalte als nicht speichernde, providerneutrale Verifikationsvorbereitung ergänzt
+- [x] Additiven 21+-Verifikationsstatus mit Methode und Zeitstempel ohne KYC-Rohdaten modelliert und migriert
+- [x] Geschützten Compliance-Status und freigabepflichtige Verifikationsanforderung im mobilen Dashboard bereitgestellt
+- [x] Redigierten, auditierbaren MCP-Lesezugriff für konsolidierte Einnahmen ergänzt
+- [x] Compliance-Modul über einen gleichwertig fingerfreundlichen mobilen Einstieg erreichbar gemacht und regressiv getestet
+- [x] Gerenderten mobilen Compliance-Schnelleinstieg mit zugänglichem Label regressiv nachgewiesen

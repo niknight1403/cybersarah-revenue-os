@@ -60,6 +60,26 @@ export async function getUserByOpenId(openId: string) {
   return user;
 }
 
+export async function getComplianceStatus(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Datenbank ist nicht verfügbar.");
+  const [user, workspace] = await Promise.all([
+    db.select().from(users).where(eq(users.id, userId)).limit(1),
+    getRevenueWorkspaceByUser(userId),
+  ]);
+  if (!user[0]) throw new Error("Benutzerprofil wurde nicht gefunden.");
+  const actions = workspace ? await db.select().from(revenueExternalActions).where(eq(revenueExternalActions.workspaceId, workspace.id)) : [];
+  const latestRequest = actions.filter(action => action.actionType === "age_verification_provider_setup_draft").sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ?? null;
+  return {
+    is21Verified: user[0].is21Verified,
+    verificationMethod: user[0].verificationMethod,
+    verificationTimestamp: user[0].verificationTimestamp,
+    vaultAccess: user[0].is21Verified,
+    providerSetupStatus: latestRequest?.status ?? "not_requested",
+    hasProviderSetupRequest: Boolean(latestRequest),
+  };
+}
+
 export async function getRevenueWorkspaceByUser(userId: number) {
   const db = await getDb();
   if (!db) return undefined;
@@ -122,6 +142,36 @@ export async function getRevenueOverview(userId: number) {
     })),
     latestAudit: audits[0] ?? null,
   };
+}
+
+export async function getMonetizationOverview(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Datenbank ist nicht verfügbar.");
+  const workspace = await getRevenueWorkspaceByUser(userId);
+  if (!workspace) return { workspace: null, totalCents: 0, currency: "EUR", metricDate: null, sources: [] as Array<{ source: string; status: string; amountCents: number | null }> };
+
+  const [[metric], [stripe]] = await Promise.all([
+    db.select().from(revenueDailyMetrics).where(eq(revenueDailyMetrics.workspaceId, workspace.id)).orderBy(desc(revenueDailyMetrics.metricDate)).limit(1),
+    db.select().from(revenueProviderConfigs).where(and(eq(revenueProviderConfigs.workspaceId, workspace.id), eq(revenueProviderConfigs.provider, "stripe"))).limit(1),
+  ]);
+
+  return {
+    workspace,
+    totalCents: metric?.revenueCents ?? 0,
+    currency: "EUR",
+    metricDate: metric?.metricDate ?? null,
+    sources: [
+      { source: "Stripe", status: stripe?.status ?? "not_configured", amountCents: metric?.revenueCents ?? 0 },
+      { source: "Affiliate", status: "not_connected", amountCents: null },
+      { source: "Ads / Sponsoring", status: "not_connected", amountCents: null },
+      { source: "Social", status: "not_connected", amountCents: null },
+    ],
+  };
+}
+
+export async function getMcpMonetizationOverview() {
+  const workspace = await getMcpOwnerWorkspace();
+  return getMonetizationOverview(workspace.userId);
 }
 
 export async function setRevenueAgentEnabled(userId: number, agentId: number, enabled: boolean) {

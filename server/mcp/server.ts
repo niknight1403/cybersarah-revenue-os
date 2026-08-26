@@ -46,6 +46,9 @@ export function createRevenueMcpServer() {
   server.registerTool("get_financial_summary", { title: "Finanzzusammenfassung", description: "Liest MRR, ARR, Umsatz-, Churn- und Conversion-Signale des Revenue-Arbeitsbereichs.", inputSchema: z.object({}) }, async (_input, extra) => {
     try { return { content: [{ type: "text", text: asText(await auditMcpOperation("tool.financial_summary", extra.requestId, () => db.getMcpRevenueMetrics())) }] }; } catch (error) { return toolError(error); }
   });
+  server.registerTool("get_total_earnings", { title: "Konsolidierte Einnahmen", description: "Liest den redigierten Status aggregierter Stripe-Einnahmen und nicht verbundener Monetarisierungsquellen. Es werden keine Providerzugangsdaten offengelegt.", inputSchema: z.object({}) }, async (_input, extra) => {
+    try { return { content: [{ type: "text", text: asText(await auditMcpOperation("tool.total_earnings", extra.requestId, () => db.getMcpMonetizationOverview())) }] }; } catch (error) { return toolError(error); }
+  });
   server.registerTool("trigger_dunning_sequence", { title: "Dunning-Entwurf", description: "Erstellt ausschließlich einen auditierten, freigabepflichtigen Dunning-Entwurf für einen registrierten Zahlungsfehler; es wird keine Nachricht versendet.", inputSchema: z.object({ revenueEventId: z.number().int().positive() }) }, async ({ revenueEventId }, extra) => {
     try { return { content: [{ type: "text", text: asText(await auditMcpOperation("tool.dunning_draft", extra.requestId, () => db.triggerMcpDunningDraft(revenueEventId))) }] }; } catch (error) { return toolError(error); }
   });
