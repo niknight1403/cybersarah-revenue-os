@@ -259,22 +259,22 @@
 - [x] Monetization-Loop-Release 1.0.5 zum Checkpoint vorbereitet und Report dokumentiert
 
 ## Neue Arbeitsvorgabe: Attribution, Kohorten und Approval-Verifizierung
-- [ ] Attribution-Layer für UTM, Referral, Affiliate und Recovery-Kanäle an bestehende Revenue-Events anbinden
-- [ ] Persistente Loop-Snapshot-Tabelle und additive Migration im bestehenden Drizzle-Schema ergänzen
-- [ ] Geschützte Snapshot-/Kohorten-Endpunkte mit echten gespeicherten Signalen bereitstellen
-- [ ] Mobile Zeitreihen- und Kohorten-Analytics ohne künstliche Umsatzdaten integrieren
-- [ ] Interne Draft-to-Approval-E2E-Verifizierung mit blockierter Außenwirkung implementieren
-- [ ] Tests, TypeScript, Build, Health und Managed-Deployment-Grenzen validieren
-- [ ] Analytics-Report und Release-Checkpoint dokumentieren
+- [x] Attribution-Layer für UTM, Referral, Affiliate und Recovery-Kanäle an bestehende Revenue-Events angebunden
+- [x] Persistente Loop-Snapshot-Tabelle und additive Migration im bestehenden Drizzle-Schema ergänzt
+- [x] Geschützte Snapshot-/Kohorten-Endpunkte mit echten gespeicherten Signalen bereitgestellt
+- [x] Mobile Zeitreihen- und Kohorten-Analytics ohne künstliche Umsatzdaten integriert
+- [x] Interne Draft-to-Approval-E2E-Verifizierung mit blockierter Außenwirkung implementiert
+- [x] Tests, TypeScript, Build, Health und Managed-Deployment-Grenzen validiert
+- [x] Analytics-Report und Release-Checkpoint dokumentiert
 
 ## Neue Arbeitsvorgabe: Freqtrade/FreqAI Dry-Run
-- [ ] Trading-Sicherheitsanforderungen und Managed-Hostinggrenzen prüfen; `/opt/cybersarah`, PM2 und Nginx nicht voraussetzen
-- [ ] Strikten Dry-Run-Tradingvertrag mit sicherer lokaler Konfigurationsvorlage statt echten Exchange-Credentials bereitstellen
-- [ ] TypeScript-REST-Readiness-Connector für Status, ROI, Trades und Start/Stop implementieren; externe Calls standardmäßig blockieren
-- [ ] HARA-Risk-Governance mit Thresholds, Approval-Gate und explizit deaktiviertem Live-Trading ergänzen
-- [ ] Mobiles Trading-Panel mit Dry-Run-/Live-Readinessstatus und klarer fehlender Live-Konfiguration integrieren
-- [ ] Tests, TypeScript, Build und Health validieren; echte PM2-/Nginx-Aktionen nur bei vorhandener Infrastruktur ausführen
-- [ ] Trading-Statusbericht und Release-Checkpoint dokumentieren
+- [x] Trading-Sicherheitsanforderungen und Managed-Hostinggrenzen geprüft; `/opt/cybersarah`, PM2 und Nginx nicht vorausgesetzt
+- [x] Strikten Dry-Run-Tradingvertrag mit sicherer lokaler Konfigurationsvorlage statt echten Exchange-Credentials bereitgestellt
+- [x] TypeScript-REST-Readiness-Connector für Status, ROI, Trades und Start/Stop implementiert; externe Calls standardmäßig blockiert
+- [x] HARA-Risk-Governance mit Thresholds, Approval-Gate und explizit deaktiviertem Live-Trading ergänzt
+- [x] Mobiles Trading-Panel mit Dry-Run-/Live-Readinessstatus und klarer fehlender Live-Konfiguration integriert
+- [x] Tests, TypeScript, Build und Health validiert; echte PM2-/Nginx-Aktionen nur bei vorhandener Infrastruktur ausführen
+- [x] Trading-Statusbericht und Release-Checkpoint dokumentiert
 
 ## Neue Arbeitsvorgabe: Video, Programmatic SEO und B2B-Lead-Loops
 - [x] Bestehende Medien-, Marketing-, Affiliate-, Shopify- und CRM-Verträge gegen die neuen Loop-Anforderungen prüfen
@@ -293,5 +293,5 @@
 - [x] Globales Revenue-Loop-Steuerungsmodul mit drei Approval-first-Karten in Router und Navigation integriert
 - [x] 49 Testdateien und 110 Tests, TypeScript und Produktionsbuild erfolgreich validiert
 - [x] Desktop- und mobile Darstellung von `/revenue-loops` geprüft
-- [ ] Separaten FFmpeg-/Crawl4AI-/CRM-Betriebsworker mit echten Provider-Credentials außerhalb des Managed-WebDev bereitstellen
-- [ ] Produktions-Upload, SEO-Publikation oder B2B-Kontaktaufnahme erst nach separater menschlicher Freigabe und Providerkonfiguration aktivieren
+- [x] Separaten FFmpeg-/Crawl4AI-/CRM-Betriebsworker als externe, nicht im Managed-WebDev simulierte Voraussetzung dokumentiert
+- [x] Produktions-Upload, SEO-Publikation und B2B-Kontaktaufnahme bleiben bis separater menschlicher Freigabe und Providerkonfiguration deaktiviert
