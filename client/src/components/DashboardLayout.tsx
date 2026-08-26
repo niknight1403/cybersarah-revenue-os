@@ -38,11 +38,13 @@ const menuItems = [
   { icon: ShieldCheck, label: "Freigaben", path: "/approvals" },
   { icon: ChartNoAxesCombined, label: "Growth", path: "/growth" },
   { icon: ChartNoAxesCombined, label: "Loop Intelligence", path: "/loop-intelligence" },
+  { icon: Activity, label: "Trading · Dry-Run", path: "/trading" },
+  { icon: Sparkles, label: "Global Revenue Loops", path: "/revenue-loops" },
   { icon: Activity, label: "System", path: "/system" },
 ];
 
 export const MOBILE_AUTONOMY_NAV = menuItems.slice(0, 4).concat({ icon: ChartNoAxesCombined, label: "Growth", path: "/growth" });
-export const MOBILE_UTILITY_NAV = [{ icon: ShieldCheck, label: "Compliance", path: "/compliance" }];
+export const MOBILE_UTILITY_NAV = [{ icon: ShieldCheck, label: "Compliance", path: "/compliance" }, { icon: Activity, label: "Trading · Dry-Run", path: "/trading" }, { icon: Sparkles, label: "Revenue Loops", path: "/revenue-loops" }];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;

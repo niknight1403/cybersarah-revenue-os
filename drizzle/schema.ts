@@ -511,3 +511,25 @@ export type GrowthExperimentEvent = typeof growthExperimentEvents.$inferSelect;
 export type RetentionCase = typeof retentionCases.$inferSelect;
 export type GrowthLoopSetting = typeof growthLoopSettings.$inferSelect;
 export type GrowthAuditEvent = typeof growthAuditEvents.$inferSelect;
+export type LoopSnapshot = typeof loopSnapshots.$inferSelect;
+
+export const loopSnapshots = mysqlTable(
+  "loop_snapshots",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    workspaceId: int("workspaceId").notNull(),
+    loopId: varchar("loopId", { length: 64 }).notNull(),
+    snapshotDate: varchar("snapshotDate", { length: 10 }).notNull(),
+    mode: mysqlEnum("mode", ["manual_approval", "semi_autopilot_internal"]).default("manual_approval").notNull(),
+    conversionRate: decimal("conversionRate", { precision: 8, scale: 6 }),
+    revenueCents: int("revenueCents"),
+    signals: json("signals").$type<Record<string, number>>().notNull(),
+    approvalRequired: boolean("approvalRequired").default(true).notNull(),
+    externalExecution: boolean("externalExecution").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    uniqueIndex("loop_snapshots_workspace_loop_date_idx").on(table.workspaceId, table.loopId, table.snapshotDate),
+    index("loop_snapshots_workspace_date_idx").on(table.workspaceId, table.snapshotDate),
+  ]
+);

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schema.freqtrade.io/schema.json",
+  "dry_run": true,
+  "trading_mode": "spot",
+  "margin_mode": "isolated",
+  "stake_currency": "USDT",
+  "stake_amount": "unlimited",
+  "max_open_trades": 0,
+  "exchange": {
+    "name": "sandbox-only",
+    "key": "",
+    "secret": "",
+    "ccxt_config": { "enableRateLimit": true }
+  },
+  "api_server": {
+    "enabled": true,
+    "listen_ip_address": "127.0.0.1",
+    "listen_port": 8080,
+    "verbosity": "error",
+    "enable_openapi": false,
+    "jwt_secret_key": "SET_OUTSIDE_REPOSITORY",
+    "CORS_origins": []
+  },
+  "api_server_note": "Template only. Set FREQTRADE_API_URL and FREQTRADE_API_TOKEN through managed secrets; do not commit credentials."
+}

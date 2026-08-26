@@ -16,6 +16,8 @@ import RevenueGrowth from "@/pages/RevenueGrowth";
 import PlayStorePolicy from "@/pages/PlayStorePolicy";
 import HaraOnboarding from "@/pages/HaraOnboarding";
 import LoopIntelligence from "@/pages/LoopIntelligence";
+import TradingPanel from "@/pages/TradingPanel";
+import GlobalRevenueLoops from "@/components/GlobalRevenueLoops";
 import RevenueWorkspace from "@/pages/RevenueWorkspace";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -30,11 +32,13 @@ function GrowthRoute() { return <ProtectedRoute><RevenueGrowth /></ProtectedRout
 function HaraRoute() { return <ProtectedRoute><HaraCenter /></ProtectedRoute>; }
 function HaraOnboardingRoute() { return <ProtectedRoute><HaraOnboarding /></ProtectedRoute>; }
 function LoopIntelligenceRoute() { return <ProtectedRoute><LoopIntelligence /></ProtectedRoute>; }
+function TradingRoute() { return <ProtectedRoute><TradingPanel /></ProtectedRoute>; }
+function GlobalRevenueLoopsRoute() { return <ProtectedRoute><GlobalRevenueLoops /></ProtectedRoute>; }
 function InfluenceRoute() { return <ProtectedRoute><InfluenceCenter /></ProtectedRoute>; }
 function TasksRoute() { return <ProtectedRoute><AutonomyTasks /></ProtectedRoute>; }
 function ProductMarketingRoute() { return <ProtectedRoute><ProductMarketing /></ProtectedRoute>; }
 function ComplianceRoute() { return <ProtectedRoute><ComplianceCenter /></ProtectedRoute>; }
 
-function Router() { return <Switch><Route path="/" component={RevenueHome} /><Route path="/privacy" component={() => <PlayStorePolicy kind="privacy" />} /><Route path="/terms" component={() => <PlayStorePolicy kind="terms" />} /><Route path="/account-deletion" component={() => <PlayStorePolicy kind="deletion" />} /><Route path="/checkout" component={RevenueCheckout} /><Route path="/hara" component={HaraRoute} /><Route path="/onboarding" component={HaraOnboardingRoute} /><Route path="/loop-intelligence" component={LoopIntelligenceRoute} /><Route path="/influence" component={InfluenceRoute} /><Route path="/tasks" component={TasksRoute} /><Route path="/marketing" component={ProductMarketingRoute} /><Route path="/compliance" component={ComplianceRoute} /><Route path="/app" component={WorkspaceRoute} /><Route path="/agents" component={AgentsRoute} /><Route path="/approvals" component={ApprovalsRoute} /><Route path="/growth" component={GrowthRoute} /><Route path="/system" component={SystemRoute} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch>; }
+function Router() { return <Switch><Route path="/" component={RevenueHome} /><Route path="/privacy" component={() => <PlayStorePolicy kind="privacy" />} /><Route path="/terms" component={() => <PlayStorePolicy kind="terms" />} /><Route path="/account-deletion" component={() => <PlayStorePolicy kind="deletion" />} /><Route path="/checkout" component={RevenueCheckout} /><Route path="/hara" component={HaraRoute} /><Route path="/onboarding" component={HaraOnboardingRoute} /><Route path="/loop-intelligence" component={LoopIntelligenceRoute} /><Route path="/trading" component={TradingRoute} /><Route path="/revenue-loops" component={GlobalRevenueLoopsRoute} /><Route path="/influence" component={InfluenceRoute} /><Route path="/tasks" component={TasksRoute} /><Route path="/marketing" component={ProductMarketingRoute} /><Route path="/compliance" component={ComplianceRoute} /><Route path="/app" component={WorkspaceRoute} /><Route path="/agents" component={AgentsRoute} /><Route path="/approvals" component={ApprovalsRoute} /><Route path="/growth" component={GrowthRoute} /><Route path="/system" component={SystemRoute} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch>; }
 
 export default function App() { return <ErrorBoundary><ThemeProvider defaultTheme="dark"><TooltipProvider><Toaster /><Router /></TooltipProvider></ThemeProvider></ErrorBoundary>; }

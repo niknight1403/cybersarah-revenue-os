@@ -257,3 +257,41 @@
 - [x] Tests, TypeScript, Build, mobile UI und verwaltete Health-Endpunkte validiert
 - [x] Monetization-Report vorbereitet; Release-Checkpoint als nächster Veröffentlichungsschritt offen
 - [x] Monetization-Loop-Release 1.0.5 zum Checkpoint vorbereitet und Report dokumentiert
+
+## Neue Arbeitsvorgabe: Attribution, Kohorten und Approval-Verifizierung
+- [ ] Attribution-Layer für UTM, Referral, Affiliate und Recovery-Kanäle an bestehende Revenue-Events anbinden
+- [ ] Persistente Loop-Snapshot-Tabelle und additive Migration im bestehenden Drizzle-Schema ergänzen
+- [ ] Geschützte Snapshot-/Kohorten-Endpunkte mit echten gespeicherten Signalen bereitstellen
+- [ ] Mobile Zeitreihen- und Kohorten-Analytics ohne künstliche Umsatzdaten integrieren
+- [ ] Interne Draft-to-Approval-E2E-Verifizierung mit blockierter Außenwirkung implementieren
+- [ ] Tests, TypeScript, Build, Health und Managed-Deployment-Grenzen validieren
+- [ ] Analytics-Report und Release-Checkpoint dokumentieren
+
+## Neue Arbeitsvorgabe: Freqtrade/FreqAI Dry-Run
+- [ ] Trading-Sicherheitsanforderungen und Managed-Hostinggrenzen prüfen; `/opt/cybersarah`, PM2 und Nginx nicht voraussetzen
+- [ ] Strikten Dry-Run-Tradingvertrag mit sicherer lokaler Konfigurationsvorlage statt echten Exchange-Credentials bereitstellen
+- [ ] TypeScript-REST-Readiness-Connector für Status, ROI, Trades und Start/Stop implementieren; externe Calls standardmäßig blockieren
+- [ ] HARA-Risk-Governance mit Thresholds, Approval-Gate und explizit deaktiviertem Live-Trading ergänzen
+- [ ] Mobiles Trading-Panel mit Dry-Run-/Live-Readinessstatus und klarer fehlender Live-Konfiguration integrieren
+- [ ] Tests, TypeScript, Build und Health validieren; echte PM2-/Nginx-Aktionen nur bei vorhandener Infrastruktur ausführen
+- [ ] Trading-Statusbericht und Release-Checkpoint dokumentieren
+
+## Neue Arbeitsvorgabe: Video, Programmatic SEO und B2B-Lead-Loops
+- [x] Bestehende Medien-, Marketing-, Affiliate-, Shopify- und CRM-Verträge gegen die neuen Loop-Anforderungen prüfen
+- [x] Faceless-Video-Draft-Engine mit Text-/Szenen-/Asset-Plan, Qualitätsprüfung und ohne automatischen Upload ergänzen
+- [x] Programmatic-SEO-Draft-Engine mit erlaubter Datenquelle, Canonical-/Disclosure-Regeln und ohne ungeprüfte Massenpublikation ergänzen
+- [x] B2B-Lead-Qualifizierungs-Draft mit Datenschutz-, Einwilligungs- und Rate-Limit-Grenzen statt aggressivem Scraping ergänzen
+- [x] Globales Revenue-Loop-Steuerungsmodul mit individuellen Freigabe-Buttons und Audit-Status integriert
+- [x] Tests, TypeScript, Build, Health und Approval-only-Außenwirkungsgrenzen validiert
+- [x] Video-/SEO-/Lead-Loop-Report und Release-Checkpoint dokumentiert
+
+## Abschluss: Video, Programmatic SEO und B2B-Lead-Loops
+- [x] Bestehende Medien-, Marketing-, Affiliate-, Shopify- und CRM-Verträge gegen die neuen Loop-Anforderungen geprüft
+- [x] Faceless-Video-Draft-Engine mit Szenen-, Caption- und Disclosure-Plan ohne automatischen Upload ergänzt
+- [x] Programmatic-SEO-Draft-Engine mit Canonical-, Disclosure- und Qualitäts-Gates ohne automatische Publikation ergänzt
+- [x] B2B-Lead-Qualifizierungs-Draft mit Datenschutz-, Einwilligungs- und Rate-Limit-Grenzen ergänzt
+- [x] Globales Revenue-Loop-Steuerungsmodul mit drei Approval-first-Karten in Router und Navigation integriert
+- [x] 49 Testdateien und 110 Tests, TypeScript und Produktionsbuild erfolgreich validiert
+- [x] Desktop- und mobile Darstellung von `/revenue-loops` geprüft
+- [ ] Separaten FFmpeg-/Crawl4AI-/CRM-Betriebsworker mit echten Provider-Credentials außerhalb des Managed-WebDev bereitstellen
+- [ ] Produktions-Upload, SEO-Publikation oder B2B-Kontaktaufnahme erst nach separater menschlicher Freigabe und Providerkonfiguration aktivieren

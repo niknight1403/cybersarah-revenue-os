@@ -6,6 +6,7 @@ import {
   growthExperimentEvents,
   growthExperiments,
   growthLoopSettings,
+  loopSnapshots,
   retentionCases,
   revenueDailyMetrics,
   revenueAgents,
@@ -19,6 +20,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { DEFAULT_REVENUE_AGENTS } from "./services/revenueCatalog";
+import { buildMonetizationLoopSnapshot } from "./services/monetizationLoopEngine";
 
 let database: ReturnType<typeof drizzle> | null = null;
 
@@ -78,6 +80,20 @@ export async function getComplianceStatus(userId: number) {
     providerSetupStatus: latestRequest?.status ?? "not_requested",
     hasProviderSetupRequest: Boolean(latestRequest),
   };
+}
+
+export async function saveLoopSnapshots(workspaceId: number, snapshots: Array<{ loopId: string; snapshotDate: string; mode: "manual_approval" | "semi_autopilot_internal"; conversionRate: number | null; revenueCents: number | null; signals: Record<string, number> }>) {
+  const db = await getDb();
+  if (!db || snapshots.length === 0) return 0;
+  await db.insert(loopSnapshots).values(snapshots.map(snapshot => ({ ...snapshot, workspaceId, conversionRate: snapshot.conversionRate === null ? null : snapshot.conversionRate.toFixed(6), approvalRequired: true, externalExecution: false })) as any).onDuplicateKeyUpdate({ set: { signals: snapshots[0].signals } });
+  return snapshots.length;
+}
+
+export async function getLoopSnapshots(userId: number, limit = 30) {
+  const db = await getDb();
+  const workspace = await getRevenueWorkspaceByUser(userId);
+  if (!db || !workspace) return [];
+  return db.select().from(loopSnapshots).where(eq(loopSnapshots.workspaceId, workspace.id)).orderBy(desc(loopSnapshots.snapshotDate)).limit(limit);
 }
 
 export async function getRevenueWorkspaceByUser(userId: number) {
@@ -718,6 +734,8 @@ export async function runGrowthAnalysis(workspaceId: number, actor: "user" | "cr
   const marketingSpendCents = previousMetric?.marketingSpendCents ?? 0;
   const { revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, cacCents, estimatedLtvCents, attribution } = aggregateGrowthMetrics(events, marketingSpendCents);
   await db.insert(revenueDailyMetrics).values({ workspaceId, metricDate: currentDay, revenueCents, mrrCents: revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, marketingSpendCents, cacCents, estimatedLtvCents }).onDuplicateKeyUpdate({ set: { revenueCents, mrrCents: revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, cacCents, estimatedLtvCents, updatedAt: now } });
+  const loopSnapshots = buildMonetizationLoopSnapshot({ mrrCents: revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations });
+  await saveLoopSnapshots(workspaceId, loopSnapshots.map(snapshot => ({ loopId: snapshot.id, snapshotDate: currentDay, mode: snapshot.mode, conversionRate: snapshot.conversionRate, revenueCents: snapshot.revenueCents, signals: snapshot.availableSignals })));
 
   const recommendations: GrowthRecommendation[] = [];
   if (paymentFailures > 0) recommendations.push({ type: "dunning", message: `${paymentFailures} fehlgeschlagene Zahlungsversuche benötigen eine einwilligungsbasierte Dunning-Sequenz als Entwurf.` });

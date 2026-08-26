@@ -10,6 +10,7 @@ import { classifyStripeFailure, createStripeCheckoutSession, createStripePayment
 import { createHeartbeatJob, updateHeartbeatJob } from "./_core/heartbeat";
 import { buildMonetizationApprovalDraft } from "./services/marketingCompliance";
 import { getShopifySandboxCatalog } from "./services/shopifySandbox";
+import { createTradingConnector } from "./services/tradingConnector";
 
 export const appRouter = router({
   system: systemRouter,
@@ -61,6 +62,9 @@ export const appRouter = router({
         return { success: true, status: draft.status, requiresApproval: draft.requiresApproval, externalExecution: draft.externalExecution } as const;
       }),
     shopifySandboxCatalog: protectedProcedure.query(() => getShopifySandboxCatalog()),
+  }),
+  trading: router({
+    status: protectedProcedure.query(() => createTradingConnector().snapshot()),
   }),
   monetization: router({
     overview: protectedProcedure.query(({ ctx }) => db.getMonetizationOverview(ctx.user.id)),
@@ -164,6 +168,16 @@ export const appRouter = router({
   }),
   growth: router({
     status: protectedProcedure.query(({ ctx }) => db.getGrowthLoopStatus(ctx.user.id)),
+    loopSnapshots: protectedProcedure.input(z.object({ limit: z.number().int().min(1).max(180).default(30) }).optional()).query(({ ctx, input }) => db.getLoopSnapshots(ctx.user.id, input?.limit ?? 30)),
+    loopCohorts: protectedProcedure.input(z.object({ limit: z.number().int().min(1).max(180).default(90) }).optional()).query(async ({ ctx, input }) => {
+      const snapshots = await db.getLoopSnapshots(ctx.user.id, input?.limit ?? 90);
+      return Object.values(snapshots.reduce<Record<string, { snapshotDate: string; loops: Record<string, { conversionRate: number | null; revenueCents: number | null }> }>>((groups, snapshot) => {
+        const group = groups[snapshot.snapshotDate] ?? { snapshotDate: snapshot.snapshotDate, loops: {} };
+        group.loops[snapshot.loopId] = { conversionRate: snapshot.conversionRate === null ? null : Number(snapshot.conversionRate), revenueCents: snapshot.revenueCents };
+        groups[snapshot.snapshotDate] = group;
+        return groups;
+      }, {})).sort((a, b) => a.snapshotDate.localeCompare(b.snapshotDate));
+    }),
     autonomyCycleStatus: protectedProcedure.query(({ ctx }) => db.getAutonomyCycleStatus(ctx.user.id)),
     setAutonomyMode: protectedProcedure.input(z.object({ mode: z.enum(["semi", "paused"]) })).mutation(async ({ ctx, input }) => {
       const workspace = await db.getRevenueWorkspaceByUser(ctx.user.id);
