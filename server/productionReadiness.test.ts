@@ -13,7 +13,7 @@ describe("production readiness", () => {
 
   it("classifies complete configured providers without enabling execution", () => {
     const result = getProductionReadiness({ REVENUE_OS_MODE: "production", STRIPE_SECRET_KEY: "live_test", STRIPE_WEBHOOK_SECRET: "whsec_test", SHOPIFY_STORE_DOMAIN: "shop.example", SHOPIFY_STOREFRONT_API_ACCESS_TOKEN: "token", REVENUECAT_API_KEY: "rc", META_GRAPH_API_TOKEN: "meta", META_PAGE_ID: "page", WHATSAPP_ACCESS_TOKEN: "wa", WHATSAPP_PHONE_NUMBER_ID: "phone" });
-    expect(result.providers).toEqual({ stripe: "production_ready", shopify: "production_ready", revenueCat: "production_ready", meta: "production_ready", whatsapp: "production_ready" });
+    expect(result.providers).toEqual({ stripe: "production_ready", shopify: "production_ready", revenueCat: "production_ready", meta: "production_ready", whatsapp: "production_ready", pollinations: "not_configured" });
     expect(result.liveTransactionsEnabled).toBe(false);
   });
 });

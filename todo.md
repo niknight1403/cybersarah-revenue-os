@@ -339,3 +339,25 @@
 - [x] Diagnosehinweis und Google-Cloud-Konfigurationsanleitung im Projektbericht ergänzt
 - [x] Redirect-Regression, TypeScript, Build, Health und Preview validiert
 - [x] Fehlerbehebung dokumentiert und neuen Release-Checkpoint vorbereitet
+
+## Neue Arbeitsvorgabe: cybersarah-ki.de Domain und SSL
+- [ ] Öffentliche Server-IP und DNS-A-Records für cybersarah-ki.de und www prüfen
+- [ ] Verfügbarkeit von `/opt/cybersarah`, PM2, Nginx und Certbot in der aktuellen Umgebung prüfen
+- [ ] Managed-Domain-/OAuth-Origin-Konfiguration gegen die erreichbare Projekt-Domain validieren
+- [ ] HTTPS-/Health-Reachability sowie Buildstatus prüfen, ohne externe Infrastruktur zu simulieren
+- [ ] Domain-/Hostingbericht und konkrete DNS-/Hosting-Schritte dokumentieren
+
+## Neue Arbeitsvorgabe: Sandbox-Build und OAuth-/Leonardo-Finalisierung
+- [ ] Vorhandene Google-/Manus-OAuth-Integration und Microsoft-Fallbackstatus prüfen
+- [ ] Provider-Buttons dynamisch nur bei vollständig konfigurierten serverseitigen Credentials aktivieren
+- [ ] Leonardo-Asset-Adapter mit serverseitiger Secret-Nutzung und fail-closed Verhalten ergänzen
+- [ ] OAuth-/Leonardo-Konfiguration diagnostisch und nicht-sensitiv im Backend ausgeben
+- [x] Tests, TypeScript, Build und Health über Port 3000 validiert
+- [ ] Repository-Status und angeforderten Commit im aktiven Projekt prüfen und dokumentieren
+
+## Scope-Änderung: Pollinations Image API statt Leonardo
+- [x] Leonardo-Asset-Abhängigkeit aus dem aktiven Integrationspfad entfernen
+- [x] Serverfähigen Pollinations-Image-Adapter mit sicherer Prompt-/URL-Verarbeitung ergänzen
+- [x] Pollinations-Providerstatus und vorhandene Asset-Draft-Flows anschließen
+- [x] Tests, TypeScript, Build und Port-3000-Health validieren
+- [x] Umstellungsbericht und Release-Checkpoint aktualisieren

@@ -17,6 +17,7 @@
  */
 import { storagePut } from "server/storage";
 import { ENV } from "./env";
+import { generatePollinationsImage, pollinationsConfigured } from "../services/pollinationsImage";
 
 export type GenerateImageOptions = {
   prompt: string;
@@ -34,6 +35,10 @@ export type GenerateImageResponse = {
 export async function generateImage(
   options: GenerateImageOptions
 ): Promise<GenerateImageResponse> {
+  if (pollinationsConfigured()) {
+    const generated = await generatePollinationsImage({ prompt: options.prompt });
+    return { url: generated.url };
+  }
   if (!ENV.forgeApiUrl) {
     throw new Error("BUILT_IN_FORGE_API_URL is not configured");
   }
