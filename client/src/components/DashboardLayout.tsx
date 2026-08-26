@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Activity, Bot, BrainCircuit, ChartNoAxesCombined, CheckSquare, LayoutDashboard, Link2, LogOut, Megaphone, PanelLeft, ShieldCheck, Sparkles } from "lucide-react";
+import { Activity, Bot, BrainCircuit, ChartNoAxesCombined, CheckSquare, GitBranch, LayoutDashboard, Link2, LogOut, Megaphone, PanelLeft, ShieldCheck, Sparkles } from "lucide-react";
 import React, { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -43,10 +43,11 @@ const menuItems = [
   { icon: ShieldCheck, label: "Paywall Readiness", path: "/paywall" },
   { icon: Link2, label: "Konto verknüpfen", path: "/account" },
   { icon: Activity, label: "System", path: "/system" },
+  { icon: GitBranch, label: "Release Center", path: "/release" },
 ];
 
 export const MOBILE_AUTONOMY_NAV = menuItems.slice(0, 4).concat({ icon: ChartNoAxesCombined, label: "Growth", path: "/growth" });
-export const MOBILE_UTILITY_NAV = [{ icon: ShieldCheck, label: "Compliance", path: "/compliance" }, { icon: Activity, label: "Trading · Dry-Run", path: "/trading" }, { icon: Sparkles, label: "Revenue Loops", path: "/revenue-loops" }, { icon: Link2, label: "Konto", path: "/account" }];
+export const MOBILE_UTILITY_NAV = [{ icon: ShieldCheck, label: "Compliance", path: "/compliance" }, { icon: Activity, label: "Trading · Dry-Run", path: "/trading" }, { icon: Sparkles, label: "Revenue Loops", path: "/revenue-loops" }, { icon: GitBranch, label: "Release", path: "/release" }];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;

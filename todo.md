@@ -380,3 +380,10 @@
 - [x] Hilfe-&-Support-Link im Login-Modal ergänzen
 - [x] Vollständige Testsuite, TypeScript, Produktionsbuild und Port-3000-Healthchecks ausführen
 - [x] Angeforderten Git-Commit erstellen und Release-Checkpoint speichern
+
+## Neuer Sprint: GitHub Push und Android-Artefakt
+- [x] Sprintumfang und vorhandene Android-/Bubblewrap-Artefakte prüfen
+- [x] Einen klar abgegrenzten nächsten Sprint im bestehenden CyberSarah-Projekt umsetzen
+- [x] Tests, TypeScript, Produktionsbuild und APK/AAB-Erstellung validieren (AAB vorhanden; signiertes APK wegen fehlender Bubblewrap-/Bundletool-/Keystore-Voraussetzungen nicht erzeugt)
+- [ ] Hauptprojekt in das ausgewählte GitHub-Repository committen und pushen
+- [x] Android-Artefakt und Release-Checkpoint mit reproduzierbarem Status dokumentieren
