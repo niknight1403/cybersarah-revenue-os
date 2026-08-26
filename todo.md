@@ -142,6 +142,8 @@
 - [x] Startknopf-Änderung validiert, gesichert und live bereitgestellt
 - [x] Sichtbare Startzyklus-Statusanzeige für läuft, erfolgreich, Duplicate und fehlgeschlagen ergänzt
 - [x] UI-Regressionstests für Duplicate-, Fehler- und mobile Statuszustände ergänzt
-- [ ] Startknopf-Stand nach den neuesten UI- und Router-Anpassungen mit Produktionsbuild validieren
-- [ ] Neuen Checkpoint für den Startknopf-Stand speichern
-- [ ] Aktualisierte Startknopf-Version live bereitstellen und nachweisen
+- [x] Startknopf-Stand nach den neuesten UI- und Router-Anpassungen mit Produktionsbuild validiert
+- [x] Neuen Checkpoint für den Startknopf-Stand gespeichert
+- [x] Aktualisierte Startknopf-Version live bereitgestellt und nachgewiesen
+- [ ] Startknopf-Änderungen nach dem Checkpoint auf der Live-Domain aktualisieren
+- [ ] Veröffentlichte Live-App browserseitig auf Startknopf und Statuszustände prüfen und dokumentieren
