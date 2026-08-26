@@ -247,3 +247,13 @@
 - [x] `PLAY_STORE_DATA_SAFETY.md` mit tatsächlichen Datenkategorien, Zweck, Aufbewahrung und Providerstatus dokumentiert
 - [x] Tests, TypeScript, Build, PWA-/Assetlinks-Checks und verwaltete Health-Endpunkte validiert
 - [x] Android-/Play-Compliance-Bericht erstellt und Release-Checkpoint vorbereitet
+
+## Neue Arbeitsvorgabe: Global Loop Monetization
+- [x] Vier Revenue-Loops gegen vorhandene Funnel-, Attribution-, Approval- und Providerverträge bewertet
+- [x] Interne Loop-Engine für Signalbewertung, Priorisierung und auditierbare Draft-Empfehlungen ergänzt
+- [x] Payment-Failover als sichere Provider-Readiness-/Fallback-Klassifikation modelliert; kein unfreigegebener Zahlungsversuch
+- [x] Loop-Intelligence-Center mit Conversion-/Revenue-Signalen und transparentem Providerstatus ergänzt
+- [x] Pro-Loop-Steuerung als Manual-Approval bzw. pausierter interner Modus umgesetzt; Full-Auto-External-Execution wird nicht angeboten
+- [x] Tests, TypeScript, Build, mobile UI und verwaltete Health-Endpunkte validiert
+- [x] Monetization-Report vorbereitet; Release-Checkpoint als nächster Veröffentlichungsschritt offen
+- [x] Monetization-Loop-Release 1.0.5 zum Checkpoint vorbereitet und Report dokumentiert

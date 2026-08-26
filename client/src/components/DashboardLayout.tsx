@@ -37,6 +37,7 @@ const menuItems = [
   { icon: Bot, label: "Agenten", path: "/agents" },
   { icon: ShieldCheck, label: "Freigaben", path: "/approvals" },
   { icon: ChartNoAxesCombined, label: "Growth", path: "/growth" },
+  { icon: ChartNoAxesCombined, label: "Loop Intelligence", path: "/loop-intelligence" },
   { icon: Activity, label: "System", path: "/system" },
 ];
 

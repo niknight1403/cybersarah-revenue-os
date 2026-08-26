@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.5] — 2026-08-26
+
+### Added
+
+- Loop-Intelligence-Center unter `/loop-intelligence` mit realen Growth-Signalen und pro-Loop Modi.
+- Vier messbare interne Revenue-Loops: Viral Content/DM-Sales, Predictive Upsell/Retention, Cart Recovery/Re-Engagement und Affiliate/Product Arbitrage.
+- Sichere Dynamic-Monetization-Readiness mit Provider-Fallback-Klassifikation statt unfreigegebener Zahlungsversuche.
+- Monetization-Loop-Report mit Priorisierung, Attribution und Ertragspotenzial-Grenzen.
+
+### Safety
+
+- Jeder Loop bleibt `approvalRequired: true` und `externalExecution: false`.
+- Full-Auto-External-Execution, automatische DMs, Posts, Rabattaktivierungen und Providerwechsel werden nicht angeboten.
+
 ## [1.0.4] — 2026-08-26
 
 ### Added
