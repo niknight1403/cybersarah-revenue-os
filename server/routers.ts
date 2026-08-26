@@ -14,11 +14,17 @@ import { createTradingConnector } from "./services/tradingConnector";
 import { getSubscriptionReadiness } from "./services/subscriptionReadiness";
 import { getProductionReadiness } from "./services/productionReadiness";
 import { resolveStagingSecrets } from "./services/stagingSecrets";
+import { googleOAuthConfigured } from "./services/googleOAuth";
 
 export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(({ ctx }) => ctx.user),
+    providers: publicProcedure.query(() => ({
+      manus: true,
+      google: googleOAuthConfigured(),
+      microsoft: Boolean(process.env.MICROSOFT_OAUTH_CLIENT_ID?.trim() && process.env.MICROSOFT_OAUTH_CLIENT_SECRET?.trim()),
+    })),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });

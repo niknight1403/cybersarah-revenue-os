@@ -45,6 +45,7 @@ export default function RevenueHome() {
   const [draftActionType, setDraftActionType] = useState("Campaign review");
   const [draftTarget, setDraftTarget] = useState("");
   const appInfo = trpc.app.info.useQuery();
+  const providers = trpc.auth.providers.useQuery();
   const tracking = trpc.app.tracking.useQuery();
   const [experimentSubjectKey] = useState(() => {
     if (typeof window === "undefined") return "server-render-experiment-subject";
@@ -108,7 +109,7 @@ export default function RevenueHome() {
                 <Button onClick={() => { if (trackingKey) sendFunnelEvent(trackingKey, "cta_click"); if (experiment.data) sendExperimentOutcome(experimentSubjectKey, experiment.data.experimentId, "cta_click"); window.location.assign(getLoginUrl()); }} disabled={loading} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">
                   {loginLabel} <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-                <Button variant="outline" onClick={() => window.location.assign("/api/oauth/google")} disabled={loading} aria-label="Mit Google anmelden">Mit Google anmelden</Button>
+                <Button variant="outline" onClick={() => window.location.assign("/api/oauth/google")} disabled={loading || providers.isLoading || providers.data?.google !== true} aria-label="Mit Google anmelden">{providers.data?.google === true ? "Mit Google anmelden" : "Google nicht konfiguriert"}</Button>
               </div>
             )}
           </div>

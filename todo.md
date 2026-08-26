@@ -341,19 +341,19 @@
 - [x] Fehlerbehebung dokumentiert und neuen Release-Checkpoint vorbereitet
 
 ## Neue Arbeitsvorgabe: cybersarah-ki.de Domain und SSL
-- [ ] Öffentliche Server-IP und DNS-A-Records für cybersarah-ki.de und www prüfen
-- [ ] Verfügbarkeit von `/opt/cybersarah`, PM2, Nginx und Certbot in der aktuellen Umgebung prüfen
-- [ ] Managed-Domain-/OAuth-Origin-Konfiguration gegen die erreichbare Projekt-Domain validieren
-- [ ] HTTPS-/Health-Reachability sowie Buildstatus prüfen, ohne externe Infrastruktur zu simulieren
-- [ ] Domain-/Hostingbericht und konkrete DNS-/Hosting-Schritte dokumentieren
+- [x] Öffentliche Server-IP und DNS-A-Records für cybersarah-ki.de und www geprüft; DNS bleibt extern nicht aufgelöst
+- [x] Verfügbarkeit von `/opt/cybersarah`, PM2, Nginx und Certbot in der aktuellen Umgebung geprüft; nicht vorhanden
+- [x] Managed-Domain-/OAuth-Origin-Konfiguration gegen die erreichbare Projekt-Domain validiert
+- [x] HTTPS-/Health-Reachability sowie Buildstatus geprüft, ohne externe Infrastruktur zu simulieren
+- [x] Domain-/Hostingbericht und konkrete DNS-/Hosting-Schritte dokumentiert
 
 ## Neue Arbeitsvorgabe: Sandbox-Build und OAuth-/Leonardo-Finalisierung
-- [ ] Vorhandene Google-/Manus-OAuth-Integration und Microsoft-Fallbackstatus prüfen
-- [ ] Provider-Buttons dynamisch nur bei vollständig konfigurierten serverseitigen Credentials aktivieren
-- [ ] Leonardo-Asset-Adapter mit serverseitiger Secret-Nutzung und fail-closed Verhalten ergänzen
-- [ ] OAuth-/Leonardo-Konfiguration diagnostisch und nicht-sensitiv im Backend ausgeben
+- [x] Vorhandene Google-/Manus-OAuth-Integration und Microsoft-Fallbackstatus geprüft
+- [x] Provider-Buttons dynamisch nur bei vollständig konfigurierten serverseitigen Credentials aktivieren
+- [x] Leonardo-Asset-Adapter durch serverseitigen Pollinations-Adapter mit fail-closed Verhalten ersetzt
+- [x] OAuth-/Pollinations-Konfiguration diagnostisch und nicht-sensitiv im Backend ausgeben
 - [x] Tests, TypeScript, Build und Health über Port 3000 validiert
-- [ ] Repository-Status und angeforderten Commit im aktiven Projekt prüfen und dokumentieren
+- [x] Repository-Status geprüft, Commit `56cc75d` erstellt und dokumentiert
 
 ## Scope-Änderung: Pollinations Image API statt Leonardo
 - [x] Leonardo-Asset-Abhängigkeit aus dem aktiven Integrationspfad entfernen

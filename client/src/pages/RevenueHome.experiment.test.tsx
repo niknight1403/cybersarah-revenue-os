@@ -10,6 +10,9 @@ vi.mock("@/_core/hooks/useAuth", () => ({ useAuth: () => ({ user: null, loading:
 vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({ revenue: { overview: { invalidate: vi.fn() } } }),
+    auth: {
+      providers: { useQuery: () => ({ data: { manus: true, google: true, microsoft: false }, isLoading: false }) },
+    },
     app: {
       info: { useQuery: () => ({ data: { title: "CyberSarah Revenue OS" } }) },
       tracking: { useQuery: () => ({ data: { key: "f1ce1bc2-bd0b-4ab3-b684-dc8a9a90e856" } }) },
