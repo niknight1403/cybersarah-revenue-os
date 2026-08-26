@@ -104,9 +104,12 @@ export default function RevenueHome() {
                 <Button variant="outline" onClick={() => void logout()} disabled={loading}>Abmelden</Button>
               </>
             ) : (
-              <Button onClick={() => { if (trackingKey) sendFunnelEvent(trackingKey, "cta_click"); if (experiment.data) sendExperimentOutcome(experimentSubjectKey, experiment.data.experimentId, "cta_click"); window.location.assign(getLoginUrl()); }} disabled={loading} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">
-                {loginLabel} <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button onClick={() => { if (trackingKey) sendFunnelEvent(trackingKey, "cta_click"); if (experiment.data) sendExperimentOutcome(experimentSubjectKey, experiment.data.experimentId, "cta_click"); window.location.assign(getLoginUrl()); }} disabled={loading} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">
+                  {loginLabel} <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button variant="outline" onClick={() => window.location.assign("/api/oauth/google")} disabled={loading} aria-label="Mit Google anmelden">Mit Google anmelden</Button>
+              </div>
             )}
           </div>
         </header>

@@ -312,3 +312,15 @@
 - [x] Account-Deletion- und Draft-to-Approval-E2E-Verifikation ohne irreversible Live-Löschung oder externe Ausführung ergänzt
 - [x] TypeScript, vollständige Testsuite, Produktionsbuild und Managed-Healthchecks validiert
 - [x] PM2-/Nginx-/`/opt/cybersarah`-Abgrenzung sowie Staging-Verifikationsbericht dokumentiert
+
+## Neue Arbeitsvorgabe: Multi-Provider-Account-Anmeldung
+- [x] Bestehenden Manus-OAuth-Flow und unterstützte Providergrenzen geprüft
+- [x] Sicheren OAuth-Vertrag für Google und Manus mit serverseitiger Secret-Konfiguration ergänzt; Microsoft auf Nutzerwunsch ausgeschlossen
+- [x] Login-/Registrierungsoberfläche und Google-Providerstatus in die bestehende mobile Navigation integriert
+- [x] Account-Auflösung, Session-Sicherheit und Provider-Governance getestet
+- [x] Auth-Regression, TypeScript, Produktionsbuild und Health validiert
+- [x] Provider-Konfigurationshinweise und Release-Checkpoint dokumentiert
+
+## Scope-Änderung: Microsoft-Login entfernt
+- [x] Microsoft OAuth aus dem aktiven Login-Flow herauslassen; Manus OAuth und Google OAuth bleiben die vorgesehenen Provider
+- [x] Google-/Manus-Login, Onboarding-Einstieg, Tests, Build und verwalteten Release final verifiziert
