@@ -159,6 +159,21 @@ export const appRouter = router({
       await db.recordGrowthAudit({ workspaceId: workspace.id, idempotencyKey: `growth-manual:${workspace.id}:${new Date().toISOString().slice(0, 10)}`, actor: "user", eventType: "growth.analysis.manual", status: "completed", detail: result });
       return result;
     }),
+    startAutonomyCycle: protectedProcedure.mutation(async ({ ctx }) => {
+      const workspace = await db.getRevenueWorkspaceByUser(ctx.user.id);
+      if (!workspace) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Bitte richten Sie zuerst einen Arbeitsbereich ein." });
+      const cycleKey = `autonomy-cycle-start:${workspace.id}:${new Date().toISOString().slice(0, 10)}`;
+      const claimed = await db.recordGrowthAudit({ workspaceId: workspace.id, idempotencyKey: cycleKey, actor: "user", eventType: "autonomy.cycle.started", status: "accepted", detail: { externalExecution: false, approvalRequired: true } });
+      if (!claimed) return { started: false as const, duplicate: true as const, message: "Der Autonomie-Zyklus wurde heute bereits gestartet." };
+      try {
+        const result = await db.runGrowthAnalysis(workspace.id, "user");
+        await db.updateGrowthAudit(cycleKey, "completed", { externalExecution: false, approvalRequired: true, recommendations: result.recommendations.length });
+        return { started: true as const, duplicate: false as const, recommendations: result.recommendations.length };
+      } catch (error) {
+        await db.updateGrowthAudit(cycleKey, "failed", { error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+        throw error;
+      }
+    }),
     setMarketingSpend: protectedProcedure
       .input(z.object({ cents: z.number().int().min(0).max(100_000_000) }))
       .mutation(async ({ ctx, input }) => {

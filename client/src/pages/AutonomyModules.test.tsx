@@ -27,14 +27,14 @@ vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({ revenue: { overview: { invalidate: vi.fn() } }, monetization: { overview: { invalidate: vi.fn() } } }),
     revenue: { overview: { useQuery: () => state.overview }, createApprovalDraft: { useMutation: () => state.mutation } },
-    growth: { status: { useQuery: () => state.growth } },
+    growth: { status: { useQuery: () => state.growth }, startAutonomyCycle: { useMutation: () => state.mutation } },
     monetization: { overview: { useQuery: () => ({ isLoading: false, isError: false, data: { currency: "EUR", totalCents: 0, sources: [{ source: "Stripe", status: "disabled", amountCents: 0 }, { source: "Affiliate", status: "not_connected", amountCents: null }] } }) }, createDraft: { useMutation: () => state.mutation } },
   },
 }));
 
 import HaraCenter from "./HaraCenter";
 import InfluenceCenter, { buildInfluenceDraft } from "./InfluenceCenter";
-import AutonomyTasks from "./AutonomyTasks";
+import AutonomyTasks, { AutonomyCycleStatus, AutonomyCycleStatus as CycleStatusView, autonomyCycleStatusCopy } from "./AutonomyTasks";
 import ProductMarketing, { buildProductMarketingDraft } from "./ProductMarketing";
 import { MOBILE_AUTONOMY_NAV, MOBILE_UTILITY_NAV } from "@/components/DashboardLayout";
 
@@ -61,6 +61,15 @@ describe("mobile Autonomie-Module", () => {
     expect(markup).toContain("Freigabe prüfen: outreach_draft");
     expect(markup).toContain("Agent bewerten: Outreach Drafting Agent");
     expect(markup).toContain("Experiment prüfen: CTA-Test");
+    expect(markup).toContain("Autonomie starten");
+    expect(markup).toContain("Keine Zahlung, kein Posting, keine Nachricht ohne Freigabe");
+  });
+
+  it("zeigt alle Startzyklus-Zustände als zugänglichen Status an", () => {
+    const statuses: AutonomyCycleStatus[] = ["running", "started", "duplicate", "failed"];
+    expect(statuses.map(autonomyCycleStatusCopy)).toEqual(["Autonomie-Zyklus läuft …", "Zyklus gestartet · Entwürfe werden geprüft", "Heute bereits gestartet · kein zweiter Lauf ausgeführt", "Start fehlgeschlagen · bitte erneut versuchen"]);
+    expect(render(<CycleStatusView status="duplicate" />)).toContain("Heute bereits gestartet");
+    expect(render(<CycleStatusView status="failed" />)).toContain("Start fehlgeschlagen");
   });
 
   it("enthält alle fünf fingerfreundlichen Kernmodule in der mobilen Navigation", () => {

@@ -120,7 +120,7 @@
 
 ## Nutzerauftrag: Prompt-Übernahme und Repository-Übertragung
 - [x] Beigefügte Arbeitsvorgabe ausgewertet und gegen den aktuellen CyberSarah-Stand abgeglichen
-- [ ] Geprüften Hauptbranch-Stand in das konfigurierte Zielrepository übertragen
+- [x] Geprüften Hauptbranch-Stand in das konfigurierte Zielrepository übertragen
 
 ## Freigabegesicherte Monetarisierung und Compliance
 - [x] Bestehende Stripe-Only-, Freigabe- und Audit-Grenzen gegen Multi-Gateway-, Affiliate- und Social-Promptanforderungen dokumentiert abgeglichen
@@ -133,3 +133,15 @@
 - [x] Redigierten, auditierbaren MCP-Lesezugriff für konsolidierte Einnahmen ergänzt
 - [x] Compliance-Modul über einen gleichwertig fingerfreundlichen mobilen Einstieg erreichbar gemacht und regressiv getestet
 - [x] Gerenderten mobilen Compliance-Schnelleinstieg mit zugänglichem Label regressiv nachgewiesen
+
+## Startknopf für autonome Zyklen
+- [x] Gebündelten Autonomie-Startzyklus auf bestehende Growth-Analyse und echte Workspace-Daten aufgesetzt
+- [x] Startknopf im Tasks-Modul mit Zyklusstatus, Fehlerzustand und Wiederholungsschutz bereitgestellt
+- [x] Externe Wirkungen weiterhin zwingend als Freigabeentwürfe behandelt und den Startzyklus auditiert
+- [x] Startzyklus, Fehlerzustände und mobile Bedienung automatisiert getestet
+- [x] Startknopf-Änderung validiert, gesichert und live bereitgestellt
+- [x] Sichtbare Startzyklus-Statusanzeige für läuft, erfolgreich, Duplicate und fehlgeschlagen ergänzt
+- [x] UI-Regressionstests für Duplicate-, Fehler- und mobile Statuszustände ergänzt
+- [ ] Startknopf-Stand nach den neuesten UI- und Router-Anpassungen mit Produktionsbuild validieren
+- [ ] Neuen Checkpoint für den Startknopf-Stand speichern
+- [ ] Aktualisierte Startknopf-Version live bereitstellen und nachweisen
