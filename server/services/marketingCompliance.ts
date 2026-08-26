@@ -1,3 +1,5 @@
+import { evaluateContentDraft } from "./loopEngineering";
+
 export type MonetizationChannel = "affiliate" | "social" | "ads";
 
 type MonetizationDraftInput = {
@@ -30,6 +32,7 @@ export function appendMarketingDisclosure(content: string, disclosure: string) {
 export function buildMonetizationApprovalDraft(input: MonetizationDraftInput) {
   const disclosure = buildMarketingDisclosure(input);
   const decoratedContent = appendMarketingDisclosure(input.content, disclosure);
+  const quality = evaluateContentDraft({ title: input.title, body: decoratedContent, channel: input.channel });
   return {
     actionType: actionTypeByChannel[input.channel],
     target: input.target.trim(),
@@ -37,8 +40,9 @@ export function buildMonetizationApprovalDraft(input: MonetizationDraftInput) {
       source: "monetization_hub",
       channel: input.channel,
       externalExecution: false,
-      consentRequired: true,
-      providerConfigured: false,
+        consentRequired: true,
+        providerConfigured: false,
+        quality,
       compliance: {
         aiDisclosure: disclosure,
         affiliate: input.affiliate,

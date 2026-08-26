@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { sdk } from "../_core/sdk";
 import * as db from "../db";
+import { runResilientInternalLoop } from "./loopEngineering";
 
 export async function handleGrowthAnalysisSchedule(req: Request, res: Response) {
   let workspaceId: number | undefined;
@@ -13,7 +14,20 @@ export async function handleGrowthAnalysisSchedule(req: Request, res: Response) 
     if (!setting || !setting.enabled) return res.json({ ok: true, skipped: "inactive-or-orphan" });
     workspaceId = setting.workspaceId;
 
-    const result = await db.runHaraOrchestrator(setting.workspaceId, "cron");
+    const resilientRun = await runResilientInternalLoop(() => db.runHaraOrchestrator(setting.workspaceId, "cron"), {
+      maxAttempts: 3,
+      onRetry: async (classification, attempt) => {
+        await db.recordGrowthAudit({
+          workspaceId: setting.workspaceId,
+          idempotencyKey: `growth-cron-retry:${user.taskUid}:${attempt}:${classification}`,
+          actor: "cron",
+          eventType: "growth.analysis.retry_attempt",
+          status: "accepted",
+          detail: { classification, attempt, retryable: true, externalExecution: false, approvalRequired: true },
+        });
+      },
+    });
+    const result = { ...resilientRun.value, loop: { attempts: resilientRun.attempts, retryable: resilientRun.retryable, fallbackUsed: resilientRun.fallbackUsed } };
     await db.recordGrowthAudit({
       workspaceId: setting.workspaceId,
       idempotencyKey: `growth-cron:${user.taskUid}:${new Date().toISOString().slice(0, 10)}`,

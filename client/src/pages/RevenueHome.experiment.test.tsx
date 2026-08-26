@@ -17,6 +17,7 @@ vi.mock("@/lib/trpc", () => ({
     },
     revenue: {
       overview: { useQuery: () => ({ data: null }) },
+      shopifySandboxCatalog: { useQuery: () => ({ data: { mode: "sandbox", connected: false, approvalRequired: true, products: [] } }) },
       initialize: { useMutation: () => ({ isPending: false, mutate: vi.fn() }) },
       setAgentEnabled: { useMutation: () => ({ isPending: false, mutate: vi.fn() }) },
       createApprovalDraft: { useMutation: () => ({ isPending: false, mutate: vi.fn() }) },

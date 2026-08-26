@@ -9,6 +9,7 @@ import * as db from "./db";
 import { classifyStripeFailure, createStripeCheckoutSession, createStripePaymentLink, getStripeProviderReadiness } from "./services/stripeProvider";
 import { createHeartbeatJob, updateHeartbeatJob } from "./_core/heartbeat";
 import { buildMonetizationApprovalDraft } from "./services/marketingCompliance";
+import { getShopifySandboxCatalog } from "./services/shopifySandbox";
 
 export const appRouter = router({
   system: systemRouter,
@@ -59,6 +60,7 @@ export const appRouter = router({
         const draft = await db.createRevenueApprovalDraft(ctx.user.id, input);
         return { success: true, status: draft.status, requiresApproval: draft.requiresApproval, externalExecution: draft.externalExecution } as const;
       }),
+    shopifySandboxCatalog: protectedProcedure.query(() => getShopifySandboxCatalog()),
   }),
   monetization: router({
     overview: protectedProcedure.query(({ ctx }) => db.getMonetizationOverview(ctx.user.id)),

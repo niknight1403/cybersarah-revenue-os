@@ -202,3 +202,29 @@
 - [x] Ausstehende Schema-/Migrationsstände geprüft; Drizzle meldet keine Schemaänderungen, daher war keine SQL-Migration erforderlich
 - [x] Verwaltete Tests, TypeScript, Produktionsbuild und Health-Endpunkte validiert (jeweils HTTP 200)
 - [x] Dashboard- und Connector-Status in `docs/connector-deployment-status.md` dokumentiert
+
+## Neue Arbeitsvorgabe: Auto-Claim, Mock-Katalog und HARA-Workspace
+- [x] Aktiven Projektpfad gegen `/opt/cybersarah`, `artifacts/*`, PM2, Nginx und `cybersarah-ki.de` geprüft
+- [x] Klar gekennzeichneten Shopify-Sandbox-Katalog mit Produkt-, Preis-, Bestands- und Margenfeldern bereitgestellt
+- [x] Dashboardstatus für Shopify korrekt als Sandbox/Fallback statt fälschlich live verknüpft ausgewiesen
+- [x] HARA-Workspace nur über echten OAuth-/Sessionfluss bereitgestellt; keine Session- oder Admin-Credentials geseedet
+- [x] CRM-/Messaging-/Stripe-Draft-only-Connectors ohne Dummy-Credentials und ohne externe Ausführung abgesichert
+- [x] Build-, Health- und verwalteten Live-Status validiert und transparent dokumentiert
+
+## Neuer Release-Auftrag
+- [x] Offene Aufgaben, Versionsstruktur und verwaltete Deploymentgrenzen geprüft
+- [x] Connector-Stubs und fehlende Provider-Fallbacks auf sichere, nicht-live Semantik geprüft
+- [x] Release-Version auf 1.0.2 erhöht und `CHANGELOG.md` mit HARA-, Approval-first-, Connector- und Loop-Änderungen angelegt
+- [x] Drizzle-Schemazustand und Migrationen geprüft, ohne PostgreSQL als vorhandene DB anzunehmen
+- [x] Vollständige Testsuite, TypeScript und Produktionsbuild validiert
+- [x] Verwaltete Health-Endpunkte und Hauptdomain geprüft; PM2/Nginx nur bewertet, da lokal nicht vorhanden
+- [x] Release-Stand zum Checkpoint vorbereitet und Modulstatus in `docs/loop-engineering-status.md` dokumentiert
+
+## Neue Arbeitsvorgabe: Loop Engineering
+- [x] Zentrale interne Resilienz- und Retry-Schleife mit begrenzten Versuchen, Fehlerklassifizierung und sicherem Fallback definiert
+- [x] Gemini/OpenAI-Fallback nur als interne Analyseoption modelliert; keine Schlüssel oder externen Aktionen simuliert
+- [x] Interne Content-Critic-Schleife mit nachvollziehbarem 1–10-Score, Verbesserungshinweisen und Approval-Gate ergänzt
+- [x] Conversion-Attribution mit generierten Drafts, Funnel-Signalen und Revenue-Events verbunden
+- [x] Strategie-/Prompt-Tuning als auditierte interne Empfehlung statt automatische Prompt- oder Außenwirkungsänderung implementiert
+- [x] Continuous-Planning-Loop auf interne Aufgaben-/Draft-Erzeugung begrenzt und externe Aktionen blockiert
+- [x] Loop-Engineering-Tests, TypeScript, Build, Health und Release-Status dokumentiert

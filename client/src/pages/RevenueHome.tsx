@@ -57,6 +57,7 @@ export default function RevenueHome() {
   });
   const experiment = trpc.app.experimentVariant.useQuery({ subjectKey: experimentSubjectKey });
   const overview = trpc.revenue.overview.useQuery(undefined, { enabled: isAuthenticated });
+  const shopifySandbox = trpc.revenue.shopifySandboxCatalog.useQuery(undefined, { enabled: isAuthenticated });
   const utils = trpc.useUtils();
   const initializeWorkspace = trpc.revenue.initialize.useMutation({
     onSuccess: () => void utils.revenue.overview.invalidate(),
@@ -175,6 +176,10 @@ export default function RevenueHome() {
                 <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[0.04] p-3"><p className="text-xs text-muted-foreground">Agenten</p><p className="mt-1 text-2xl font-semibold text-white">{overview.data.agents.length}</p></div>
                 <div className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.04] p-3"><p className="text-xs text-muted-foreground">Aktiviert</p><p className="mt-1 text-2xl font-semibold text-white">{overview.data.agents.filter(agent => agent.enabled).length}</p></div>
                 <div className="rounded-xl border border-amber-300/15 bg-amber-300/[0.04] p-3"><p className="text-xs text-muted-foreground">Freigaben</p><p className="mt-1 text-2xl font-semibold text-white">{overview.data.pendingApprovals}</p></div>
+              </div>
+              <div className="mt-5 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.04] p-4">
+                <div className="flex items-center justify-between gap-3"><div><p className="mono text-[10px] tracking-[0.14em] text-cyan-200">SHOPIFY // SANDBOX</p><p className="mt-1 text-sm font-medium text-white">Katalog für HARA-Entwürfe</p></div><span className="text-[10px] text-amber-100">Nicht live verknüpft</span></div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">{(shopifySandbox.data?.products ?? []).map(product => <div key={product.id} className="rounded-lg border border-border/70 bg-background/30 p-3"><p className="text-xs font-medium text-white">{product.title}</p><p className="mt-1 text-[11px] text-muted-foreground">€{(product.priceCents / 100).toFixed(2)} · {product.inventory} Bestand</p><p className="mt-1 text-[11px] text-cyan-100">{product.marginPercent}% Marge</p></div>)}</div>
               </div>
               <div className="mt-5 space-y-2">
                 {overview.data.agents.map(agent => (
