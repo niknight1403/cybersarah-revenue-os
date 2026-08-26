@@ -66,6 +66,26 @@ describe("Stripe-Webhook-Gate", () => {
     expect(createRetentionDraft).toHaveBeenCalledWith(13, 9, "dunning", "cus_123", expect.stringContaining("Dunning-Entwurf"));
   });
 
+  it("auditiert Webhook-Fehler als retrybaren Approval-only-Fallback ohne Retention- oder Außenwirkung", async () => {
+    const recordAudit = vi.fn(async () => true);
+    const recordEvent = vi.fn(async () => { throw new Error("Stripe provider timeout"); });
+    const createRetentionDraft = vi.fn();
+    const handler = createStripeWebhookHandler({
+      constructEvent: vi.fn(() => ({ id: "evt_retry", type: "invoice.payment_succeeded", created: 1_700_000_003, data: { object: { amount_paid: 4900, metadata: { workspace_id: "9" } } } })),
+      isProviderActive: vi.fn(async () => true),
+      recordWebhook: vi.fn(async () => undefined),
+      recordEvent,
+      recordAudit,
+      createRetentionDraft,
+    });
+    const { response, result } = createResponse();
+    await handler({ headers: { "stripe-signature": "valid" }, body: Buffer.from("{}") } as unknown as Request, response);
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({ retryable: true, fallback: "approval_draft", error: "Stripe provider timeout" });
+    expect(recordAudit).toHaveBeenCalledWith(expect.objectContaining({ eventType: "stripe.webhook_retry_hint", status: "failed", detail: expect.objectContaining({ retryable: true, fallback: "approval_draft", externalExecution: false, operation: "webhook" }) }));
+    expect(createRetentionDraft).not.toHaveBeenCalled();
+  });
+
   it("erfasst einen erfolgreichen Checkout als Umsatzsignal ohne Kundenkommunikation auszulösen", async () => {
     const recordEvent = vi.fn(async () => ({ event: { id: 41 }, inserted: true }));
     const createRetentionDraft = vi.fn();

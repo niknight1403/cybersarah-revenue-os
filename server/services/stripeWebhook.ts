@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import * as db from "../db";
-import { constructStripeEvent } from "./stripeProvider";
+import { classifyStripeFailure, constructStripeEvent } from "./stripeProvider";
 
 type StripeEventObject = {
   id?: string;
@@ -40,6 +40,7 @@ function amountOf(object: StripeEventObject) {
 
 export function createStripeWebhookHandler(dependencies: StripeWebhookDependencies) {
   return async (req: Request, res: Response) => {
+    let context: { workspaceId: number; eventId: string; eventType: string } | undefined;
     const signature = req.headers["stripe-signature"];
     if (typeof signature !== "string" || !Buffer.isBuffer(req.body)) {
       return res.status(400).json({ error: "Ungültige Stripe-Signatur oder Rohdaten." });
@@ -52,6 +53,7 @@ export function createStripeWebhookHandler(dependencies: StripeWebhookDependenci
         return res.status(202).json({ verified: true, processed: false, reason: "Kein Revenue-Workspace im Stripe-Ereignis hinterlegt." });
       }
 
+      context = { workspaceId, eventId: event.id, eventType: event.type };
       const providerActive = await dependencies.isProviderActive(workspaceId);
       await dependencies.recordWebhook(workspaceId, event.type, providerActive);
       if (!providerActive) {
@@ -86,7 +88,15 @@ export function createStripeWebhookHandler(dependencies: StripeWebhookDependenci
       await dependencies.recordAudit({ workspaceId, idempotencyKey: `stripe-accepted:${event.id}`, actor: "webhook", eventType: "stripe.webhook_accepted", status: "completed", detail: { stripeEventId: event.id, stripeEventType: event.type, amountCents: amountOf(object), subjectRef } });
       return res.status(200).json({ verified: true, processed: true, eventType: event.type });
     } catch (error) {
-      return res.status(400).json({ error: error instanceof Error ? error.message : "Stripe-Webhook-Verarbeitung fehlgeschlagen." });
+      const message = error instanceof Error ? error.message : "Stripe-Webhook-Verarbeitung fehlgeschlagen.";
+      if (context) {
+        try {
+          await dependencies.recordAudit({ workspaceId: context.workspaceId, idempotencyKey: `stripe-webhook-retry:${context.eventId}`, actor: "webhook", eventType: "stripe.webhook_retry_hint", status: "failed", detail: { stripeEventId: context.eventId, stripeEventType: context.eventType, ...classifyStripeFailure(error, "webhook") } });
+        } catch (auditError) {
+          console.error("[Stripe] Webhook-Fehler konnte nicht auditiert werden", auditError);
+        }
+      }
+      return res.status(400).json({ error: message, retryable: true, fallback: "approval_draft" });
     }
   };
 }

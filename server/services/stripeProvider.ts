@@ -24,6 +24,11 @@ function getStripeClient() {
   return new Stripe(secretKey, { maxNetworkRetries: 2, timeout: 15_000 });
 }
 
+export function classifyStripeFailure(error: unknown, operation: "checkout" | "payment_link" | "webhook") {
+  const message = error instanceof Error ? error.message : "Unbekannter Stripe-Fehler.";
+  return { provider: "stripe" as const, operation, retryable: true as const, fallback: "approval_draft" as const, externalExecution: false as const, message: message.replace(/sk_(?:test|live)_[A-Za-z0-9_]+/g, "[redacted]").slice(0, 240) };
+}
+
 export function constructStripeEvent(rawBody: Buffer, signature: string) {
   const secrets = [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_TEST_WEBHOOK_SECRET].filter((secret): secret is string => Boolean(secret));
   if (!secrets.length) throw new Error("Kein Stripe-Webhook-Signaturgeheimnis ist konfiguriert.");

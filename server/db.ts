@@ -441,7 +441,7 @@ export function buildGrowthActionDrafts(input: { workspaceId: number; currentDay
   return [];
 }
 
-type GrowthMetricEvent = { eventType: string; amountCents: number };
+type GrowthMetricEvent = { eventType: string; amountCents: number; metadata?: unknown };
 
 export function aggregateGrowthMetrics(events: GrowthMetricEvent[], marketingSpendCents: number) {
   const revenueCents = events.filter(event => ["invoice.payment_succeeded", "checkout.session.completed", "payment_intent.succeeded"].includes(event.eventType)).reduce((total, event) => total + event.amountCents, 0);
@@ -450,7 +450,17 @@ export function aggregateGrowthMetrics(events: GrowthMetricEvent[], marketingSpe
   const paymentFailures = events.filter(event => event.eventType === "invoice.payment_failed").length;
   const cancellations = events.filter(event => event.eventType === "customer.subscription.deleted").length;
   const activeSubscriptions = Math.max(0, events.filter(event => event.eventType === "customer.subscription.created").length - cancellations);
-  return { revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, cacCents: checkoutCompleted > 0 ? Math.round(marketingSpendCents / checkoutCompleted) : 0, estimatedLtvCents: activeSubscriptions > 0 ? Math.round(revenueCents / activeSubscriptions) : 0 };
+  const attribution = events.reduce((summary, event) => {
+    const metadata = event.metadata && typeof event.metadata === "object" ? event.metadata as { attribution?: { stage?: string; channel?: string; feedbackSignal?: string } } : {};
+    const signal = metadata.attribution;
+    if (signal?.stage === "acquisition") summary.acquisition += 1;
+    if (signal?.stage === "activation") summary.activation += 1;
+    if (signal?.stage === "conversion") summary.conversion += 1;
+    if (signal?.channel === "owned") summary.owned += 1;
+    if (signal?.feedbackSignal === "checkout_intent") summary.checkoutIntent += 1;
+    return summary;
+  }, { acquisition: 0, activation: 0, conversion: 0, owned: 0, checkoutIntent: 0 });
+  return { revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, cacCents: checkoutCompleted > 0 ? Math.round(marketingSpendCents / checkoutCompleted) : 0, estimatedLtvCents: activeSubscriptions > 0 ? Math.round(revenueCents / activeSubscriptions) : 0, attribution };
 }
 
 export async function getAutonomyCycleStatus(userId: number) {
@@ -471,13 +481,15 @@ export async function getGrowthLoopStatus(userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Datenbank ist nicht verfügbar.");
   const setting = await getOrCreateGrowthLoopSettings(workspace.id);
-  const [metrics, experiments, retention, experimentEvents] = await Promise.all([
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const [metrics, experiments, retention, experimentEvents, revenueSignals] = await Promise.all([
     db.select().from(revenueDailyMetrics).where(eq(revenueDailyMetrics.workspaceId, workspace.id)).orderBy(desc(revenueDailyMetrics.metricDate)).limit(1),
     db.select().from(growthExperiments).where(eq(growthExperiments.workspaceId, workspace.id)).orderBy(desc(growthExperiments.updatedAt)).limit(6),
     db.select().from(retentionCases).where(eq(retentionCases.workspaceId, workspace.id)).orderBy(desc(retentionCases.updatedAt)).limit(6),
     db.select().from(growthExperimentEvents).where(eq(growthExperimentEvents.workspaceId, workspace.id)),
+    db.select().from(revenueEvents).where(and(eq(revenueEvents.workspaceId, workspace.id), gte(revenueEvents.occurredAt, since))),
   ]);
-  return { workspace, setting, metrics: metrics[0] ?? null, experiments: experiments.map(experiment => ({ ...experiment, results: summarizeExperimentResults(experiment, experimentEvents) })), retention };
+  return { workspace, setting, metrics: metrics[0] ?? null, attribution: aggregateGrowthMetrics(revenueSignals, 0).attribution, experiments: experiments.map(experiment => ({ ...experiment, results: summarizeExperimentResults(experiment, experimentEvents) })), retention };
 }
 
 type ExperimentWithVariants = { id: number; variants: Array<{ key: string; label: string; value: string }> };
@@ -656,6 +668,10 @@ export async function getGrowthLoopSettingsByAnalyticsKey(analyticsWriteKey: str
   return setting;
 }
 
+export function deriveFunnelAttribution(eventType: "landing_view" | "cta_click" | "checkout.session.created") {
+  return { channel: "owned" as const, stage: eventType === "landing_view" ? "acquisition" as const : eventType === "cta_click" ? "activation" as const : "conversion" as const, feedbackSignal: eventType === "checkout.session.created" ? "checkout_intent" as const : "engagement" as const };
+}
+
 export async function recordFunnelEvent(input: { analyticsWriteKey: string; eventId: string; eventType: "landing_view" | "cta_click" | "checkout.session.created"; occurredAt: Date }) {
   const setting = await getGrowthLoopSettingsByAnalyticsKey(input.analyticsWriteKey);
   if (!setting) throw new Error("Unbekannter Funnel-Tracking-Schlüssel.");
@@ -665,10 +681,10 @@ export async function recordFunnelEvent(input: { analyticsWriteKey: string; even
     externalEventId: `funnel:${input.eventId}`,
     eventType: input.eventType,
     occurredAt: input.occurredAt,
-    metadata: { collector: "funnel", eventType: input.eventType },
+    metadata: { collector: "funnel", eventType: input.eventType, attribution: deriveFunnelAttribution(input.eventType) },
   });
   if (recorded.inserted) {
-    await recordGrowthAudit({ workspaceId: setting.workspaceId, idempotencyKey: `funnel-audit:${input.eventId}`, actor: "system", eventType: "funnel.event_recorded", status: "accepted", detail: { eventType: input.eventType, revenueEventId: recorded.event.id } });
+    await recordGrowthAudit({ workspaceId: setting.workspaceId, idempotencyKey: `funnel-audit:${input.eventId}`, actor: "system", eventType: "funnel.event_recorded", status: "accepted", detail: { eventType: input.eventType, revenueEventId: recorded.event.id, attribution: deriveFunnelAttribution(input.eventType) } });
   }
   return { workspaceId: setting.workspaceId, inserted: recorded.inserted };
 }
@@ -700,7 +716,7 @@ export async function runGrowthAnalysis(workspaceId: number, actor: "user" | "cr
   const currentDay = now.toISOString().slice(0, 10);
   const [previousMetric] = await db.select().from(revenueDailyMetrics).where(and(eq(revenueDailyMetrics.workspaceId, workspaceId), eq(revenueDailyMetrics.metricDate, currentDay))).limit(1);
   const marketingSpendCents = previousMetric?.marketingSpendCents ?? 0;
-  const { revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, cacCents, estimatedLtvCents } = aggregateGrowthMetrics(events, marketingSpendCents);
+  const { revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, cacCents, estimatedLtvCents, attribution } = aggregateGrowthMetrics(events, marketingSpendCents);
   await db.insert(revenueDailyMetrics).values({ workspaceId, metricDate: currentDay, revenueCents, mrrCents: revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, marketingSpendCents, cacCents, estimatedLtvCents }).onDuplicateKeyUpdate({ set: { revenueCents, mrrCents: revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, cacCents, estimatedLtvCents, updatedAt: now } });
 
   const recommendations: GrowthRecommendation[] = [];
@@ -726,7 +742,7 @@ export async function runGrowthAnalysis(workspaceId: number, actor: "user" | "cr
   }
   const setting = await getOrCreateGrowthLoopSettings(workspaceId);
   await db.update(growthLoopSettings).set({ lastRunAt: now }).where(eq(growthLoopSettings.id, setting.id));
-  return { revenueCents, paymentFailures, cancellations, checkoutStarted, checkoutCompleted, cacCents, estimatedLtvCents, recommendations };
+  return { revenueCents, paymentFailures, cancellations, checkoutStarted, checkoutCompleted, cacCents, estimatedLtvCents, attribution, recommendations };
 }
 
 export function buildHaraWorkflowPlan(input: { workspaceId: number; currentDay: string; recommendations: GrowthRecommendation[] }) {

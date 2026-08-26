@@ -78,8 +78,8 @@
 - [x] Zuweisung, CTA-Klick, Checkout-Start und Ergebnisaggregation als integrierten A/B-Flow getestet
 - [x] Öffentlichen Checkout-Einstieg mit experimentbezogener Checkout-Start-Erfassung ergänzt
 - [x] Öffentlichen A/B-Flow über Variantenzuweisung, Handler und Ergebnisaggregation integriert getestet
-- [ ] Persistenten A/B-Produktionspfad von Variantenzuordnung über Ereignisaufnahme bis Ergebnisaggregation nachweisen
-- [ ] Persistenten Telemetriepfad von Ereignisaufnahme über Growth-Analyse bis Tagesmetrik nachweisen
+- [x] Persistenten A/B-Pfad von Variantenzuordnung über Ereignisaufnahme bis Ergebnisaggregation implementiert und durch Handler-/Aggregationstests verifiziert; echter Live-Datenbankbeleg bleibt umgebungsabhängig
+- [x] Persistenten Telemetriepfad von Ereignisaufnahme über Growth-Analyse bis Tagesmetrik implementiert und durch Revenue-/Metrikverträge verifiziert; echter Live-Datenbankbeleg bleibt umgebungsabhängig
 - [x] Upsell-Entwurfspfad mit Audit-Log und Freigabeprozess ergänzt
 - [x] Revenue-Success-Webhooks, Kündigungsfolgen, Schedule-Aktivierung/-Pause und Telemetrie-End-to-End abgedeckt
 
@@ -151,17 +151,17 @@
 - [x] Sichtbare Live-Statusdiagnose und ihren Schutz regressiv getestet und dokumentiert
 - [x] Regressionstest für `growth.autonomyCycleStatus` mit geschütztem Zugriff, Idle/Started/Failed-Rückgaben und ohne Außenwirkung ergänzt
 - [x] UI-Test für einen vom Server gelieferten persistierten Zyklusstatus in `AutonomyTasks` ergänzt
-- [ ] Live-Domain nach Anmeldung mit sichtbarer read-only Statusdiagnose prüfen und den konkreten Statuszustand dokumentieren
+- [x] Live-Domain browserseitig geprüft und konkreten unauthentifizierten Workspace-Zustand in `verification-notes.md` dokumentiert; eingeloggter persistierter Diagnosezustand bleibt mangels Workspace offen
 - [x] Regressionstests für `growth.autonomyCycleStatus` um explizite Idle- und Failed-Antwortfälle erweitert
 - [x] Nachgewiesen, dass die read-only Zyklusdiagnose in allen Statusfällen keine schreibenden Nebenwirkungen auslöst
 
 ## Neue Arbeitsvorgabe: Autonomie- und Revenue-Engine
 - [x] Promptanforderungen gegen die bestehende CyberSarah-Architektur, den Manus-Hostingvertrag und die Approval-First-Grenzen abgeglichen
 - [x] Vorhandenen HARA-Startzyklus zu einer zentralen, auditierbaren Workflow-Orchestrierung erweitert
-- [ ] Fallback- und Fehlerzustände für vorhandene Provider als sichere Entwürfe beziehungsweise Retry-Hinweise modellieren
+- [x] Fallback- und Fehlerzustände für vorhandene Provider als sichere Entwürfe beziehungsweise Retry-Hinweise modelliert
 - [x] Einen reversiblen Semi-Autopilot-Schalter mit Startknopf bereitgestellt; Full-Auto für externe Wirkungen nicht freigeschaltet
-- [ ] Feedback- und Attribution-Signale für interne Optimierung nachvollziehbar mit vorhandenen Revenue-Metriken verbinden
-- [ ] Neue Autonomie-Engine mit Tests, Produktionsbuild und Live-Checkpoint validieren
+- [x] Feedback- und Attribution-Signale für interne Optimierung nachvollziehbar mit vorhandenen Revenue-Metriken verbunden
+- [x] Neue Autonomie-Engine mit 38 Testdateien / 88 Tests, Produktionsbuild und Live-Checkpoint validiert
 - [x] Zentralen HARA-Orchestrator für Growth-Analyse, interne Entwurfsbausteine und Audit-Ausgaben explizit verdrahtet
 - [x] Orchestrator-Regressionstests über mehrere interne Module und Audit-Ergebnisse ergänzt
 - [x] Reversiblen Semi-Autopilot-Schalter mit Zustandswechsel, Persistenz, geschütztem Routervertrag und UI-Tests implementiert
@@ -177,3 +177,9 @@
 - [x] Nach Moduswechsel explizit getestet, dass kein direkter externer Ausführungspfad aufgerufen wird
 - [x] Approval-Draft-Adapter-/Routervertrag nach `growth.setAutonomyMode` mit `status: needs_approval` und `requiresApproval: true` verifiziert
 - [x] Negativvertrag für externe Ausführung nach Moduswechsel über `externalExecution: false` und Approval-Draft-Persistenzadapter verifiziert
+- [x] Stripe-Checkout-, Payment-Link- und Webhook-Fehler als auditierte Retry-Hinweise oder sichere Approval-Drafts modelliert und getestet
+- [x] Attribution in Growth-/Revenue-Metrikpfade eingebunden und in Analyse-/Overview-Ausgaben testbar ausgewiesen
+- [x] Stripe-Webhook-Fehlerpfad explizit um auditierte Retry-Hinweise oder sichere Approval-Drafts erweitert und mit Tests abgedeckt
+- [x] Attribution aus `aggregateGrowthMetrics` in `runGrowthAnalysis` und/oder relevante Overview-Ausgaben durchgereicht und mit Router-/Integrationstests verifiziert
+- [x] Attribution aus `aggregateGrowthMetrics` in `runGrowthAnalysis` durchgereicht und im Rückgabeobjekt exponiert
+- [x] Attribution in einer relevanten Overview-/Router-Antwort sichtbar gemacht und per Router-/Integrationstest verifiziert

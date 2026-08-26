@@ -6,7 +6,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { createStripeCheckoutSession, createStripePaymentLink, getStripeProviderReadiness } from "./services/stripeProvider";
+import { classifyStripeFailure, createStripeCheckoutSession, createStripePaymentLink, getStripeProviderReadiness } from "./services/stripeProvider";
 import { createHeartbeatJob, updateHeartbeatJob } from "./_core/heartbeat";
 import { buildMonetizationApprovalDraft } from "./services/marketingCompliance";
 
@@ -137,17 +137,27 @@ export const appRouter = router({
       .input(z.object({ workspaceId: z.number().int().positive(), productName: z.string().trim().min(2).max(180), unitAmount: z.number().int().min(50).max(10_000_000), currency: z.string().trim().length(3), recurring: z.boolean(), origin: z.string().url() }))
       .mutation(async ({ ctx, input }) => {
         if (!await db.isStripeProviderActive(input.workspaceId)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe ist für diesen Arbeitsbereich nicht freigegeben." });
-        const paymentLink = await createStripePaymentLink({ ...input, createdBy: ctx.user.id, idempotencyKey: `stripe-link:${input.workspaceId}:${input.productName}:${input.unitAmount}:${input.recurring}` });
-        await db.recordGrowthAudit({ workspaceId: input.workspaceId, idempotencyKey: `stripe-link-audit:${paymentLink.id}`, actor: "user", eventType: "stripe.payment_link_created", status: "completed", detail: { paymentLinkId: paymentLink.id, productId: paymentLink.productId, priceId: paymentLink.priceId, mode: paymentLink.mode } });
-        return paymentLink;
+        try {
+          const paymentLink = await createStripePaymentLink({ ...input, createdBy: ctx.user.id, idempotencyKey: `stripe-link:${input.workspaceId}:${input.productName}:${input.unitAmount}:${input.recurring}` });
+          await db.recordGrowthAudit({ workspaceId: input.workspaceId, idempotencyKey: `stripe-link-audit:${paymentLink.id}`, actor: "user", eventType: "stripe.payment_link_created", status: "completed", detail: { paymentLinkId: paymentLink.id, productId: paymentLink.productId, priceId: paymentLink.priceId, mode: paymentLink.mode } });
+          return paymentLink;
+        } catch (error) {
+          await db.recordGrowthAudit({ workspaceId: input.workspaceId, idempotencyKey: `stripe-link-failed:${input.workspaceId}:${new Date().toISOString()}`, actor: "user", eventType: "stripe.payment_link_retry_hint", status: "failed", detail: classifyStripeFailure(error, "payment_link") });
+          throw error;
+        }
       }),
     createCheckoutSession: adminProcedure
       .input(z.object({ workspaceId: z.number().int().positive(), productName: z.string().trim().min(2).max(180), unitAmount: z.number().int().min(50).max(10_000_000), currency: z.string().trim().length(3), recurring: z.boolean(), origin: z.string().url() }))
       .mutation(async ({ ctx, input }) => {
         if (!await db.isStripeProviderActive(input.workspaceId)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Stripe ist für diesen Arbeitsbereich nicht freigegeben." });
-        const checkout = await createStripeCheckoutSession({ ...input, createdBy: ctx.user.id, idempotencyKey: `stripe-checkout:${input.workspaceId}:${input.productName}:${input.unitAmount}:${input.recurring}` });
-        await db.recordGrowthAudit({ workspaceId: input.workspaceId, idempotencyKey: `stripe-checkout-audit:${checkout.id}`, actor: "user", eventType: "stripe.checkout_session_created", status: "completed", detail: { checkoutSessionId: checkout.id, productId: checkout.productId, priceId: checkout.priceId, mode: checkout.mode } });
-        return checkout;
+        try {
+          const checkout = await createStripeCheckoutSession({ ...input, createdBy: ctx.user.id, idempotencyKey: `stripe-checkout:${input.workspaceId}:${input.productName}:${input.unitAmount}:${input.recurring}` });
+          await db.recordGrowthAudit({ workspaceId: input.workspaceId, idempotencyKey: `stripe-checkout-audit:${checkout.id}`, actor: "user", eventType: "stripe.checkout_session_created", status: "completed", detail: { checkoutSessionId: checkout.id, productId: checkout.productId, priceId: checkout.priceId, mode: checkout.mode } });
+          return checkout;
+        } catch (error) {
+          await db.recordGrowthAudit({ workspaceId: input.workspaceId, idempotencyKey: `stripe-checkout-failed:${input.workspaceId}:${new Date().toISOString()}`, actor: "user", eventType: "stripe.checkout_retry_hint", status: "failed", detail: classifyStripeFailure(error, "checkout") });
+          throw error;
+        }
       }),
   }),
   growth: router({

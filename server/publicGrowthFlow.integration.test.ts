@@ -31,9 +31,10 @@ describe("öffentlicher Growth-Telemetriefluss", () => {
   });
 
   it("nimmt Funnel-Events über den Handler auf und bildet daraus die für die Growth-Analyse benötigten Kennzahlen", async () => {
-    const telemetry: Array<{ eventType: string; amountCents: number }> = [];
+    const telemetry: Array<{ eventType: string; amountCents: number; metadata?: unknown }> = [];
     const recordEvent = (async (input: { eventType: "landing_view" | "cta_click" | "checkout.session.created" }) => {
-      telemetry.push({ eventType: input.eventType, amountCents: 0 });
+      const stage = input.eventType === "landing_view" ? "acquisition" : input.eventType === "cta_click" ? "activation" : "conversion";
+      telemetry.push({ eventType: input.eventType, amountCents: 0, metadata: { attribution: { channel: "owned", stage, feedbackSignal: input.eventType === "checkout.session.created" ? "checkout_intent" : "engagement" } } });
       return { workspaceId: 19, inserted: true };
     }) as never;
     const handler = createFunnelTrackingHandler({ recordEvent });
@@ -43,6 +44,6 @@ describe("öffentlicher Growth-Telemetriefluss", () => {
       expect(captured.state.status).toBe(202);
     }
     telemetry.push({ eventType: "checkout.session.completed", amountCents: 49900 }, { eventType: "customer.subscription.created", amountCents: 0 });
-    expect(aggregateGrowthMetrics(telemetry, 10000)).toMatchObject({ revenueCents: 49900, checkoutStarted: 1, checkoutCompleted: 1, cacCents: 10000, estimatedLtvCents: 49900 });
+    expect(aggregateGrowthMetrics(telemetry, 10000)).toMatchObject({ revenueCents: 49900, checkoutStarted: 1, checkoutCompleted: 1, cacCents: 10000, estimatedLtvCents: 49900, attribution: { acquisition: 1, activation: 1, conversion: 1, owned: 3, checkoutIntent: 1 } });
   });
 });

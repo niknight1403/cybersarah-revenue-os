@@ -18,6 +18,11 @@ describe("autonomy cycle router", () => {
     vi.clearAllMocks();
     db.getGrowthLoopStatus.mockResolvedValue({ setting: { autonomyMode: "semi" } });
   });
+  it("exponiert Attribution im geschützten Growth-Status für die interne Optimierung", async () => {
+    db.getGrowthLoopStatus.mockResolvedValue({ workspace: { id: 73 }, setting: { autonomyMode: "semi" }, metrics: null, attribution: { acquisition: 2, activation: 1, conversion: 1, owned: 4, checkoutIntent: 1 }, experiments: [], retention: [] });
+    await expect(appRouter.createCaller(context()).growth.status()).resolves.toMatchObject({ attribution: { acquisition: 2, activation: 1, conversion: 1, owned: 4, checkoutIntent: 1 } });
+  });
+
   it("wechselt den Semi-Autopilot reversibel und auditiert den sicheren Modus", async () => {
     db.getRevenueWorkspaceByUser.mockResolvedValue({ id: 73, userId: 13 });
     db.saveAutonomyMode.mockResolvedValue({ autonomyMode: "paused" });
