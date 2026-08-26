@@ -361,3 +361,8 @@
 - [x] Pollinations-Providerstatus und vorhandene Asset-Draft-Flows anschließen
 - [x] Tests, TypeScript, Build und Port-3000-Health validieren
 - [x] Umstellungsbericht und Release-Checkpoint aktualisieren
+
+## Neuer Release-Lauf
+- [x] Versions- und Changelog-Stand für den nächsten Release aktualisieren
+- [x] Vollständige Testsuite, TypeScript, Produktionsbuild und Port-3000-Healthchecks erneut ausführen
+- [x] Release-Status dokumentieren und neuen automatisch veröffentlichten Checkpoint speichern

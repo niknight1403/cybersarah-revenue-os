@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.6] — 2026-08-26
+
+### Added
+
+- Serverseitiger Pollinations-Image-Adapter als Leonardo-Ersatz mit Bearer-Secret, Safety-Flag, Prompt-/Modell-Allowlist und Storage-Upload.
+- Nicht-sensitiver `auth.providers`-Status für dynamische Login-Schaltflächen; nicht konfigurierte Provider bleiben deaktiviert.
+
+### Validation
+
+- 59 Testdateien und 128 Tests, TypeScript, Produktionsbuild sowie `healthz`, `readyz` und `livez` auf Port 3000 erfolgreich.
+- Managed-WebDev bleibt der Betriebsweg; PM2/Systemd und `/opt/cybersarah` werden nicht verwendet.
+
 ## [1.0.5] — 2026-08-26
 
 ### Added
