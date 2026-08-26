@@ -11,6 +11,8 @@ import { createHeartbeatJob, updateHeartbeatJob } from "./_core/heartbeat";
 import { buildMonetizationApprovalDraft } from "./services/marketingCompliance";
 import { getShopifySandboxCatalog } from "./services/shopifySandbox";
 import { createTradingConnector } from "./services/tradingConnector";
+import { getSubscriptionReadiness } from "./services/subscriptionReadiness";
+import { getProductionReadiness } from "./services/productionReadiness";
 
 export const appRouter = router({
   system: systemRouter,
@@ -65,6 +67,9 @@ export const appRouter = router({
   }),
   trading: router({
     status: protectedProcedure.query(() => createTradingConnector().snapshot()),
+  }),
+  subscriptions: router({
+    readiness: protectedProcedure.query(() => ({ subscription: getSubscriptionReadiness(), production: getProductionReadiness() })),
   }),
   monetization: router({
     overview: protectedProcedure.query(({ ctx }) => db.getMonetizationOverview(ctx.user.id)),

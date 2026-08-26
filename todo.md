@@ -295,3 +295,12 @@
 - [x] Desktop- und mobile Darstellung von `/revenue-loops` geprüft
 - [x] Separaten FFmpeg-/Crawl4AI-/CRM-Betriebsworker als externe, nicht im Managed-WebDev simulierte Voraussetzung dokumentiert
 - [x] Produktions-Upload, SEO-Publikation und B2B-Kontaktaufnahme bleiben bis separater menschlicher Freigabe und Providerkonfiguration deaktiviert
+
+## Neue Arbeitsvorgabe: Produktionstransition und Echtgeld-Readiness
+- [x] Produktions-/Sandbox-Kontrakt und vorhandene Provider-Readiness für Stripe, Shopify, RevenueCat, Meta und WhatsApp geprüft
+- [x] Sichere Produktionskonfiguration mit serverseitiger Secret-Validierung und ohne automatische Aktivierung implementiert
+- [x] Paywall-Readiness für RevenueCat/Google Play mit Trial-, Monats- und Jahresprodukten integriert
+- [x] Cart-Recovery-, Auto-DM-, Video-Upload- und Push-Aktionen als auditierte Approval-first-Entwürfe abgebildet
+- [x] Account-Deletion-, Privacy-, Terms- und Onboarding-Verträge gegen den neuen Flow validiert
+- [x] TypeScript, Tests, Produktionsbuild, Health und Managed-Deployment-Grenzen validiert
+- [x] Echtgeld-Readiness-Bericht und Checkpoint dokumentiert

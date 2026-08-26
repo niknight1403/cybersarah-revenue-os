@@ -40,6 +40,7 @@ const menuItems = [
   { icon: ChartNoAxesCombined, label: "Loop Intelligence", path: "/loop-intelligence" },
   { icon: Activity, label: "Trading · Dry-Run", path: "/trading" },
   { icon: Sparkles, label: "Global Revenue Loops", path: "/revenue-loops" },
+  { icon: ShieldCheck, label: "Paywall Readiness", path: "/paywall" },
   { icon: Activity, label: "System", path: "/system" },
 ];
 
