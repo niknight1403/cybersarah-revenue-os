@@ -13,6 +13,7 @@ import { getShopifySandboxCatalog } from "./services/shopifySandbox";
 import { createTradingConnector } from "./services/tradingConnector";
 import { getSubscriptionReadiness } from "./services/subscriptionReadiness";
 import { getProductionReadiness } from "./services/productionReadiness";
+import { resolveStagingSecrets } from "./services/stagingSecrets";
 
 export const appRouter = router({
   system: systemRouter,
@@ -69,7 +70,7 @@ export const appRouter = router({
     status: protectedProcedure.query(() => createTradingConnector().snapshot()),
   }),
   subscriptions: router({
-    readiness: protectedProcedure.query(() => ({ subscription: getSubscriptionReadiness(), production: getProductionReadiness() })),
+    readiness: protectedProcedure.query(() => ({ subscription: getSubscriptionReadiness(), production: getProductionReadiness(), stagingSecrets: resolveStagingSecrets() })),
   }),
   monetization: router({
     overview: protectedProcedure.query(({ ctx }) => db.getMonetizationOverview(ctx.user.id)),

@@ -304,3 +304,11 @@
 - [x] Account-Deletion-, Privacy-, Terms- und Onboarding-Verträge gegen den neuen Flow validiert
 - [x] TypeScript, Tests, Produktionsbuild, Health und Managed-Deployment-Grenzen validiert
 - [x] Echtgeld-Readiness-Bericht und Checkpoint dokumentiert
+
+## Neue Arbeitsvorgabe: Staging-Secrets, RevenueCat-Webhooks und E2E-Verifikation
+- [x] Staging-/Produktions-Secretvertrag und vorhandene Provider-Readiness geprüft
+- [x] Serverseitigen fail-closed Staging-Secret-Resolver ohne Dummy-Produktionswerte ergänzt
+- [x] RevenueCat-Webhook-Eventklassifizierung und Verifikationsvertrag für INITIAL_PURCHASE, RENEWAL, CANCELLATION und EXPIRATION getestet
+- [x] Account-Deletion- und Draft-to-Approval-E2E-Verifikation ohne irreversible Live-Löschung oder externe Ausführung ergänzt
+- [x] TypeScript, vollständige Testsuite, Produktionsbuild und Managed-Healthchecks validiert
+- [x] PM2-/Nginx-/`/opt/cybersarah`-Abgrenzung sowie Staging-Verifikationsbericht dokumentiert

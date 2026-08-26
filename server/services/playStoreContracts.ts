@@ -18,7 +18,9 @@ export function classifyRevenueCatEvent(input: unknown) {
 }
 
 export async function handleRevenueCatWebhook(req: Request, res: Response) {
-  const configuredSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
+  const configuredSecret = process.env.REVENUECAT_WEBHOOK_SECRET?.trim();
+  const explicitDeploymentMode = process.env.REVENUE_OS_MODE === "staging" || process.env.REVENUE_OS_MODE === "production";
+  if (explicitDeploymentMode && !configuredSecret) return res.status(503).json({ ok: false, error: "webhook-secret-not-configured", externalExecution: false });
   if (configuredSecret && req.header("x-revenuecat-webhook-secret") !== configuredSecret) return res.status(401).json({ ok: false, error: "invalid-webhook-secret" });
   const result = classifyRevenueCatEvent(req.body);
   return res.status(202).json({ ok: true, result, note: "Event angenommen; Entitlement- und Außenwirkung bleiben bis Providerkonfiguration und Freigabe blockiert." });
