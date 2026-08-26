@@ -238,3 +238,12 @@
 - [x] Mobile Performance-/Accessibility-Grundlagen sowie Tests, Build und verwaltete Health-Endpunkte validiert
 - [x] Play-Store-Readiness-Report und APK/AAB-Bereitstellungsstatus in `docs/play-store-readiness-report.md` dokumentiert
 - [x] Play-Store-Readiness-Stand 1.0.3 zum Checkpoint vorbereitet und Marktreifebericht dokumentiert
+
+## Neue Arbeitsvorgabe: Android Scaffold und Play-Compliance
+- [x] Android-/TWA-Anforderungen gegen den vorhandenen WebDev-Projektpfad abgeglichen; private Signing Keys nicht im Agentenlauf erzeugt
+- [x] Sicheres Android-/Bubblewrap-Scaffold mit Build-Anleitung und neutralem Assetlinks-Vertrag vorbereitet
+- [x] RevenueCat-/Google-Play-Webhook- und Produktmapping als nicht-live Backend-/Frontend-Vertrag ergänzt
+- [x] Authentifizierte Account-Löschungsanforderungs-API mit Bestätigung entworfen; keine unbestätigte irreversible Löschung ausgeführt
+- [x] `PLAY_STORE_DATA_SAFETY.md` mit tatsächlichen Datenkategorien, Zweck, Aufbewahrung und Providerstatus dokumentiert
+- [x] Tests, TypeScript, Build, PWA-/Assetlinks-Checks und verwaltete Health-Endpunkte validiert
+- [x] Android-/Play-Compliance-Bericht erstellt und Release-Checkpoint vorbereitet

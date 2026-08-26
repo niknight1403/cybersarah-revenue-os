@@ -14,6 +14,7 @@ import { handleStripeWebhook } from "../services/stripeWebhook";
 import { handleGrowthAnalysisSchedule } from "../services/growthSchedule";
 import { handleFunnelTracking } from "../services/funnelTracking";
 import { handleExperimentOutcome } from "../services/experimentTracking";
+import { handleAccountDeletionRequest, handleRevenueCatWebhook } from "../services/playStoreContracts";
 import { requireMcpBearer, registerMcpHealthProbe } from "../mcp/auth";
 import { handleMcpRequest } from "../mcp/server";
 
@@ -68,6 +69,8 @@ async function startServer() {
   });
 
   app.post("/api/stripe/webhook", express.raw({ type: "application/json", limit: "1mb" }), handleStripeWebhook);
+  app.post("/api/v1/webhooks/revenuecat", express.json({ limit: "256kb" }), handleRevenueCatWebhook);
+  app.post("/api/v1/user/delete-account", express.json({ limit: "32kb" }), handleAccountDeletionRequest);
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ limit: "2mb", extended: true }));
   app.post("/api/events/funnel", handleFunnelTracking);

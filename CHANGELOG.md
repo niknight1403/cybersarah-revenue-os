@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.4] — 2026-08-26
+
+### Added
+
+- Nicht-signiertes Android-/Bubblewrap-Scaffold mit Build-Anleitung und neutralem TWA-Assetlinks-Vertrag.
+- Sicherer RevenueCat-Webhook-Vertrag für Renewal, Cancellation, Expiration und Billing-Issue-Events.
+- Authentifizierter, exakt bestätigungspflichtiger Account-Löschungsanforderungs-Endpunkt `POST /api/v1/user/delete-account`.
+- `PLAY_STORE_DATA_SAFETY.md` mit Datenkategorien, Zweck, Providerstatus und Retention-Hinweisen.
+
+### Safety
+
+- Keine privaten Signing Keys oder Passwörter erzeugt, gespeichert oder in das Repository eingebettet.
+- RevenueCat-Events und Account-Löschungen erzeugen im aktuellen Stand keine automatische Außenwirkung; die produktive Datenkaskade bleibt vor Store-Einreichung separat zu verifizieren.
+
 ## [1.0.3] — 2026-08-26
 
 ### Added
