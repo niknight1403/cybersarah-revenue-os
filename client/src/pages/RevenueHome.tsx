@@ -131,6 +131,11 @@ export default function RevenueHome() {
           </div>
         </section>
 
+        <section className="cyber-panel mt-6 p-5 sm:p-6" aria-label="Abo-Bereitschaft">
+          <div className="flex items-start justify-between gap-4"><div><p className="mono text-[10px] tracking-[0.16em] text-violet-200">PAYWALL // READINESS</p><h2 className="mt-2 text-xl font-semibold text-white">HARA-Entitlements</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Free Trial, Monats- und Jahresentitlement sind als Paywall-Vertrag vorbereitet. Käufe werden erst nach echter Google-Play-/RevenueCat-Konfiguration ausgeführt.</p></div><CreditCard className="hidden h-5 w-5 shrink-0 text-violet-200 sm:block" aria-hidden="true" /></div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">{[["Free Trial", "hara_basic"], ["Monat", "hara_pro"], ["Jahr", "hara_pro"]].map(([label, entitlement]) => <div key={label} className="rounded-xl border border-violet-300/15 bg-violet-300/[0.04] p-3"><p className="text-sm font-medium text-white">{label}</p><p className="mt-1 text-[11px] text-violet-100">{entitlement}</p><p className="mt-2 text-[10px] text-amber-100">Provider-Setup erforderlich</p></div>)}</div>
+        </section>
+
         <section className="mt-6 grid gap-4 lg:grid-cols-[1.45fr_1fr]">
           <article className="cyber-panel p-5 sm:p-6">
             <div className="flex items-center gap-2">

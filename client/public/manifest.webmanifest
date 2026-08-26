@@ -1,0 +1,12 @@
+{
+  "name": "CyberSarah Revenue OS",
+  "short_name": "CyberSarah",
+  "lang": "de",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#17102c",
+  "background_color": "#090719",
+  "description": "Approval-first Revenue Operations und HARA-Automatisierung."
+}

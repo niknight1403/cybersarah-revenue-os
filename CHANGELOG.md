@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.3] — 2026-08-26
+
+### Added
+
+- Öffentliche `/privacy`, `/terms` und `/account-deletion`-Pfade als Play-Store-Readiness-Grundlage.
+- Mobile PWA-Basis mit Manifest, optionalem Offline-Service-Worker und neutralem `/.well-known/assetlinks.json`-Platzhalter.
+- Geschützter 3-Schritt-HARA-Onboarding-Flow mit Approval-first-Hinweisen.
+- RevenueCat-/Google-Play-Entitlement-Vertrag für Trial, Monats- und Jahresabo ohne Kauf-Ausführung.
+- Web-Push-/Firebase-Benachrichtigungsvertrag für Sale-, Lead- und Video-Ready-Drafts.
+
+### Safety
+
+- Kein Account-, Billing- oder Provider-Token wird automatisch geseedet oder in den Frontend-Build eingebettet.
+- TWA-Assetlinks bleiben bis zur echten Paket-ID und Signatur absichtlich neutral.
+- Produktive Account-Löschung, Google-Play-Billing, Push-Zustellung und externe Connector-Schreibvorgänge bleiben vor echter Providerkonfiguration deaktiviert beziehungsweise freigabepflichtig.
+
 ## [1.0.2] — 2026-08-26
 
 ### Added

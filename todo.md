@@ -228,3 +228,13 @@
 - [x] Strategie-/Prompt-Tuning als auditierte interne Empfehlung statt automatische Prompt- oder Außenwirkungsänderung implementiert
 - [x] Continuous-Planning-Loop auf interne Aufgaben-/Draft-Erzeugung begrenzt und externe Aktionen blockiert
 - [x] Loop-Engineering-Tests, TypeScript, Build, Health und Release-Status dokumentiert
+
+## Neue Arbeitsvorgabe: Play-Store-Readiness und Launch
+- [x] Mobile-Artefakte, PWA-Manifest, Service-Worker und TWA-Voraussetzungen gegen den bestehenden WebDev-Stand geprüft und sichere Grundlagen ergänzt
+- [x] Privacy-Policy-, Account-Löschungs-, AGB- und Abo-Transparenzpfade geprüft und sichere öffentliche Grundlagen ergänzt; produktive Löschverarbeitung bleibt vor Store-Release offen
+- [x] RevenueCat-/Google-Play-Billing als konfigurierte, nicht-live Paywall-/Entitlement-Verträge vorbereitet
+- [x] 3-Schritt-Onboarding für HARA-Agenten als geschützten, approval-first Flow ergänzt
+- [x] Web-Push/Firebase-Hooks als serverseitig konfigurierbare Benachrichtigungsentwürfe modelliert
+- [x] Mobile Performance-/Accessibility-Grundlagen sowie Tests, Build und verwaltete Health-Endpunkte validiert
+- [x] Play-Store-Readiness-Report und APK/AAB-Bereitstellungsstatus in `docs/play-store-readiness-report.md` dokumentiert
+- [x] Play-Store-Readiness-Stand 1.0.3 zum Checkpoint vorbereitet und Marktreifebericht dokumentiert
