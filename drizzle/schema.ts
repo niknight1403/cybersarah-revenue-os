@@ -466,6 +466,7 @@ export const growthLoopSettings = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     workspaceId: int("workspaceId").notNull(),
     enabled: boolean("enabled").default(false).notNull(),
+    autonomyMode: mysqlEnum("autonomyMode", ["semi", "paused"]).default("semi").notNull(),
     cadenceCron: varchar("cadenceCron", { length: 64 }).default("0 0 7 * * *").notNull(),
     scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }),
     analyticsWriteKey: varchar("analyticsWriteKey", { length: 64 }).unique(),

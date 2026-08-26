@@ -145,5 +145,35 @@
 - [x] Startknopf-Stand nach den neuesten UI- und Router-Anpassungen mit Produktionsbuild validiert
 - [x] Neuen Checkpoint für den Startknopf-Stand gespeichert
 - [x] Aktualisierte Startknopf-Version live bereitgestellt und nachgewiesen
-- [ ] Startknopf-Änderungen nach dem Checkpoint auf der Live-Domain aktualisieren
-- [ ] Veröffentlichte Live-App browserseitig auf Startknopf und Statuszustände prüfen und dokumentieren
+- [x] Startknopf-Änderungen nach dem Checkpoint auf der Live-Domain aktualisiert
+- [x] Veröffentlichte Live-App browserseitig auf Startknopf und Statuszustände geprüft und dokumentiert
+- [x] Read-only Statusdiagnose für den Autonomie-Startzyklus ohne Ausführung externer Aktionen ergänzt
+- [x] Sichtbare Live-Statusdiagnose und ihren Schutz regressiv getestet und dokumentiert
+- [x] Regressionstest für `growth.autonomyCycleStatus` mit geschütztem Zugriff, Idle/Started/Failed-Rückgaben und ohne Außenwirkung ergänzt
+- [x] UI-Test für einen vom Server gelieferten persistierten Zyklusstatus in `AutonomyTasks` ergänzt
+- [ ] Live-Domain nach Anmeldung mit sichtbarer read-only Statusdiagnose prüfen und den konkreten Statuszustand dokumentieren
+- [x] Regressionstests für `growth.autonomyCycleStatus` um explizite Idle- und Failed-Antwortfälle erweitert
+- [x] Nachgewiesen, dass die read-only Zyklusdiagnose in allen Statusfällen keine schreibenden Nebenwirkungen auslöst
+
+## Neue Arbeitsvorgabe: Autonomie- und Revenue-Engine
+- [x] Promptanforderungen gegen die bestehende CyberSarah-Architektur, den Manus-Hostingvertrag und die Approval-First-Grenzen abgeglichen
+- [x] Vorhandenen HARA-Startzyklus zu einer zentralen, auditierbaren Workflow-Orchestrierung erweitert
+- [ ] Fallback- und Fehlerzustände für vorhandene Provider als sichere Entwürfe beziehungsweise Retry-Hinweise modellieren
+- [x] Einen reversiblen Semi-Autopilot-Schalter mit Startknopf bereitgestellt; Full-Auto für externe Wirkungen nicht freigeschaltet
+- [ ] Feedback- und Attribution-Signale für interne Optimierung nachvollziehbar mit vorhandenen Revenue-Metriken verbinden
+- [ ] Neue Autonomie-Engine mit Tests, Produktionsbuild und Live-Checkpoint validieren
+- [x] Zentralen HARA-Orchestrator für Growth-Analyse, interne Entwurfsbausteine und Audit-Ausgaben explizit verdrahtet
+- [x] Orchestrator-Regressionstests über mehrere interne Module und Audit-Ergebnisse ergänzt
+- [x] Reversiblen Semi-Autopilot-Schalter mit Zustandswechsel, Persistenz, geschütztem Routervertrag und UI-Tests implementiert
+- [x] Nachgewiesen, dass auch im Semi-Autopilot-Modus keine externe Wirkung ohne Einzel-Freigabe möglich ist
+- [x] Expliziten HARA-Orchestrator für Growth-Analyse, interne Draft-Module und Audit-Ausgaben implementiert
+- [x] Modulübergreifenden Orchestrator-Test mit Audit-Ergebnissen und internen Draft-Pfaden ergänzt
+- [x] UI-Regressionstest für sichtbares Pause/Fortsetzen und persistierten Semi-Autopilot-Zustand ergänzt
+- [x] Nach Moduswechsel per Router-/Integrationstest die Approval-only-Grenze externer Wirkungen nachgewiesen
+- [x] Echten Orchestrator-Integrationstest ohne Mocking der Orchestrator-Ausgabe von Analyse über Draft-Erzeugung bis Audit-Nachweis ergänzt
+- [x] Router-/Integrationstest nach Moduswechsel mit `needs_approval`-Drafts und ohne externe Ausführung ergänzt
+- [x] Echten `runHaraOrchestrator`-Integrationstest mit Analyseergebnis, Draft-Erzeugung und Abschluss-Audit nachgewiesen
+- [x] Persistierten Approval-Draft nach `growth.setAutonomyMode` mit `status: needs_approval` und `requiresApproval: true` verifiziert
+- [x] Nach Moduswechsel explizit getestet, dass kein direkter externer Ausführungspfad aufgerufen wird
+- [x] Approval-Draft-Adapter-/Routervertrag nach `growth.setAutonomyMode` mit `status: needs_approval` und `requiresApproval: true` verifiziert
+- [x] Negativvertrag für externe Ausführung nach Moduswechsel über `externalExecution: false` und Approval-Draft-Persistenzadapter verifiziert

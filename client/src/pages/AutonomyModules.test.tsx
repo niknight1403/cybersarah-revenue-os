@@ -27,7 +27,7 @@ vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({ revenue: { overview: { invalidate: vi.fn() } }, monetization: { overview: { invalidate: vi.fn() } } }),
     revenue: { overview: { useQuery: () => state.overview }, createApprovalDraft: { useMutation: () => state.mutation } },
-    growth: { status: { useQuery: () => state.growth }, startAutonomyCycle: { useMutation: () => state.mutation } },
+    growth: { status: { useQuery: () => ({ ...state.growth, data: { ...state.growth.data, setting: state.growth.data.setting ?? { autonomyMode: "semi" } } }) }, autonomyCycleStatus: { useQuery: () => ({ isLoading: false, isError: false, data: { status: "started" } }) }, setAutonomyMode: { useMutation: () => state.mutation }, startAutonomyCycle: { useMutation: () => state.mutation } },
     monetization: { overview: { useQuery: () => ({ isLoading: false, isError: false, data: { currency: "EUR", totalCents: 0, sources: [{ source: "Stripe", status: "disabled", amountCents: 0 }, { source: "Affiliate", status: "not_connected", amountCents: null }] } }) }, createDraft: { useMutation: () => state.mutation } },
   },
 }));
@@ -46,6 +46,8 @@ describe("mobile Autonomie-Module", () => {
     expect(markup).toContain("HARA // HUMAN-AUDITED REVENUE AUTONOMY");
     expect(markup).toContain("Freigabe-Queue bereinigen");
     expect(markup).toContain("AUDIT #12");
+    expect(markup).toContain("Semi-Autopilot aktiv");
+    expect(markup).toContain("Full-Auto gesperrt");
   });
 
   it("stellt KI-Influence und Produktvermarktung als Entwurfs-Workflows bereit", () => {
@@ -63,11 +65,25 @@ describe("mobile Autonomie-Module", () => {
     expect(markup).toContain("Experiment prüfen: CTA-Test");
     expect(markup).toContain("Autonomie starten");
     expect(markup).toContain("Keine Zahlung, kein Posting, keine Nachricht ohne Freigabe");
+    expect(markup).toContain("Zyklus gestartet · Entwürfe werden geprüft");
+  });
+
+  it("zeigt den sichtbaren Semi-Autopilot-Schalter für Pause und Fortsetzen", () => {
+    const semiMarkup = render(<HaraCenter />);
+    expect(semiMarkup).toContain("Autonomie pausieren");
+    expect(semiMarkup).toContain("aria-label=\"Semi-Autopilot pausieren\"");
+    state.growth.data.setting = { autonomyMode: "paused" };
+    const pausedMarkup = render(<HaraCenter />);
+    expect(pausedMarkup).toContain("Autonomie pausiert");
+    expect(pausedMarkup).toContain("Semi-Autopilot fortsetzen");
+    expect(pausedMarkup).toContain("aria-label=\"Semi-Autopilot fortsetzen\"");
+    state.growth.data.setting = { autonomyMode: "semi" };
   });
 
   it("zeigt alle Startzyklus-Zustände als zugänglichen Status an", () => {
     const statuses: AutonomyCycleStatus[] = ["running", "started", "duplicate", "failed"];
     expect(statuses.map(autonomyCycleStatusCopy)).toEqual(["Autonomie-Zyklus läuft …", "Zyklus gestartet · Entwürfe werden geprüft", "Heute bereits gestartet · kein zweiter Lauf ausgeführt", "Start fehlgeschlagen · bitte erneut versuchen"]);
+    expect(render(<CycleStatusView status="idle" />)).toContain("Bereit für den nächsten Start");
     expect(render(<CycleStatusView status="duplicate" />)).toContain("Heute bereits gestartet");
     expect(render(<CycleStatusView status="failed" />)).toContain("Start fehlgeschlagen");
   });

@@ -4,6 +4,8 @@ import type { TrpcContext } from "./_core/context";
 const db = vi.hoisted(() => ({
   getRevenueOverview: vi.fn(),
   getRevenueWorkspaceByUser: vi.fn(),
+  saveAutonomyMode: vi.fn(),
+  recordGrowthAudit: vi.fn(),
   createRevenueWorkspace: vi.fn(),
   setRevenueAgentEnabled: vi.fn(),
   createRevenueApprovalDraft: vi.fn(),
@@ -36,7 +38,10 @@ function createAnonymousContext(): TrpcContext {
 }
 
 describe("revenue router integration", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    db.createRevenueApprovalDraft.mockResolvedValue({ status: "needs_approval", requiresApproval: true, externalExecution: false });
+  });
 
   it("initialisiert einen fehlenden persönlichen Arbeitsbereich", async () => {
     db.getRevenueWorkspaceByUser.mockResolvedValueOnce(undefined);
@@ -63,8 +68,19 @@ describe("revenue router integration", () => {
     const caller = appRouter.createCaller(createAuthenticatedContext());
     const input = { actionType: "Campaign review", target: "Kampagne Q4", payload: { source: "test" } };
 
-    await expect(caller.revenue.createApprovalDraft(input)).resolves.toEqual({ success: true });
+    await expect(caller.revenue.createApprovalDraft(input)).resolves.toMatchObject({ success: true, status: "needs_approval", requiresApproval: true, externalExecution: false });
     expect(db.createRevenueApprovalDraft).toHaveBeenCalledWith(7, input);
+  });
+
+  it("hält nach dem Semi-Autopilot-Moduswechsel externe Marketing-Wirkungen im Approval-Draft-Pfad", async () => {
+    db.getRevenueWorkspaceByUser.mockResolvedValue({ id: 19, userId: 7 });
+    db.saveAutonomyMode.mockResolvedValue({ autonomyMode: "semi" });
+    const caller = appRouter.createCaller(createAuthenticatedContext());
+    await expect(caller.growth.setAutonomyMode({ mode: "semi" })).resolves.toMatchObject({ mode: "semi", externalExecution: false, approvalRequired: true });
+    const input = { actionType: "social_distribution_draft", target: "LinkedIn", payload: { externalExecution: false, consentRequired: true } };
+    await expect(caller.revenue.createApprovalDraft(input)).resolves.toMatchObject({ success: true, status: "needs_approval", requiresApproval: true, externalExecution: false });
+    expect(db.createRevenueApprovalDraft).toHaveBeenCalledWith(7, input);
+    expect(db.createRevenueApprovalDraft).not.toHaveBeenCalledWith(7, expect.objectContaining({ payload: expect.objectContaining({ externalExecution: true }) }));
   });
 
   it("leitet KI-Influence- und Produktmarketing-Entwürfe unverändert an den geschützten Draft-Pfad weiter", async () => {

@@ -1,0 +1,3 @@
+# Verifikationsnotiz – 2026-08-26
+
+Die mobile Vorschau wurde auf `/hara` und `/tasks` bei 390×844 geprüft. Bottom-Navigation, HARA- und Tasks-Einstieg sowie die dunkle, fingerfreundliche Gestaltung sind sichtbar. Die Vorschau war nicht in einem authentifizierten Revenue-Workspace: HARA zeigte „HARA braucht einen Arbeitsbereich“ und Tasks den Ladezustand. Deshalb konnte der persistierte Pause/Fortsetzen-Schalter in der Browser-Vorschau nicht als eingeloggter Workspace-Zustand bestätigt werden. Die entsprechende UI-Regression ist im Test abgedeckt; der Live-Nachweis nach Anmeldung bleibt bewusst offen.

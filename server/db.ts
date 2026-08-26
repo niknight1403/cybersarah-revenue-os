@@ -192,12 +192,17 @@ export function buildRevenueApprovalDraftRecord(workspaceId: number, input: { ac
   return { workspaceId, actionKey, actionType: input.actionType, target: input.target, payload: input.payload, status: "needs_approval" as const, requiresApproval: true, requestedAt: new Date() };
 }
 
-export async function createRevenueApprovalDraft(userId: number, input: { actionType: string; target: string; payload: Record<string, unknown> }) {
-  const db = await getDb();
-  if (!db) throw new Error("Datenbank ist nicht verfügbar.");
-  const workspace = await getRevenueWorkspaceByUser(userId);
+export async function createRevenueApprovalDraft(userId: number, input: { actionType: string; target: string; payload: Record<string, unknown> }, dependencies: { getWorkspace?: typeof getRevenueWorkspaceByUser; persist?: (record: ReturnType<typeof buildRevenueApprovalDraftRecord>) => Promise<void> } = {}) {
+  const workspace = await (dependencies.getWorkspace ?? getRevenueWorkspaceByUser)(userId);
   if (!workspace) throw new Error("Arbeitsbereich wurde nicht gefunden.");
-  await db.insert(revenueExternalActions).values(buildRevenueApprovalDraftRecord(workspace.id, input, crypto.randomUUID()));
+  const record = buildRevenueApprovalDraftRecord(workspace.id, input, crypto.randomUUID());
+  if (dependencies.persist) await dependencies.persist(record);
+  else {
+    const db = await getDb();
+    if (!db) throw new Error("Datenbank ist nicht verfügbar.");
+    await db.insert(revenueExternalActions).values(record);
+  }
+  return { status: record.status, requiresApproval: record.requiresApproval, externalExecution: false as const };
 }
 
 async function getOrCreateStripeProviderConfig(workspaceId: number) {
@@ -355,6 +360,16 @@ async function getOrCreateGrowthLoopSettings(workspaceId: number) {
   return created;
 }
 
+export async function saveAutonomyMode(workspaceId: number, autonomyMode: "semi" | "paused") {
+  const db = await getDb();
+  if (!db) throw new Error("Datenbank ist nicht verfügbar.");
+  const settings = await getOrCreateGrowthLoopSettings(workspaceId);
+  await db.update(growthLoopSettings).set({ autonomyMode }).where(eq(growthLoopSettings.id, settings.id));
+  const [updated] = await db.select().from(growthLoopSettings).where(eq(growthLoopSettings.id, settings.id)).limit(1);
+  if (!updated) throw new Error("Autonomie-Modus konnte nicht gespeichert werden.");
+  return updated;
+}
+
 async function createGrowthActionDraft(workspaceId: number, actionKey: string, actionType: string, target: string, payload: Record<string, unknown>) {
   const db = await getDb();
   if (!db) throw new Error("Datenbank ist nicht verfügbar.");
@@ -366,7 +381,9 @@ async function createGrowthActionDraft(workspaceId: number, actionKey: string, a
 
 type GrowthRecommendation = { type: "dunning" | "retention" | "experiment" | "upsell"; message: string };
 
-export function buildGrowthActionDrafts(input: { workspaceId: number; currentDay: string; recommendation: GrowthRecommendation }) {
+type GrowthActionDraft = { actionKey: string; actionType: string; target: string; payload: Record<string, unknown> };
+
+export function buildGrowthActionDrafts(input: { workspaceId: number; currentDay: string; recommendation: GrowthRecommendation }): GrowthActionDraft[] {
   const { workspaceId, currentDay, recommendation } = input;
   if (recommendation.type === "experiment") {
     return [
@@ -434,6 +451,18 @@ export function aggregateGrowthMetrics(events: GrowthMetricEvent[], marketingSpe
   const cancellations = events.filter(event => event.eventType === "customer.subscription.deleted").length;
   const activeSubscriptions = Math.max(0, events.filter(event => event.eventType === "customer.subscription.created").length - cancellations);
   return { revenueCents, checkoutStarted, checkoutCompleted, paymentFailures, cancellations, activeSubscriptions, cacCents: checkoutCompleted > 0 ? Math.round(marketingSpendCents / checkoutCompleted) : 0, estimatedLtvCents: activeSubscriptions > 0 ? Math.round(revenueCents / activeSubscriptions) : 0 };
+}
+
+export async function getAutonomyCycleStatus(userId: number) {
+  const workspace = await getRevenueWorkspaceByUser(userId);
+  if (!workspace) return { status: "idle" as const, startedAt: null, recommendations: 0, externalExecution: false };
+  const db = await getDb();
+  if (!db) throw new Error("Datenbank ist nicht verfügbar.");
+  const [latest] = await db.select({ status: growthAuditEvents.status, createdAt: growthAuditEvents.createdAt, detail: growthAuditEvents.detail }).from(growthAuditEvents).where(and(eq(growthAuditEvents.workspaceId, workspace.id), eq(growthAuditEvents.eventType, "autonomy.cycle.started"))).orderBy(desc(growthAuditEvents.createdAt)).limit(1);
+  if (!latest) return { status: "idle" as const, startedAt: null, recommendations: 0, externalExecution: false };
+  const detail = latest.detail && typeof latest.detail === "object" ? latest.detail as Record<string, unknown> : {};
+  const status = latest.status === "failed" ? "failed" as const : latest.status === "completed" ? "started" as const : "running" as const;
+  return { status, startedAt: latest.createdAt, recommendations: typeof detail.recommendations === "number" ? detail.recommendations : 0, externalExecution: false };
 }
 
 export async function getGrowthLoopStatus(userId: number) {
@@ -698,4 +727,26 @@ export async function runGrowthAnalysis(workspaceId: number, actor: "user" | "cr
   const setting = await getOrCreateGrowthLoopSettings(workspaceId);
   await db.update(growthLoopSettings).set({ lastRunAt: now }).where(eq(growthLoopSettings.id, setting.id));
   return { revenueCents, paymentFailures, cancellations, checkoutStarted, checkoutCompleted, cacCents, estimatedLtvCents, recommendations };
+}
+
+export function buildHaraWorkflowPlan(input: { workspaceId: number; currentDay: string; recommendations: GrowthRecommendation[] }) {
+  const drafts = input.recommendations.flatMap(recommendation => buildGrowthActionDrafts({ workspaceId: input.workspaceId, currentDay: input.currentDay, recommendation }));
+  return {
+    workflow: "hara-revenue-orchestration" as const,
+    modules: {
+      hara: { status: "completed" as const, recommendationCount: input.recommendations.length },
+      influence: { status: "draft_only" as const, draftEligible: drafts.some(draft => draft.actionType === "outreach_draft") },
+      marketing: { status: "draft_only" as const, draftEligible: drafts.some(draft => draft.actionType === "seo_landing_draft" || draft.actionType === "upsell_draft") },
+    },
+    drafts,
+    externalExecution: false as const,
+    approvalRequired: true as const,
+  };
+}
+
+export async function runHaraOrchestrator(workspaceId: number, actor: "user" | "cron", dependencies: { analyze?: typeof runGrowthAnalysis; audit?: typeof recordGrowthAudit } = {}) {
+  const analysis = await (dependencies.analyze ?? runGrowthAnalysis)(workspaceId, actor);
+  const plan = buildHaraWorkflowPlan({ workspaceId, currentDay: new Date().toISOString().slice(0, 10), recommendations: analysis.recommendations });
+  await (dependencies.audit ?? recordGrowthAudit)({ workspaceId, idempotencyKey: `hara-orchestration:${workspaceId}:${new Date().toISOString().slice(0, 10)}`, actor, eventType: "hara.orchestration.completed", status: "completed", detail: { workflow: plan.workflow, modules: plan.modules, draftCount: plan.drafts.length, externalExecution: plan.externalExecution, approvalRequired: plan.approvalRequired } });
+  return { ...analysis, ...plan };
 }

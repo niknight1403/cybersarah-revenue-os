@@ -56,8 +56,8 @@ export const appRouter = router({
         if (!workspace) {
           throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Bitte richten Sie zuerst einen Arbeitsbereich ein." });
         }
-        await db.createRevenueApprovalDraft(ctx.user.id, input);
-        return { success: true } as const;
+        const draft = await db.createRevenueApprovalDraft(ctx.user.id, input);
+        return { success: true, status: draft.status, requiresApproval: draft.requiresApproval, externalExecution: draft.externalExecution } as const;
       }),
   }),
   monetization: router({
@@ -152,6 +152,14 @@ export const appRouter = router({
   }),
   growth: router({
     status: protectedProcedure.query(({ ctx }) => db.getGrowthLoopStatus(ctx.user.id)),
+    autonomyCycleStatus: protectedProcedure.query(({ ctx }) => db.getAutonomyCycleStatus(ctx.user.id)),
+    setAutonomyMode: protectedProcedure.input(z.object({ mode: z.enum(["semi", "paused"]) })).mutation(async ({ ctx, input }) => {
+      const workspace = await db.getRevenueWorkspaceByUser(ctx.user.id);
+      if (!workspace) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Bitte richten Sie zuerst einen Arbeitsbereich ein." });
+      const setting = await db.saveAutonomyMode(workspace.id, input.mode);
+      await db.recordGrowthAudit({ workspaceId: workspace.id, idempotencyKey: `autonomy-mode:${workspace.id}:${input.mode}:${new Date().toISOString()}`, actor: "user", eventType: "autonomy.mode.changed", status: "completed", detail: { mode: input.mode, externalExecution: false, approvalRequired: true } });
+      return { mode: setting.autonomyMode, externalExecution: false, approvalRequired: true };
+    }),
     runAnalysis: protectedProcedure.mutation(async ({ ctx }) => {
       const workspace = await db.getRevenueWorkspaceByUser(ctx.user.id);
       if (!workspace) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Bitte richten Sie zuerst einen Arbeitsbereich ein." });
@@ -162,13 +170,15 @@ export const appRouter = router({
     startAutonomyCycle: protectedProcedure.mutation(async ({ ctx }) => {
       const workspace = await db.getRevenueWorkspaceByUser(ctx.user.id);
       if (!workspace) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Bitte richten Sie zuerst einen Arbeitsbereich ein." });
-      const cycleKey = `autonomy-cycle-start:${workspace.id}:${new Date().toISOString().slice(0, 10)}`;
+       const state = await db.getGrowthLoopStatus(ctx.user.id);
+       if (state.setting?.autonomyMode === "paused") return { started: false as const, duplicate: false as const, paused: true as const, message: "Der Semi-Autopilot ist pausiert." };
+       const cycleKey = `autonomy-cycle-start:${workspace.id}:${new Date().toISOString().slice(0, 10)}`;
       const claimed = await db.recordGrowthAudit({ workspaceId: workspace.id, idempotencyKey: cycleKey, actor: "user", eventType: "autonomy.cycle.started", status: "accepted", detail: { externalExecution: false, approvalRequired: true } });
       if (!claimed) return { started: false as const, duplicate: true as const, message: "Der Autonomie-Zyklus wurde heute bereits gestartet." };
       try {
-        const result = await db.runGrowthAnalysis(workspace.id, "user");
-        await db.updateGrowthAudit(cycleKey, "completed", { externalExecution: false, approvalRequired: true, recommendations: result.recommendations.length });
-        return { started: true as const, duplicate: false as const, recommendations: result.recommendations.length };
+        const result = await db.runHaraOrchestrator(workspace.id, "user");
+        await db.updateGrowthAudit(cycleKey, "completed", { externalExecution: false, approvalRequired: true, recommendations: result.recommendations.length, workflow: result.workflow, modules: result.modules });
+        return { started: true as const, duplicate: false as const, recommendations: result.recommendations.length, workflow: result.workflow, modules: result.modules };
       } catch (error) {
         await db.updateGrowthAudit(cycleKey, "failed", { error: error instanceof Error ? error.message : "Unbekannter Fehler" });
         throw error;

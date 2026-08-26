@@ -1,0 +1,1 @@
+ALTER TABLE `growth_loop_settings` ADD `autonomyMode` enum('semi','paused') DEFAULT 'semi' NOT NULL;
