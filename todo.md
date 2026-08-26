@@ -366,3 +366,11 @@
 - [x] Versions- und Changelog-Stand für den nächsten Release aktualisieren
 - [x] Vollständige Testsuite, TypeScript, Produktionsbuild und Port-3000-Healthchecks erneut ausführen
 - [x] Release-Status dokumentieren und neuen automatisch veröffentlichten Checkpoint speichern
+
+## Neue Arbeitsvorgabe: Login-Modal UX und OAuth-Fehler
+- [x] Bestehenden Login-Einstieg und OAuth-Fehlerparameter prüfen
+- [x] Ladeanimationen und disabled-/aria-busy-Zustände für Manus, Google und Microsoft ergänzen
+- [x] Providerbezogene, klare Fehlermeldungen und erneuten Login-Start integrieren
+- [x] Providerstatus und nicht konfigurierte Microsoft-Anmeldung transparent darstellen
+- [x] UI-Regression, TypeScript, Build, Preview und Health validieren
+- [x] Login-UX dokumentieren und Release-Checkpoint aktualisieren

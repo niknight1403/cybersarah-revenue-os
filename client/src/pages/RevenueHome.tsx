@@ -1,8 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
+import LoginModal from "@/components/auth/LoginModal";
 import { trpc } from "@/lib/trpc";
-import { Activity, ArrowRight, Bot, Cable, CircleDollarSign, CreditCard, ShieldCheck, ShoppingBag, Sparkles } from "lucide-react";
+import { Activity, Bot, Cable, CircleDollarSign, CreditCard, ShieldCheck, ShoppingBag, Sparkles } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 
 function sendFunnelEvent(key: string, eventType: "landing_view" | "cta_click" | "checkout.session.created") {
@@ -45,7 +45,6 @@ export default function RevenueHome() {
   const [draftActionType, setDraftActionType] = useState("Campaign review");
   const [draftTarget, setDraftTarget] = useState("");
   const appInfo = trpc.app.info.useQuery();
-  const providers = trpc.auth.providers.useQuery();
   const tracking = trpc.app.tracking.useQuery();
   const [experimentSubjectKey] = useState(() => {
     if (typeof window === "undefined") return "server-render-experiment-subject";
@@ -105,12 +104,7 @@ export default function RevenueHome() {
                 <Button variant="outline" onClick={() => void logout()} disabled={loading}>Abmelden</Button>
               </>
             ) : (
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button onClick={() => { if (trackingKey) sendFunnelEvent(trackingKey, "cta_click"); if (experiment.data) sendExperimentOutcome(experimentSubjectKey, experiment.data.experimentId, "cta_click"); window.location.assign(getLoginUrl()); }} disabled={loading} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">
-                  {loginLabel} <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <Button variant="outline" onClick={() => window.location.assign("/api/oauth/google")} disabled={loading || providers.isLoading || providers.data?.google !== true} aria-label="Mit Google anmelden">{providers.data?.google === true ? "Mit Google anmelden" : "Google nicht konfiguriert"}</Button>
-              </div>
+              <LoginModal />
             )}
           </div>
         </header>
