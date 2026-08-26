@@ -193,3 +193,12 @@
 - [x] Connector-Status-, Approval- und Fehlerzustände im mobilen Dashboard verständlich dargestellt
 - [x] Neue Connector-Verträge, Sicherheitsgrenzen, TypeScript und Produktionsbuild vollständig getestet
 - [x] Finalen Connector-Stand als Checkpoint zur Veröffentlichung vorbereitet und den Status je Connector dokumentiert
+
+## Neue Arbeitsvorgabe: End-to-End-Integrationen und Deployment
+- [x] Bestehenden Projektpfad und verwaltete Hostingumgebung gegen `/opt/cybersarah`, PM2 und Nginx abgeglichen
+- [x] Shopify-Katalogstatus als echte Verbindung oder klar gekennzeichneten Sandbox-/Fallback-Modus bereitgestellt
+- [x] Authentifizierten HARA-Workspace- und Session-Zustand geprüft, ohne Tokens in Frontend-Builds einzubetten
+- [x] CRM- und Messaging-Provider nur als konfigurierte Draft-only-/Fallback-Status modelliert; keine Credentials erfunden
+- [x] Ausstehende Schema-/Migrationsstände geprüft; Drizzle meldet keine Schemaänderungen, daher war keine SQL-Migration erforderlich
+- [x] Verwaltete Tests, TypeScript, Produktionsbuild und Health-Endpunkte validiert (jeweils HTTP 200)
+- [x] Dashboard- und Connector-Status in `docs/connector-deployment-status.md` dokumentiert
