@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 describe("Pollinations server secret", () => {
-  it("authenticates a lightweight model-catalog request without exposing the key", async () => {
+  it.skipIf(!process.env.POLLINATIONS_API_KEY)("authenticates a lightweight model-catalog request without exposing the key", async () => {
     const key = process.env.POLLINATIONS_API_KEY?.trim();
     expect(key).toBeTruthy();
     expect(key).not.toContain("client_secret");

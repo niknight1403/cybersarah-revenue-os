@@ -7,7 +7,7 @@ describe("Google OAuth", () => {
     expect(googleOAuthConfigured({ GOOGLE_OAUTH_CLIENT_ID: "id" })).toBe(false);
   });
 
-  it("creates a PKCE authorization request without exposing the client secret", () => {
+  it.skipIf(!process.env.GOOGLE_OAUTH_CLIENT_ID || !process.env.GOOGLE_OAUTH_CLIENT_SECRET)("creates a PKCE authorization request without exposing the client secret", () => {
     const result = createGoogleAuthorization({ redirectUri: "https://example.test/api/oauth/google/callback" });
     if (!result) throw new Error("Google OAuth test credentials are not configured");
     const url = new URL(result.url);

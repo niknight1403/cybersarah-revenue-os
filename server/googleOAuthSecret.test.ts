@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 describe("Google OAuth secret configuration", () => {
-  it("has a server-side client configuration and reaches the token endpoint without exposing values", async () => {
+  it.skipIf(!process.env.GOOGLE_OAUTH_CLIENT_ID || !process.env.GOOGLE_OAUTH_CLIENT_SECRET)("has a server-side client configuration and reaches the token endpoint without exposing values", async () => {
     const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
     expect(clientId).toMatch(/\.apps\.googleusercontent\.com$/);

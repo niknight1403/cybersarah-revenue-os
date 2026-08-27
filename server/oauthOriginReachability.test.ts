@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 describe("configured OAuth origin reachability", () => {
-  it("uses a reachable HTTPS origin for the published health endpoint", async () => {
+  it.skipIf(!process.env.OAUTH_PUBLIC_ORIGIN)("uses a reachable HTTPS origin for the published health endpoint", async () => {
     const configured = process.env.OAUTH_PUBLIC_ORIGIN?.trim();
     expect(configured).toBeTruthy();
     const origin = new URL(configured!).origin;

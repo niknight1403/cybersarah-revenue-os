@@ -1,0 +1,14 @@
+{
+  "enabled": false,
+  "interval_seconds": 60,
+  "worker_timeout_seconds": 30,
+  "max_restarts": 3,
+  "backoff_base_seconds": 1.0,
+  "backoff_max_seconds": 60.0,
+  "action_mode": "draft",
+  "external_execution": false,
+  "telemetry_path": "./csro.log",
+  "replit_base_url": null,
+  "min_payout_cents": 5000,
+  "max_request_per_minute": 60
+}

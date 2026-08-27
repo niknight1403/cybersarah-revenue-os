@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import * as db from "../db";
 import { classifyStripeFailure, constructStripeEvent } from "./stripeProvider";
+import { z } from "zod";
 
 type StripeEventObject = {
   id?: string;
@@ -14,6 +15,23 @@ type StripeEventObject = {
 };
 
 type StripeEventLike = { id: string; type: string; created: number; data: { object: StripeEventObject } };
+
+const stripeEventSchema = z.object({
+  id: z.string().min(1).max(255),
+  type: z.string().min(1).max(120),
+  created: z.number().int().nonnegative(),
+  data: z.object({
+    object: z.object({
+      amount_paid: z.number().int().nonnegative().nullable().optional(),
+      amount_received: z.number().int().nonnegative().nullable().optional(),
+      amount_total: z.number().int().nonnegative().nullable().optional(),
+      currency: z.string().length(3).nullable().optional(),
+      customer: z.union([z.string().min(1), z.object({ id: z.string().min(1).optional() })]).nullable().optional(),
+      subscription: z.union([z.string().min(1), z.object({ id: z.string().min(1).optional() })]).nullable().optional(),
+      metadata: z.record(z.string(), z.string()).nullable().optional(),
+    }).passthrough(),
+  }),
+}).passthrough();
 
 type StripeWebhookDependencies = {
   constructEvent: (rawBody: Buffer, signature: string) => StripeEventLike;
@@ -47,7 +65,7 @@ export function createStripeWebhookHandler(dependencies: StripeWebhookDependenci
     }
 
     try {
-      const event = dependencies.constructEvent(req.body, signature);
+      const event = stripeEventSchema.parse(dependencies.constructEvent(req.body, signature)) as StripeEventLike;
       const workspaceId = workspaceIdOf(event);
       if (!workspaceId) {
         return res.status(202).json({ verified: true, processed: false, reason: "Kein Revenue-Workspace im Stripe-Ereignis hinterlegt." });

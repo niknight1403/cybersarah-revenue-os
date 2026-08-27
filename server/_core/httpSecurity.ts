@@ -1,4 +1,4 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response } from "express";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import helmet from "helmet";
 
@@ -25,6 +25,29 @@ export function resolveHttpSecurityConfig(env: Record<string, string | undefined
   };
 }
 
+function configuredOrigins(env: Record<string, string | undefined>) {
+  return (env.CORS_ALLOWED_ORIGINS ?? env.ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map(origin => origin.trim())
+    .filter(Boolean);
+}
+
+export function isAllowedOrigin(origin: string | undefined, allowedOrigins: string[]) {
+  if (!origin) return false;
+  return allowedOrigins.includes(origin) || (origin.startsWith("exp://") && allowedOrigins.includes("exp://"));
+}
+
+function applyCors(response: Response, origin: string | undefined, allowedOrigins: string[]) {
+  if (!origin) return;
+  const allowed = isAllowedOrigin(origin, allowedOrigins);
+  if (!allowed) return;
+  response.setHeader("Access-Control-Allow-Origin", origin);
+  response.setHeader("Vary", "Origin");
+  response.setHeader("Access-Control-Allow-Credentials", "true");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-CSRF-Token");
+  response.setHeader("Access-Control-Allow-Methods", "GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS");
+}
+
 function skipRateLimit(request: Request) {
   const path = request.originalUrl.split("?", 1)[0] ?? request.path;
   return path === "/api/oauth/callback" || path === "/api/stripe/webhook";
@@ -33,6 +56,12 @@ function skipRateLimit(request: Request) {
 export function configureHttpSecurity(app: Express, env: Record<string, string | undefined> = process.env) {
   const config = resolveHttpSecurityConfig(env);
   app.disable("x-powered-by");
+  const allowedOrigins = configuredOrigins(env);
+  app.use((request, response, next) => {
+    applyCors(response, request.headers.origin, allowedOrigins);
+    if (request.method === "OPTIONS") return response.sendStatus(204);
+    return next();
+  });
   if (config.trustProxyHops > 0) app.set("trust proxy", config.trustProxyHops);
   app.use(helmet({
     contentSecurityPolicy: config.contentSecurityPolicyEnabled ? {

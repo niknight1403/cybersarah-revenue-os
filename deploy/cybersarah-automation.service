@@ -1,0 +1,24 @@
+[Unit]
+Description=CyberSarah Revenue OS Automation Orchestrator
+After=network-online.target cybersarah-peer.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cybersarah
+Group=cybersarah
+WorkingDirectory=/opt/cybersarah
+Environment=PYTHONUNBUFFERED=1
+Environment=CSRO_CONFIG_PATH=/opt/cybersarah/automation/config.json
+ExecStart=/usr/bin/python3 -m automation.runner
+Restart=on-failure
+RestartSec=8
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/cybersarah/automation /var/log/cybersarah
+
+[Install]
+WantedBy=multi-user.target
