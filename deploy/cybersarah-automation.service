@@ -7,10 +7,10 @@ Wants=network-online.target
 Type=simple
 User=cybersarah
 Group=cybersarah
-WorkingDirectory=/opt/cybersarah
+WorkingDirectory=/opt/cybersarah-automation
 Environment=PYTHONUNBUFFERED=1
-Environment=CSRO_CONFIG_PATH=/opt/cybersarah/automation/config.json
-ExecStart=/usr/bin/python3 -m automation.runner
+Environment=CSRO_CONFIG_PATH=/opt/cybersarah-automation/automation/config.json
+ExecStart=/opt/cybersarah-automation/.venv/bin/python -m automation.runner
 Restart=on-failure
 RestartSec=8
 TimeoutStopSec=15
@@ -18,7 +18,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/cybersarah/automation /var/log/cybersarah
+ReadWritePaths=/opt/cybersarah-automation/automation /var/log/cybersarah
 
 [Install]
 WantedBy=multi-user.target
