@@ -27,24 +27,26 @@ jobs:
         env:
           HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
           HETZNER_USER: ${{ secrets.HETZNER_USER }}
-          HETZNER_KNOWN_HOSTS: ${{ secrets.HETZNER_KNOWN_HOSTS }}
           HETZNER_SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
         run: |
           set -euo pipefail
           test "$HETZNER_HOST" = "167.233.196.20"
           test -n "$HETZNER_USER"
-          test -n "$HETZNER_KNOWN_HOSTS"
           test -n "$HETZNER_SSH_PRIVATE_KEY"
       - name: Configure SSH trust
         env:
-          HETZNER_KNOWN_HOSTS: ${{ secrets.HETZNER_KNOWN_HOSTS }}
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
           HETZNER_SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
         run: |
           set -euo pipefail
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$HETZNER_SSH_PRIVATE_KEY" > "$HOME/.ssh/deploy_key"
           chmod 600 "$HOME/.ssh/deploy_key"
-          printf '%s\n' "$HETZNER_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          scan="$(ssh-keyscan -T 10 -t ed25519 "$HETZNER_HOST" 2>/dev/null)"
+          test -n "$scan"
+          fingerprint="$(printf '%s\n' "$scan" | ssh-keygen -lf - -E sha256 | awk '{print $2}')"
+          test "$fingerprint" = "SHA256:Jb2McJeobw3DL3sThN3+l/02O04gHtHg3r+x1sMfPLc"
+          printf '%s\n' "$scan" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
       - name: Fast-forward, build and restart service
         env:
