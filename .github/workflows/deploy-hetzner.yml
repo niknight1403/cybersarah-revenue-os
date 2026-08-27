@@ -40,8 +40,9 @@ jobs:
         run: |
           set -euo pipefail
           install -d -m 700 "$HOME/.ssh"
-          printf '%s\n' "$HETZNER_SSH_PRIVATE_KEY" > "$HOME/.ssh/deploy_key"
+          printf '%s' "$HETZNER_SSH_PRIVATE_KEY" | tr -d '\r' > "$HOME/.ssh/deploy_key"
           chmod 600 "$HOME/.ssh/deploy_key"
+          ssh-keygen -y -f "$HOME/.ssh/deploy_key" >/dev/null
           scan="$(ssh-keyscan -T 10 -t ed25519 "$HETZNER_HOST" 2>/dev/null)"
           test -n "$scan"
           fingerprint="$(printf '%s\n' "$scan" | ssh-keygen -lf - -E sha256 | awk '{print $2}')"
