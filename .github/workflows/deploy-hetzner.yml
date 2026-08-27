@@ -13,7 +13,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  unit-tests:
+    name: Required unit tests before deploy
+    uses: ./.github/workflows/unit-tests.yml
+
   deploy:
+    needs: unit-tests
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
@@ -30,7 +35,6 @@ jobs:
           test -n "$HETZNER_USER"
           test -n "$HETZNER_KNOWN_HOSTS"
           test -n "$HETZNER_SSH_PRIVATE_KEY"
-
       - name: Configure SSH trust
         env:
           HETZNER_KNOWN_HOSTS: ${{ secrets.HETZNER_KNOWN_HOSTS }}
@@ -42,7 +46,6 @@ jobs:
           chmod 600 "$HOME/.ssh/deploy_key"
           printf '%s\n' "$HETZNER_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
-
       - name: Fast-forward, build and restart service
         env:
           HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
@@ -63,7 +66,6 @@ jobs:
           sudo systemctl is-active --quiet cybersarah-peer.service
           sudo systemctl show cybersarah-peer.service -p MainPID -p ExecMainStatus
           REMOTE
-
       - name: Cleanup SSH material
         if: always()
         run: rm -f "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
