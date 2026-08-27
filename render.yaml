@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: cybersarah-control-center
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm build
+    startCommand: pnpm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OAUTH_SERVER_URL
+        sync: false
+      - key: EXPO_PUBLIC_OAUTH_SERVER_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: WORKSPACE_SERVICE_URL
+        sync: false
+      - key: WORKSPACE_SERVICE_TOKEN
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
