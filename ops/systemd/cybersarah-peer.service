@@ -1,0 +1,35 @@
+[Unit]
+Description=CyberSarah Revenue OS API and governed HARA runtime
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cybersarah
+Group=cybersarah
+WorkingDirectory=/opt/cybersarah
+EnvironmentFile=-/etc/cybersarah/cybersarah.env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/pnpm --filter @workspace/api-server start
+Restart=on-failure
+RestartSec=8
+TimeoutStartSec=90
+TimeoutStopSec=30
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/cybersarah /var/lib/cybersarah
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+# Installation:
+# sudo install -o root -g root -m 0644 ops/systemd/cybersarah-peer.service /etc/systemd/system/cybersarah-peer.service
+# sudo systemctl daemon-reload
+# sudo systemctl enable --now cybersarah-peer.service
+# The service account, environment file, and application directory must exist before activation.

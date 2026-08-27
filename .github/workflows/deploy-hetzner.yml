@@ -1,0 +1,69 @@
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-hetzner
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    steps:
+      - name: Validate deployment inputs
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+          HETZNER_KNOWN_HOSTS: ${{ secrets.HETZNER_KNOWN_HOSTS }}
+          HETZNER_SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test "$HETZNER_HOST" = "167.233.196.20"
+          test -n "$HETZNER_USER"
+          test -n "$HETZNER_KNOWN_HOSTS"
+          test -n "$HETZNER_SSH_PRIVATE_KEY"
+
+      - name: Configure SSH trust
+        env:
+          HETZNER_KNOWN_HOSTS: ${{ secrets.HETZNER_KNOWN_HOSTS }}
+          HETZNER_SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$HETZNER_SSH_PRIVATE_KEY" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$HETZNER_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Fast-forward, build and restart service
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/deploy_key" -o BatchMode=yes "$HETZNER_USER@$HETZNER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd /opt/cybersarah
+          test "$(git status --porcelain)" = ""
+          git fetch origin main --prune
+          git merge --ff-only origin/main
+          corepack pnpm install --frozen-lockfile
+          NODE_OPTIONS=--max-old-space-size=1024 corepack pnpm run build
+          test "$(grep -E "^HARA_RUNTIME_ENABLED=true$" /etc/cybersarah/cybersarah.env)"
+          sudo systemctl daemon-reload
+          sudo systemctl restart cybersarah-peer.service
+          sudo systemctl is-active --quiet cybersarah-peer.service
+          sudo systemctl show cybersarah-peer.service -p MainPID -p ExecMainStatus
+          REMOTE
+
+      - name: Cleanup SSH material
+        if: always()
+        run: rm -f "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
