@@ -387,3 +387,14 @@
 - [x] Tests, TypeScript, Produktionsbuild und APK/AAB-Erstellung validieren (AAB vorhanden; signiertes APK wegen fehlender Bubblewrap-/Bundletool-/Keystore-Voraussetzungen nicht erzeugt)
 - [ ] Hauptprojekt in das ausgewählte GitHub-Repository committen und pushen
 - [x] Android-Artefakt und Release-Checkpoint mit reproduzierbarem Status dokumentieren
+
+
+## Neue Arbeitsvorgabe: Guarded Async Revenue Orchestration
+- [x] Modulare asyncio-Orchestrierung mit isolierten Content-, Engagement- und Revenue-Workern ergänzt
+- [x] Exponentielles Backoff, Worker-Timeouts, Restart-Limits und JSONL-Telemetrie ergänzt
+- [x] Fail-closed Draft-/Simulation-Modus und Mindest-Auszahlung validiert
+- [x] Stripe-Webhook-Ereignisse zusätzlich schema-validiert und Approval-Gates beibehalten
+- [x] Explizite CORS-Allowlist für Web- und Expo-Origins ergänzt
+- [x] Optionale Live-Credential-Tests bei fehlenden Secrets sauber überspringbar gemacht
+- [x] Typecheck, vollständige Node-Tests, Python-Automationstests und Produktionsbuild verifiziert
+- [ ] Produktionskopie `/opt/cybersarah` nach Bereinigung unversionierter Artefakte und Bereitstellung der Python-Abhängigkeiten synchronisieren
