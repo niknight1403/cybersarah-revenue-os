@@ -1038,3 +1038,44 @@ await createInvite.mutateAsync({ eventId: "123", origin: window.location.origin 
 // Backend - use input.origin to build the URL
 const inviteUrl = `${input.origin}/events/${eventId}/join?token=${token}`;
 ```
+
+## CI/CD-Workflow und Deployment-Voraussetzungen
+
+Der produktive Deploymentpfad für das autonome Agent-System ist als GitHub-Actions-Kette aufgebaut. Änderungen auf `main` lösen zunächst den Unit-Test-Workflow aus. Der Workflow installiert die im Repository deklarierte pnpm-Version, installiert die Abhängigkeiten mit `pnpm install --frozen-lockfile`, führt `pnpm test` aus und prüft anschließend den TypeScript-Stand mit `pnpm run check`. Der Workflow `deploy-hetzner.yml` ruft diesen Testjob als verbindliches Gate über `needs: unit-tests` auf. Schlägt ein Unit-Test oder der TypeScript-Check fehl, startet der Deployment-Job nicht.
+
+Zusätzlich laufen der Gitleaks-Secret-Scan und die CodeQL-Analyse für die unterstützten JavaScript-/TypeScript- und Python-Komponenten. Diese Prüfungen sind eigenständige Sicherheitsjobs und werden bei Pushes auf `main`, Pull Requests sowie — abhängig vom Workflow — manuell oder zeitgesteuert ausgeführt. Ein grüner Unit-Test-Job bedeutet nicht automatisch, dass CodeQL- oder Gitleaks-Findings ausgeschlossen sind; alle drei Ergebnisse müssen vor einer formalen Release-Freigabe geprüft werden.
+
+### Workflow-Übersicht
+
+| Workflow | Zweck | Auslöser | Gate-Verhalten |
+|---|---|---|---|
+| `unit-tests.yml` | Abhängigkeiten installieren, Unit-Tests und TypeScript prüfen | Push, Pull Request, manuell; zusätzlich als reusable Workflow | Verbindlich für `deploy-hetzner.yml` |
+| `secret-scan.yml` | Gitleaks-Scan der versionierten Repository-Historie | Push, Pull Request, manuell | Sicherheitsprüfung; keine Secrets in Logs ausgeben |
+| `codeql.yml` | Statische Codeanalyse für JavaScript/TypeScript und Python | Push, Pull Request, Zeitplan, manuell | Security-Analyse; Findings im GitHub-Security-Bereich prüfen |
+| `deploy-hetzner.yml` | Build und Neustart des Produktionsdienstes auf Hetzner | Push auf `main`, manuell | Startet erst nach erfolgreichem `unit-tests`-Job |
+
+### Erforderliche GitHub-Konfiguration
+
+Für den Hetzner-Deploy müssen im GitHub-Environment `production` die folgenden Secrets gesetzt sein. Die Werte dürfen weder in `README.md`, Workflow-Dateien, Logs noch in Commit-Nachrichten erscheinen.
+
+| Secret | Zweck und Anforderung |
+|---|---|
+| `HETZNER_HOST` | Muss auf den freigegebenen Produktionshost `167.233.196.20` zeigen. |
+| `HETZNER_USER` | Unprivilegierter SSH-Benutzer mit den für den Deploy erforderlichen, begrenzten sudo-Rechten. |
+| `HETZNER_SSH_PRIVATE_KEY` | Gültiger, passphrase-freier SSH-Private-Key im mehrzeiligen OpenSSH-Format. Der Workflow normalisiert CRLF-Zeichen und validiert den Schlüssel vor dem Verbindungsaufbau. |
+
+Der aktuelle Workflow pinnt zusätzlich den öffentlichen Ed25519-Host-Key des Produktionsservers per SHA256-Fingerprint. Bei einer legitimen Server-Neuausstellung des Host-Keys muss der Fingerprint bewusst geprüft und im Workflow aktualisiert werden; ein pauschales Deaktivieren der Host-Key-Prüfung ist nicht zulässig.
+
+### Voraussetzungen auf dem Hetzner-Server
+
+Der Server muss vor einem automatischen Deploy einen sauberen, versionierten Checkout unter `/opt/cybersarah` besitzen. Der Deploy führt dort einen Fast-Forward auf `origin/main` aus, installiert die Lockfile-Abhängigkeiten mit pnpm, baut die Anwendung und startet anschließend `cybersarah-peer.service` über systemd. Der Dienst muss für den konfigurierten `HETZNER_USER` kontrolliert per sudo neu ladbar und neustartbar sein. Die produktive Environment-Datei `/etc/cybersarah/cybersarah.env` bleibt ausschließlich auf dem Server und muss die erwartete Aktivierungsvariable `HARA_RUNTIME_ENABLED=true` enthalten.
+
+Die Laufzeit muss die im Repository deklarierte pnpm-Version `10.4.1` und Node.js 22 bereitstellen. Das Projektverzeichnis darf vor dem Fast-Forward keine nicht gespeicherten versionierten Änderungen enthalten. Secrets, Backups, Datenbankexporte, `node_modules`, Builds, Logs, lokale Caches und private Schlüssel gehören nicht in den Checkout und werden durch `.gitignore`-Regeln ausgeschlossen.
+
+### Release- und Fehlerprüfung
+
+Ein erfolgreicher CI-Lauf bestätigt zunächst die automatisierten Prüfungen. Der Hetzner-Job muss danach den Build erfolgreich abschließen und `cybersarah-peer.service` als aktiv melden. Zusätzlich sollte nach jedem Produktionsdeploy der öffentliche oder lokale Anwendungs-Health-Endpunkt geprüft werden; ein systemd-Erfolg allein beweist noch keine HTTP-Erreichbarkeit.
+
+Bei `Load key ... error in libcrypto` ist zuerst das GitHub-Secret `HETZNER_SSH_PRIVATE_KEY` zu prüfen. Der Wert muss ein vollständiger, gültiger Private-Key ohne Passphrase sein; beschädigte Zeilenumbrüche, abgeschnittene Inhalte oder ein falscher Schlüssel verhindern den Deploy. Bei einem Host-Key-Fehler darf nicht mit `StrictHostKeyChecking=no` umgangen werden. Stattdessen muss der Server-Fingerprint verifiziert und die gepinnte Workflow-Konfiguration bewusst aktualisiert werden.
+
+Der ältere Workflow `deploy.yml` ist getrennt vom gated Workflow vorhanden und darf nicht als Beleg für das Unit-Test-Gate betrachtet werden. Für neue Produktionsfreigaben ist ausschließlich der dokumentierte Pfad über `deploy-hetzner.yml` maßgeblich; veraltete parallele Deploy-Auslöser sollten vor einer verbindlichen Branch-Protection-Freigabe deaktiviert oder ebenfalls mit demselben Gate versehen werden.
