@@ -38,6 +38,33 @@ check_http() {
   fi
 }
 
+check_tls_certificate() {
+  local domain="$1"
+  local minimum_days="${HEALTHCHECK_TLS_MIN_DAYS:-14}"
+  local certificate_file end_date end_epoch now_epoch remaining_days
+  certificate_file="$(mktemp)"
+  trap 'rm -f "$certificate_file"' RETURN
+
+  if ! timeout 12 openssl s_client -connect "$domain:443" -servername "$domain" -verify_hostname "$domain" -verify_return_error </dev/null 2>/dev/null | openssl x509 -outform PEM >"$certificate_file" 2>/dev/null; then
+    fail "tls:$domain certificate/hostname verification failed"
+    return
+  fi
+
+  end_date="$(openssl x509 -in "$certificate_file" -noout -enddate 2>/dev/null | cut -d= -f2-)"
+  if [[ -z "$end_date" ]] || ! end_epoch="$(date -d "$end_date" +%s 2>/dev/null)"; then
+    fail "tls:$domain expiry date unreadable"
+    return
+  fi
+
+  now_epoch="$(date +%s)"
+  remaining_days=$(( (end_epoch - now_epoch) / 86400 ))
+  if (( remaining_days < minimum_days )); then
+    fail "tls:$domain expires in ${remaining_days}d (minimum ${minimum_days}d)"
+  else
+    pass "tls:$domain valid; expires ${end_date}; ${remaining_days}d remaining"
+  fi
+}
+
 printf '%s\n' "CYBERSARAH_HEALTHCHECK host=$(hostname -s)"
 printf '%s\n' '--- systemd ---'
 systemd_units="${HEALTHCHECK_SYSTEMD_UNITS:-pm2-cybersarah.service cybersarah-peer.service cybersarah-disk-check-ntfy.timer nginx}"
@@ -56,6 +83,16 @@ urls="${HEALTHCHECK_URLS:-http://127.0.0.1:3000/api/healthz http://127.0.0.1:300
 for url in $urls; do
   check_http "$url"
 done
+
+printf '%s\n' '--- public tls ---'
+public_domains="${HEALTHCHECK_PUBLIC_DOMAINS:-}"
+if [[ -z "$public_domains" ]]; then
+  fail 'tls:HEALTHCHECK_PUBLIC_DOMAINS not configured'
+else
+  for domain in $public_domains; do
+    check_tls_certificate "$domain"
+  done
+fi
 
 printf 'HEALTHCHECK_STATUS=%s\n' "$([[ "$failures" -eq 0 ]] && echo PASS || echo FAIL)"
 exit "$failures"
