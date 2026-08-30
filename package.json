@@ -113,7 +113,12 @@
       "wouter@3.7.1": "patches/wouter@3.7.1.patch"
     },
     "overrides": {
-      "tailwindcss>nanoid": "3.3.7"
+      "drizzle-orm": ">=0.45.2",
+      "js-yaml": ">=4.3.1",
+      "fast-uri": ">=3.1.5",
+      "brace-expansion": ">=5.0.9",
+      "nanoid": ">=3.3.18",
+      "postcss": ">=8.5.18"
     }
   }
 }
