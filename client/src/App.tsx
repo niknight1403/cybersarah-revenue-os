@@ -7,6 +7,7 @@ import RevenueApprovals from "@/pages/RevenueApprovals";
 import AutonomyTasks from "@/pages/AutonomyTasks";
 import HaraCenter from "@/pages/HaraCenter";
 import InfluenceCenter from "@/pages/InfluenceCenter";
+import TikTokStudio from "@/pages/TikTokStudio";
 import ProductMarketing from "@/pages/ProductMarketing";
 import ComplianceCenter from "@/pages/ComplianceCenter";
 import RevenueCheckout from "@/pages/RevenueCheckout";
@@ -40,6 +41,7 @@ function GlobalRevenueLoopsRoute() { return <ProtectedRoute><GlobalRevenueLoops 
 function PaywallRoute() { return <ProtectedRoute><Paywall /></ProtectedRoute>; }
 function AccountRoute() { return <ProtectedRoute><AccountSettings /></ProtectedRoute>; }
 function InfluenceRoute() { return <ProtectedRoute><InfluenceCenter /></ProtectedRoute>; }
+function TikTokRoute() { return <ProtectedRoute><TikTokStudio /></ProtectedRoute>; }
 function TasksRoute() { return <ProtectedRoute><AutonomyTasks /></ProtectedRoute>; }
 function ProductMarketingRoute() { return <ProtectedRoute><ProductMarketing /></ProtectedRoute>; }
 function ComplianceRoute() { return <ProtectedRoute><ComplianceCenter /></ProtectedRoute>; }
