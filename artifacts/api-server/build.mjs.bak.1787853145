@@ -21,7 +21,6 @@ const result = await build({
     "pino-http",
     "cookie-parser",
     "cors",
-    "dotenv",
     "express",
     "google-auth-library",
     "drizzle-orm",

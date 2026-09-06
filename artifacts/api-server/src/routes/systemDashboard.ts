@@ -207,7 +207,7 @@ async function triggerDeploy() {
   const el = document.getElementById('actionResult');
   el.textContent = '⏳ Deploy wird ausgeführt...';
   try {
-    const r = await fetch(API + '/admin/deploy', {method:'POST', headers:{'X-Deploy-Token':'cybersarah2026'}});
+    const r = await fetch(API + '/admin/deploy', {method:'POST', headers:{'X-Deploy-Token': process.env['DEPLOY_TOKEN'] ?? ''}});
     const d = await r.json();
     el.textContent = d.success ? '✅ Deploy gestartet! Server restartet...' : '❌ Fehler: ' + (d.message || '?');
   } catch(e) {
