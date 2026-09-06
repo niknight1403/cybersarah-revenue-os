@@ -6,7 +6,7 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-const DEPLOY_TOKEN = process.env["DEPLOY_TOKEN"] || "cybersarah2026";
+const DEPLOY_TOKEN = process.env["DEPLOY_TOKEN"];
 const PROJECT_DIR = path.resolve(import.meta.dirname ?? ".", "../../../..");
 
 // Simple auth check
