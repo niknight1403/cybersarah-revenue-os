@@ -38,13 +38,17 @@ import StripeZahlungen from "@/pages/stripeZahlungen";
 import StripeAbos from "@/pages/stripeAbos";
 import { CouponDashboard } from "@/pages/couponDashboard";
 import { LoyaltyDashboard } from "@/pages/loyaltyDashboard";
+import { ApiKeyGuardianDashboard } from "@/pages/apiKeyGuardianDashboard";
 import { AffiliateDashboard } from "@/pages/affiliateDashboard";
 import { SalesChatDashboard } from "@/pages/salesChatDashboard";
 import { CrossSellDashboard } from "@/pages/crossSellDashboard";
+import { VoiceAgentDashboard } from "@/pages/voiceAgentDashboard";
+import { LeadNurtureDashboard } from "@/pages/leadNurtureDashboard";
 import { MobileRevenue } from "@/pages/mobileRevenue";
 import { ConversionDashboard } from "@/pages/conversionDashboard";
 import { SubscriptionDashboard } from "@/pages/subscriptionDashboard";
 import { StartupScreen } from "@/pages/_startup";
+import DesignDemo from "@/pages/design-demo";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient({
@@ -62,6 +66,7 @@ function Router() {
     <Layout>
       <Switch>
         <Route path="/" component={() => <ErrorBoundary name="Dashboard"><Dashboard /></ErrorBoundary>} />
+        <Route path="/design-demo" component={DesignDemo} />
         <Route path="/sofort-start" component={() => <ErrorBoundary name="SofortStart"><SofortStart /></ErrorBoundary>} />
         <Route path="/trading" component={() => <ErrorBoundary name="Trading"><Trading /></ErrorBoundary>} />
         <Route path="/chancen" component={() => <ErrorBoundary name="Chancen"><Chancen /></ErrorBoundary>} />
@@ -86,10 +91,12 @@ function Router() {
         <Route path="/whatsapp" component={() => <ErrorBoundary name="WhatsApp"><WhatsApp /></ErrorBoundary>} />
         <Route path="/coupons" component={() => <ErrorBoundary name="CouponDashboard"><CouponDashboard /></ErrorBoundary>} />
         <Route path="/loyalty" component={() => <ErrorBoundary name="LoyaltyDashboard"><LoyaltyDashboard /></ErrorBoundary>} />
+        <Route path="/api-keys" component={() => <ErrorBoundary name="ApiKeyGuardianDashboard"><ApiKeyGuardianDashboard /></ErrorBoundary>} />
         <Route path="/affiliates" component={() => <ErrorBoundary name="AffiliateDashboard"><AffiliateDashboard /></ErrorBoundary>} />
         <Route path="/sales-chat" component={() => <ErrorBoundary name="SalesChatDashboard"><SalesChatDashboard /></ErrorBoundary>} />
         <Route path="/cross-sell" component={() => <ErrorBoundary name="CrossSellDashboard"><CrossSellDashboard /></ErrorBoundary>} />
-        <Route path="/mobile" component={() => <ErrorBoundary name="MobileRevenue"><MobileRevenue /></ErrorBoundary>} />
+        <Route path="/voice-agent" component={() => <ErrorBoundary name="VoiceAgentDashboard"><VoiceAgentDashboard /></ErrorBoundary>} />
+        <Route path="/lead-nurture" component={() => <ErrorBoundary name="LeadNurtureDashboard"><LeadNurtureDashboard /></ErrorBoundary>} />
         <Route path="/conversion" component={() => <ErrorBoundary name="ConversionDashboard"><ConversionDashboard /></ErrorBoundary>} />
         <Route path="/subscriptions" component={() => <ErrorBoundary name="SubscriptionDashboard"><SubscriptionDashboard /></ErrorBoundary>} />
         <Route path="/email" component={() => <ErrorBoundary name="EmailAutomation"><EmailAutomation /></ErrorBoundary>} />

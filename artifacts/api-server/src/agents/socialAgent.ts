@@ -23,6 +23,9 @@ export interface SocialPost {
 
 const queue: SocialPost[] = [];
 
+type OpenAiChatResponse = { choices?: Array<{ message?: { content?: string | null } }> };
+type InstagramApiResponse = { id?: string; error?: unknown };
+
 async function generateCaption(topic: string): Promise<string> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OpenAI-Key fehlt – Content-Erzeugung nicht möglich (keine Simulation).");
@@ -45,7 +48,7 @@ async function generateCaption(topic: string): Promise<string> {
     }),
   });
   if (!r.ok) throw new Error(`OpenAI HTTP ${r.status}`);
-  const data = await r.json();
+  const data = await r.json() as OpenAiChatResponse;
   return data.choices?.[0]?.message?.content?.trim() ?? "";
 }
 
@@ -58,14 +61,15 @@ async function postToInstagram(caption: string, imageUrl: string): Promise<strin
     `https://graph.facebook.com/v21.0/${igUserId}/media?image_url=${encodeURIComponent(imageUrl)}&caption=${encodeURIComponent(caption)}&access_token=${token}`,
     { method: "POST" },
   );
-  const container = await create.json();
+  const container = await create.json() as InstagramApiResponse;
   if (!create.ok) throw new Error(`IG media: ${JSON.stringify(container.error ?? container)}`);
   const publish = await fetch(
     `https://graph.facebook.com/v21.0/${igUserId}/media_publish?creation_id=${container.id}&access_token=${token}`,
     { method: "POST" },
   );
-  const result = await publish.json();
+  const result = await publish.json() as InstagramApiResponse;
   if (!publish.ok) throw new Error(`IG publish: ${JSON.stringify(result.error ?? result)}`);
+  if (!result.id) throw new Error("IG publish: Keine Medien-ID erhalten");
   return result.id;
 }
 

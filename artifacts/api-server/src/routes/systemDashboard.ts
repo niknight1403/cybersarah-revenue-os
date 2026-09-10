@@ -154,7 +154,7 @@ async function loadStatus() {
         <div class="actions">
           <button class="btn btn-primary" onclick="loadStatus()">🔄 Aktualisieren</button>
           <button class="btn btn-outline" onclick="triggerWatchdog()">⚡ Watchdog</button>
-          <button class="btn btn-success" onclick="triggerDeploy()">🚀 Deploy</button>
+          <span class="btn btn-outline" title="Deployments werden ausschließlich über das geschützte CI/CD-Gate ausgeführt">🔒 Deploy via CI/CD</span>
         </div>
         <div id="actionResult" style="margin-top:12px;font-size:0.85rem;color:#6b7280"></div>
       </div>

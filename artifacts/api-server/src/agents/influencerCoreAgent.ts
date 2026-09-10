@@ -57,6 +57,11 @@ const posts: ContentPost[] = [];
 const trends: TrendItem[] = [];
 const revenueActions: RevenueAction[] = [];
 
+type RedditChild = { data: { title: string; score: number; permalink: string } };
+type RedditResponse = { data?: { children?: RedditChild[] } };
+type OpenAiResponse = { choices?: Array<{ message?: { content?: string | null } }> };
+type InstagramResponse = { id?: string };
+
 // ── Trend-Scraping (echte APIs) ────────────────────────────
 async function fetchRedditTrends(subreddit = "artificial"): Promise<TrendItem[]> {
   try {
@@ -65,8 +70,8 @@ async function fetchRedditTrends(subreddit = "artificial"): Promise<TrendItem[]>
       { headers: { "User-Agent": "CyberSarahOS/1.0" } }
     );
     if (!r.ok) return [];
-    const data = await r.json();
-    return (data.data?.children ?? []).map((c: any) => ({
+    const data = await r.json() as RedditResponse;
+    return (data.data?.children ?? []).map((c: RedditChild) => ({
       titel: c.data.title,
       quelle: `reddit/r/${subreddit}`,
       relevanz: Math.min(100, Math.round(c.data.score / 100)),
@@ -108,7 +113,7 @@ Kein Spam, keine falschen Versprechen, keine ungenehmigten Einkommens-Claims.`,
     }),
   });
   if (!r.ok) throw new Error(`OpenAI HTTP ${r.status}`);
-  const data = await r.json();
+  const data = await r.json() as OpenAiResponse;
   return data.choices?.[0]?.message?.content?.trim() ?? "";
 }
 
@@ -138,7 +143,7 @@ async function posteAufPlattform(post: ContentPost): Promise<ContentPost> {
           `https://graph.facebook.com/v21.0/${igUserId}/media?image_url=${encodeURIComponent(imageUrl)}&caption=${encodeURIComponent(post.caption)}&access_token=${token}`,
           { method: "POST" }
         );
-        const container = await create.json();
+        const container = await create.json() as InstagramResponse;
         if (create.ok) {
           await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media_publish?creation_id=${container.id}&access_token=${token}`, { method: "POST" });
           return { ...post, status: "veröffentlicht" };

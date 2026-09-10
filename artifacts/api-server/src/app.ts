@@ -11,6 +11,7 @@ import stripeWebhookRouter from "./routes/stripeWebhook";
 import seoBlogRouter from "./routes/seoBlogSitemap";
 import publicSiteRouter from "./routes/publicSite";
 import { corsOptions } from "./lib/corsConfig";
+import { apiAuthMiddleware } from "./lib/apiAuth";
 import { db } from "@workspace/db";
 import { webhookEventsTable } from "@workspace/db";
 
@@ -155,10 +156,10 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     }
     return res.status(500).json({ error: "Datenbank-Fehler", detail: err.message?.slice(0, 120) });
   }
-  next(err);
+  return next(err);
 });
 
-app.use("/api", router);
+app.use("/api", apiAuthMiddleware, router);
 
 // ─── Digistore24 Status-Endpoint (REST, nicht Webhook) ──────────────────────
 
@@ -181,13 +182,12 @@ app.get("/api/webhook-events", async (req, res) => {
     const quelle = req.query.quelle as string | undefined;
 
     const { desc, eq } = await import("drizzle-orm");
-    let query = db.select().from(webhookEventsTable);
-    if (quelle) {
-      query = query.where(eq(webhookEventsTable.quelle, quelle));
-    }
+    const query = quelle
+      ? db.select().from(webhookEventsTable).where(eq(webhookEventsTable.quelle, quelle))
+      : db.select().from(webhookEventsTable);
     const events = await query.orderBy(desc(webhookEventsTable.createdAt)).limit(limit);
 
-    res.json(events.map(e => ({
+    return res.json(events.map(e => ({
       id: e.id,
       quelle: e.quelle,
       ereignisTyp: e.ereignisTyp,
@@ -201,7 +201,7 @@ app.get("/api/webhook-events", async (req, res) => {
     })));
   } catch (err) {
     logger.error({ err }, "Fehler beim Laden der Webhook-Events");
-    res.status(500).json({ error: "Interner Serverfehler" });
+    return res.status(500).json({ error: "Interner Serverfehler" });
   }
 });
 

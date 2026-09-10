@@ -30,7 +30,7 @@ const MOCK_AGENTS = [
 router.get("/agents", async (req, res) => {
   if (!db) return res.json(MOCK_AGENTS);
   const agents = await db.select().from(agentsTable).orderBy(agentsTable.id);
-  res.json(agents.map(a => ({
+  return res.json(agents.map(a => ({
     id: a.id,
     name: a.name,
     typ: a.typ,

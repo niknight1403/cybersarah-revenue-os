@@ -1,0 +1,239 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DEEP VOID — CyberSarah Design System v1
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Organische, fließende UI-Sprache statt starrer Raster.
+ * Import EINMAL in main.tsx oder index.css: @import "./styles/void-theme.css";
+ *
+ * Nutzung in Komponenten (Tailwind-Klassen, kein JS nötig für die Basis):
+ *   <div class="void-blob void-glass">...</div>          → organischer Glass-Container
+ *   <div class="void-breathe">...</div>                  → ruhiges Pulsieren (Agent bereit)
+ *   <div class="void-breathe" style="--breathe-speed: 0.6s">...</div>  → schneller = aktiver
+ *   <span class="void-text-gold">1.990 €</span>           → Umsatz-Akzent
+ *   <div class="void-stream">...</div>                    → fließender Datenstrom-Rand
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+:root {
+  /* ── Deep Void — Hintergrund ── */
+  --void-bg: #050814;
+  --void-bg-elevated: #0A0F24;
+  --void-bg-surface: #0D1330;
+
+  /* ── Fluid Cyan/Petrol — Agenten-Aktivität, Datenströme ── */
+  --void-stream-start: #00F2FE;
+  --void-stream-end: #4FACFE;
+  --void-stream-glow: rgba(0, 242, 254, 0.35);
+
+  /* ── Liquid Gold — Umsatz, Erfolg, ROI ── */
+  --void-gold-start: #F6D365;
+  --void-gold-end: #FDA085;
+  --void-gold-glow: rgba(253, 160, 133, 0.35);
+
+  /* ── Text ── */
+  --void-text-primary: #F2F4FA;
+  --void-text-muted: #8890B5;
+  --void-text-faint: #4C5278;
+
+  /* ── Glass ── */
+  --void-glass-fill: rgba(255, 255, 255, 0.04);
+  --void-glass-border: rgba(255, 255, 255, 0.09);
+  --void-glass-blur: 20px;
+
+  /* ── Easing — "butterweich", nicht-linear ── */
+  --void-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --void-ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* ── Breathing-Grundgeschwindigkeit — via JS pro Agent überschreibbar ── */
+  --breathe-speed: 3.2s;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HINTERGRUND
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.void-canvas {
+  background: var(--void-bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(0, 242, 254, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 10%, rgba(253, 160, 133, 0.05), transparent);
+  color: var(--void-text-primary);
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BLOB-CONTAINER — organische Radien statt harter Ecken
+   Vier leicht unterschiedliche Varianten, damit nichts uniform wirkt
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.void-blob {
+  border-radius: 28px 34px 24px 38px / 32px 24px 36px 26px;
+  transition: border-radius 0.6s var(--void-ease-soft);
+}
+
+.void-blob-alt {
+  border-radius: 36px 22px 40px 26px / 24px 38px 22px 32px;
+}
+
+.void-blob:hover {
+  border-radius: 34px 28px 38px 24px / 26px 36px 24px 34px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLASSMORPHISM
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.void-glass {
+  background: var(--void-glass-fill);
+  backdrop-filter: blur(var(--void-glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--void-glass-blur)) saturate(140%);
+  border: 1px solid var(--void-glass-border);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.void-glass-elevated {
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 1px 0 rgba(255, 255, 255, 0.08) inset;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ATMENDE AGENTEN-ZUSTÄNDE — Signalbereitschaft ohne Ablenkung
+   Geschwindigkeit via --breathe-speed steuerbar (State-Driven UI)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes void-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.75; }
+  50%      { transform: scale(1.06); opacity: 1; }
+}
+
+.void-breathe {
+  animation: void-breathe var(--breathe-speed) var(--void-ease-soft) infinite;
+}
+
+@keyframes void-breathe-glow {
+  0%, 100% { box-shadow: 0 0 12px 0 var(--void-stream-glow); }
+  50%      { box-shadow: 0 0 28px 6px var(--void-stream-glow); }
+}
+
+.void-agent-orb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--void-stream-start), var(--void-stream-end));
+  animation: void-breathe var(--breathe-speed) var(--void-ease-soft) infinite,
+             void-breathe-glow var(--breathe-speed) var(--void-ease-soft) infinite;
+}
+
+.void-agent-orb.void-agent-idle {
+  background: var(--void-text-faint);
+  animation: void-breathe 5s var(--void-ease-soft) infinite;
+  box-shadow: none;
+}
+
+.void-agent-orb.void-agent-gold {
+  background: linear-gradient(135deg, var(--void-gold-start), var(--void-gold-end));
+}
+.void-agent-orb.void-agent-gold {
+  animation: void-breathe var(--breathe-speed) var(--void-ease-soft) infinite;
+  box-shadow: 0 0 16px 2px var(--void-gold-glow);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FLIESSENDE DATENSTRÖME — Ränder & Verbindungslinien
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes void-stream-flow {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.void-stream {
+  position: relative;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--void-bg-surface), var(--void-bg-surface)) padding-box,
+    linear-gradient(90deg, var(--void-stream-start), var(--void-stream-end), var(--void-stream-start)) border-box;
+  background-size: 200% 100%;
+  animation: void-stream-flow 4s linear infinite;
+}
+
+/* Partikel-Punkt der über eine Linie "wandert" — für Transfer-Visualisierung */
+@keyframes void-particle-travel {
+  0%   { offset-distance: 0%; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+
+.void-particle {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--void-stream-start);
+  box-shadow: 0 0 8px 2px var(--void-stream-glow);
+  offset-path: var(--particle-path, none);
+  animation: void-particle-travel 2.2s var(--void-ease) infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TEXT-AKZENTE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.void-text-stream {
+  background: linear-gradient(120deg, var(--void-stream-start), var(--void-stream-end));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.void-text-gold {
+  background: linear-gradient(120deg, var(--void-gold-start), var(--void-gold-end));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TIEFE-HIERARCHIE — aktive Prozesse vorn, passive Daten verblassen
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.void-layer-active {
+  filter: drop-shadow(0 4px 24px rgba(0, 242, 254, 0.18));
+  opacity: 1;
+}
+
+.void-layer-passive {
+  opacity: 0.55;
+  filter: saturate(0.7);
+  transition: opacity 0.5s var(--void-ease-soft), filter 0.5s var(--void-ease-soft);
+}
+
+.void-layer-passive:hover {
+  opacity: 0.85;
+  filter: saturate(0.9);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   REDUCED MOTION — Barrierefreiheit, wie in der Skill-Guideline gefordert
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .void-breathe,
+  .void-agent-orb,
+  .void-stream,
+  .void-particle {
+    animation: none !important;
+  }
+  .void-blob {
+    transition: none !important;
+  }
+}

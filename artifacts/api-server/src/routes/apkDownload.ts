@@ -131,7 +131,8 @@ setInterval(updateStatus, 15000);
 
 // APK-Dateien ausliefern
 router.get("/:filename", (req: Request, res: Response) => {
-  const filename = req.params["filename"];
+  const rawFilename = req.params["filename"];
+  const filename = Array.isArray(rawFilename) ? rawFilename[0] : rawFilename;
   if (!filename || !filename.endsWith(".apk")) {
     res.status(404).send("Nur APK-Dateien");
     return;

@@ -19,6 +19,9 @@ import { transactionsTable, webhookEventsTable } from "@workspace/db";
 import { logger } from "./logger";
 import { sendEmail } from "./emailClient";
 import { orderConfirmation } from "./emailTemplates";
+import { claimStripeEvent, markStripeEventFailed, markStripeEventProcessed } from "../services/stripeEventClaimService";
+import { resolveRevenueAttribution } from "../services/revenueAttributionService";
+import { emitHaraSignal } from "../services/haraSignalService";
 
 // ─── Event-Deduplizierung ─────────────────────────────────────────────────────
 // Verhindert Doppelverarbeitung bei Stripe-Retries oder schnellen
@@ -103,6 +106,22 @@ async function schreibeTransaktion(params: {
   return eingefügt.length > 0;
 }
 
+async function emitRevenueHaraSignal(input: { event: Stripe.Event; objectId: string; amount: number; currency: string; metadata?: Stripe.Metadata | Record<string, unknown> | null; clientReferenceId?: string | null; type?: "revenue" | "refund" }): Promise<void> {
+  const attribution = resolveRevenueAttribution({ metadata: input.metadata, clientReferenceId: input.clientReferenceId });
+  await emitHaraSignal({
+    signalKey: `stripe:${input.event.id}:${input.type ?? "revenue"}:${input.objectId}`,
+    signalType: "revenue",
+    amount: input.type === "refund" ? -Math.abs(input.amount) : input.amount,
+    currency: input.currency,
+    attributionStatus: attribution.status,
+    personaId: attribution.personaId,
+    campaignId: attribution.campaignId ? String(attribution.campaignId) : null,
+    offerId: attribution.offerId,
+    utmCampaign: attribution.utmCampaign,
+    summary: `${input.type === "refund" ? "Stripe-Erstattung" : "Stripe-Umsatz"}: ${input.objectId}`,
+  });
+}
+
 // ─── Prüft ob PaymentIntent zu einer Rechnung gehört ──────────────────────────
 // Verhindert Doppelzählung: Abo-/Rechnungszahlungen werden über invoice.paid
 // gebucht, nicht über payment_intent.succeeded.
@@ -148,7 +167,7 @@ const eventHandlers: Record<string, EventHandler> = {
       return;
     }
 
-    await schreibeTransaktion({
+    const neu = await schreibeTransaktion({
       transaktionsId: session.id,
       stripeEventId: event.id,
       quelle: "Stripe",
@@ -156,14 +175,11 @@ const eventHandlers: Record<string, EventHandler> = {
       betrag,
       waehrung: (session.currency ?? "eur").toUpperCase(),
       beschreibung: `Stripe Checkout: ${session.id}`,
-      metadaten: {
-        sessionId: session.id,
-        customerId: session.customer,
-        customerEmail: session.customer_details?.email,
-      },
+      metadaten: { ...session.metadata, sessionId: session.id, customerId: String(session.customer ?? "") },
     });
+    if (neu) await emitRevenueHaraSignal({ event, objectId: session.id, amount: betrag, currency: (session.currency ?? "eur").toUpperCase(), metadata: session.metadata, clientReferenceId: session.client_reference_id });
 
-    logger.info({ sessionId: session.id, betrag }, "Stripe Checkout in DB geschrieben");
+    logger.info({ sessionId: session.id, betrag, neu }, "Stripe Checkout in DB geschrieben");
   },
 
   // ── payment_intent.succeeded ────────────────────────────────────────────
@@ -180,7 +196,7 @@ const eventHandlers: Record<string, EventHandler> = {
       return;
     }
 
-    await schreibeTransaktion({
+    const neu = await schreibeTransaktion({
       transaktionsId: pi.id,
       stripeEventId: event.id,
       quelle: "Stripe",
@@ -188,10 +204,11 @@ const eventHandlers: Record<string, EventHandler> = {
       betrag,
       waehrung: (pi.currency ?? "eur").toUpperCase(),
       beschreibung: `Stripe Zahlung: ${pi.id}`,
-      metadaten: { paymentIntentId: pi.id, customerId: pi.customer },
+      metadaten: { ...pi.metadata, paymentIntentId: pi.id, customerId: String(pi.customer ?? "") },
     });
+    if (neu) await emitRevenueHaraSignal({ event, objectId: pi.id, amount: betrag, currency: (pi.currency ?? "eur").toUpperCase(), metadata: pi.metadata });
 
-    logger.info({ paymentIntentId: pi.id, betrag }, "PaymentIntent in DB geschrieben");
+    logger.info({ paymentIntentId: pi.id, betrag, neu }, "PaymentIntent in DB geschrieben");
   },
 
   // ── payment_intent.payment_failed ───────────────────────────────────────
@@ -305,6 +322,7 @@ const eventHandlers: Record<string, EventHandler> = {
         },
       });
 
+      if (neu) await emitRevenueHaraSignal({ event, objectId: invoice.id, amount: betrag, currency: (invoice.currency ?? "eur").toUpperCase(), metadata: invoice.metadata });
       logger.info(
         { invoiceId: invoice.id, betrag, neu },
         "Invoice-Zahlung in DB geschrieben"
@@ -400,8 +418,7 @@ const eventHandlers: Record<string, EventHandler> = {
     logger.error(
       {
         earlyFraudWarningId: efw.id,
-        chargeId: efw.charge,
-        betrag: efw.amount,
+        chargeId: typeof efw.charge === "string" ? efw.charge : efw.charge.id,
       },
       "🚨 Stripe FRÜH-FAUD-WARNUNG — Zahlung überprüfen!"
     );
@@ -422,8 +439,9 @@ export class WebhookHandlers {
     event: Stripe.Event,
     ipAdresse?: string
   ): Promise<void> {
-    // ── 1. Event-Deduplizierung ──────────────────────────────────────────
-    if (istBereitsVerarbeitet(event.id)) {
+    // ── 1. Atomarer Event-Claim ──────────────────────────────────────────
+    const claimed = await claimStripeEvent(event.id, event.type);
+    if (!claimed || istBereitsVerarbeitet(event.id)) {
       logger.info(
         { eventId: event.id, eventType: event.type },
         "⏭️ Stripe Event bereits verarbeitet — übersprungen"
@@ -436,9 +454,10 @@ export class WebhookHandlers {
 
     if (handler) {
       try {
-        await handler(event, ipAdresse);
+        await handler(event, ipAdresse ?? "unbekannt");
 
         // Erfolgreiche Verarbeitung audit-loggen
+        await markStripeEventProcessed(event.id);
         await protokolliereWebhookEvent({
           quelle: "stripe",
           ereignisTyp: event.type,
@@ -458,8 +477,8 @@ export class WebhookHandlers {
           `❌ Stripe Event ${event.type} fehlgeschlagen`
         );
 
-        // Fehler audit-loggen (aber Event als "verarbeitet" markieren,
-        // damit Stripe nicht endlos retryed)
+        await markStripeEventFailed(event.id, fehlerMsg);
+        // Fehler audit-loggen; der Claim bleibt sichtbar und kann überwacht werden.
         await protokolliereWebhookEvent({
           quelle: "stripe",
           ereignisTyp: event.type,

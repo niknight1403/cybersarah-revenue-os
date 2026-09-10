@@ -27,6 +27,18 @@ import {
 
 const router = Router();
 
+function metadataVideoUrl(value: string | null): string | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (typeof parsed !== "object" || parsed === null) return undefined;
+    const candidate = (parsed as Record<string, unknown>).videoUrl;
+    return typeof candidate === "string" && candidate.length > 0 ? candidate : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // GET /api/social/status — Plattform-Status + Konfiguration
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -80,8 +92,8 @@ router.get("/social/content", async (req, res) => {
   res.json({
     content: content.map(c => ({
       id: c.id, titel: c.titel, marke: c.marke,
-      inhalt: c.inhalt, kategorie: c.kategorie, typ: c.typ,
-      bildUrl: c.bildUrl, videoUrl: c.videoUrl,
+      inhalt: c.inhalt, kategorie: c.typ, typ: c.typ,
+      bildUrl: c.bildUrl, videoUrl: metadataVideoUrl(c.metadaten),
       status: c.status, erstellt: c.createdAt,
     })),
   });
@@ -124,7 +136,7 @@ router.post("/social/post", async (req, res) => {
       if (content) {
         caption = caption || content.inhalt || content.titel;
         title = title || content.titel;
-        videoUrl = videoUrl || content.videoUrl || undefined;
+        videoUrl = videoUrl || metadataVideoUrl(content.metadaten);
         imageUrl = imageUrl || content.bildUrl || undefined;
       }
     }

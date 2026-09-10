@@ -1,4 +1,4 @@
-import { pgTable, serial, text, decimal, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, decimal, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 
 export const produkteTable = pgTable("produkte", {
   id: serial("id").primaryKey(),
@@ -16,6 +16,8 @@ export const produkteTable = pgTable("produkte", {
   verkaeufeAnzahl: text("verkaeufe_anzahl").default("0"),
   pausiertAm: timestamp("pausiert_am"),
   quelle: text("quelle"),
+  basisProduktId: integer("basis_produkt_id"),
+  preisVariante: text("preis_variante"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

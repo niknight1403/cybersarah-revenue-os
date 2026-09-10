@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setBaseUrl } from "@workspace/api-client-react";
 import App from "./App";
 import "./index.css";
+import "./styles/void-theme.css";
 
 // API-Basis-URL: In der APK zeigt sie auf den Live-Server (Railway),
 // im Dev-Modus bleibt sie leer (relative Pfade an den Vite-Proxy).

@@ -6,6 +6,9 @@ import {
   Mail, Megaphone, Brain, DollarSign, Target, Cpu, CreditCard, Package, Repeat,
   Newspaper, MessageCircle, Tag, Key, TerminalSquare,
   Menu, X, Smartphone, Sparkles, Circle, Percent, Share2, Bell,
+  Phone,
+  Award,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +30,10 @@ const navigation = [
   { name: "🤝 Affiliates", href: "/affiliates", icon: Users, badge: "NEU", gruppe: "umsatz" },
   { name: "💬 Sales Chat", href: "/sales-chat", icon: MessageCircle, badge: "NEU", gruppe: "umsatz" },
   { name: "🎯 Cross-Sell", href: "/cross-sell", icon: Target, badge: "NEU", gruppe: "umsatz" },
+  { name: "📞 Voice-Agent", href: "/voice-agent", icon: Phone, badge: "NEU", gruppe: "umsatz" },
+  { name: "📬 Lead-Nurture", href: "/lead-nurture", icon: Mail, badge: "NEU", gruppe: "umsatz" },
+  { name: "🏆 Treueprogramm", href: "/loyalty", icon: Award, badge: "NEU", gruppe: "umsatz" },
+  { name: "🔑 Key-Guardian", href: "/api-keys", icon: KeyRound, badge: "NEU", gruppe: "system" },
   { name: "📱 Mobile Revenue", href: "/mobile", icon: Smartphone, badge: "NEU", gruppe: "umsatz" },
   { name: "🧪 A/B-Tests", href: "/conversion", icon: Percent, badge: "NEU", gruppe: "umsatz" },
   { name: "🔄 Abos", href: "/subscriptions", icon: Repeat, badge: "NEU", gruppe: "umsatz" },

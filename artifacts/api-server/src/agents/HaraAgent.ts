@@ -196,7 +196,7 @@ export class HaraAgent extends AgentBase {
           businessCase: v.businessCase.slice(0, 1000),
           roiErwartung: v.roiErwartung.slice(0, 500),
           geschaetzterMonatsumsatz: String(v.geschaetzterMonatsumsatz ?? 0),
-          ressourcen: v.ressourcen,
+          ressourcen: JSON.stringify(v.ressourcen),
           automatisierungsPfad: JSON.stringify(v.automatisierungsPfad),
           gesamtScore,
           automatisierbarkeitScore,
@@ -845,7 +845,6 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
             beschreibung: `Generiert vom HARA Revenue Agent`,
             preis: "19.00",
             kategorie: "hara_generiert",
-            slug: `hara-${Date.now()}`,
             stripeProduktId: produkt.id,
             stripePreisId: preis.id,
             aktiv: true,
@@ -1028,6 +1027,7 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
             const spr = await stripe.prices.create({ product: sp.id, unit_amount: Math.round(p.preis * 100), currency: "eur" });
             await db.insert(produkteTable).values({
               name: p.name, preis: String(p.preis), beschreibung: p.desc,
+              kategorie: "hara_basisprodukt",
               stripeProduktId: sp.id, stripePreisId: spr.id,
               aktiv: true, verkaeufeAnzahl: "0",
             });
@@ -1071,8 +1071,8 @@ Antworte NUR mit dem JSON-Objekt, kein anderer Text.`;
         ];
         for (const c of chancen) {
           await db.insert(revenueOpportunitiesTable).values({
-            titel: c.titel, kanal: c.kanal, potenzial: c.potenzial,
-            status: "aktiv", prioritaet: c.prioritaet, erstelltAm: new Date(),
+            titel: c.titel, kanal: c.kanal, geschaetzterMonatsumsatz: c.potenzial,
+            status: "aktiv", prioritaet: c.prioritaet,
           });
         }
         aktionen.push("🎯 3 Revenue-Chancen automatisch angelegt");

@@ -117,7 +117,7 @@ export class MonetizationAgent extends AgentBase {
     let upsells = 0;
     const bestehende = await db.select({ titel: revenueOpportunitiesTable.titel })
       .from(revenueOpportunitiesTable)
-      .where(eq(revenueOpportunitiesTable.quelle, "Monetization-V5-Upsell"));
+      .where(eq(revenueOpportunitiesTable.gefundenVon, "Monetization-V5-Upsell"));
     const bestehendeTitel = new Set(bestehende.map(b => b.titel));
 
     for (const produkt of produkte) {
@@ -134,9 +134,9 @@ export class MonetizationAgent extends AgentBase {
         });
 
         await db.insert(revenueOpportunitiesTable).values({
-          titel: produkt.name, typ: "upsell", kanal: "eigenes_produkt",
+          titel: produkt.name, kanal: "eigenes_produkt",
           status: "aktiv", geschaetzterMonatsumsatz: (parseFloat(produkt.preis) * 10).toString(),
-          beschreibung: produkt.beschreibung, quelle: "Monetization-V5-Upsell",
+          beschreibung: produkt.beschreibung, gefundenVon: "Monetization-V5-Upsell",
         }).onConflictDoNothing();
         upsells++;
       } catch (err) {
@@ -253,10 +253,10 @@ export class MonetizationAgent extends AgentBase {
 
         await db.insert(revenueOpportunitiesTable).values({
           titel: `${p1.name} + ${p2.name} ${combo.nameSuffix}`,
-          typ: "bundle", kanal: "eigenes_produkt",
+          kanal: "eigenes_produkt",
           status: "aktiv", geschaetzterMonatsumsatz: (bundlePreis * 8).toString(),
           beschreibung: `Auto-Bundle (V5): ${p1.name} + ${p2.name} - ${Math.round(combo.rabatt * 100)}%`,
-          quelle: "Monetization-V5-Bundle",
+          gefundenVon: "Monetization-V5-Bundle",
         }).onConflictDoNothing();
         bundlesErstellt++;
       } catch { /* überspringe Fehler */ }
@@ -302,10 +302,10 @@ export class MonetizationAgent extends AgentBase {
         });
 
         await db.insert(revenueOpportunitiesTable).values({
-          titel: flashName, typ: "flash_sale", kanal: "eigenes_produkt",
+          titel: flashName, kanal: "eigenes_produkt",
           status: "aktiv", geschaetzterMonatsumsatz: (flashPreis * 3).toString(),
           beschreibung: `⚡ Flash Sale: ${opp.titel} -50%!`,
-          quelle: "Monetization-V5-FlashSale",
+          gefundenVon: "Monetization-V5-FlashSale",
         }).onConflictDoNothing();
         flashSales++;
       } catch { /* überspringe Fehler */ }

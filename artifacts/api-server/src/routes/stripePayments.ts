@@ -321,7 +321,7 @@ router.get("/stripe/checkout-links/:produktId", async (req, res) => {
     let paymentLink: string | null = null;
     const bestehendeLinks = await stripe.paymentLinks.list({ limit: 10 });
     for (const link of bestehendeLinks.data) {
-      const hatProdukt = link.line_items?.some(item => item.price === defaultPrice.id);
+      const hatProdukt = link.line_items?.data.some(item => item.price?.id === defaultPrice.id);
       if (hatProdukt) {
         paymentLink = link.url;
         break;

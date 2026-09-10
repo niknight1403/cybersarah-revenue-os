@@ -13,6 +13,15 @@
 
 const STRIPE = "https://api.stripe.com/v1";
 
+type StripeError = { error?: { message?: string } };
+type StripePaymentLink = { id?: string; url?: string; metadata?: Record<string, string> };
+type PaymentLinksResponse = StripeError & { data?: StripePaymentLink[] };
+type StripeResourceResponse = StripeError & { id?: string };
+type StripePriceResponse = StripeResourceResponse;
+type StripeCreatedPaymentLinkResponse = StripeError & { url?: string };
+type StripeCharge = { id: string; amount: number; created: number; currency?: string; status?: string; paid?: boolean; refunded?: boolean };
+type ChargesResponse = StripeError & { data?: StripeCharge[]; has_more?: boolean };
+
 function authHeaders() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("STRIPE_SECRET_KEY fehlt – FinanceAgent kann nicht arbeiten.");
@@ -32,16 +41,17 @@ export async function ensurePaymentLink(
   currency = "eur",
 ): Promise<{ url: string; created: boolean }> {
   const h = authHeaders();
-  const links = await fetch(`${STRIPE}/payment_links?limit=100&active=true`, { headers: h }).then(r => r.json());
-  const existing = links.data?.find((l: any) => l.metadata?.agent === "cybersarah");
-  if (existing) return { url: existing.url, created: false };
+  const links = await fetch(`${STRIPE}/payment_links?limit=100&active=true`, { headers: h }).then(r => r.json() as Promise<PaymentLinksResponse>);
+  const existing = links.data?.find(link => link.metadata?.agent === "cybersarah");
+  if (existing?.url) return { url: existing.url, created: false };
 
   const product = await fetch(`${STRIPE}/products`, {
     method: "POST",
     headers: h,
     body: new URLSearchParams({ name: productName }),
-  }).then(r => r.json());
-  if (product.error) throw new Error(`Produkt: ${product.error.message}`);
+  }).then(r => r.json() as Promise<StripeResourceResponse>);
+  if (product.error) throw new Error(`Produkt: ${product.error.message ?? "unbekannter Stripe-Fehler"}`);
+  if (!product.id) throw new Error("Stripe-Produkt ohne ID erhalten");
 
   const price = await fetch(`${STRIPE}/prices`, {
     method: "POST",
@@ -51,8 +61,9 @@ export async function ensurePaymentLink(
       unit_amount: String(amountCents),
       currency,
     }),
-  }).then(r => r.json());
-  if (price.error) throw new Error(`Preis: ${price.error.message}`);
+  }).then(r => r.json() as Promise<StripePriceResponse>);
+  if (price.error) throw new Error(`Preis: ${price.error.message ?? "unbekannter Stripe-Fehler"}`);
+  if (!price.id) throw new Error("Stripe-Preis ohne ID erhalten");
 
   const link = await fetch(`${STRIPE}/payment_links`, {
     method: "POST",
@@ -62,8 +73,9 @@ export async function ensurePaymentLink(
       "line_items[0][quantity]": "1",
       "metadata[agent]": "cybersarah",
     }),
-  }).then(r => r.json());
-  if (link.error) throw new Error(`Payment-Link: ${link.error.message}`);
+  }).then(r => r.json() as Promise<StripeCreatedPaymentLinkResponse>);
+  if (link.error) throw new Error(`Payment-Link: ${link.error.message ?? "unbekannter Stripe-Fehler"}`);
+  if (!link.url) throw new Error("Stripe-Payment-Link ohne URL erhalten");
   return { url: link.url, created: true };
 }
 
@@ -89,7 +101,7 @@ export async function runFinanceAgent(): Promise<RevenueReport> {
   let url = `${STRIPE}/charges?limit=100&created[gte]=${since7d}`;
   // Pagination sauber durchlaufen – keine Schätzwerte
   for (let page = 0; page < 10; page++) {
-    const res = await fetch(url, { headers: h }).then(r => r.json());
+    const res = await fetch(url, { headers: h }).then(r => r.json() as Promise<ChargesResponse>);
     if (res.error) throw new Error(res.error.message);
     for (const c of res.data ?? []) {
       currency = c.currency ?? currency;

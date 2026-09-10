@@ -59,7 +59,7 @@ router.get("/dashboard/kpis", async (req, res) => {
     ? Math.round((konversionen / klicks) * 10000) / 100
     : null;
 
-  res.json({
+  return res.json({
     umsatzHeute: parseFloat(heuteRes?.s ?? "0"),
     umsatzWoche: parseFloat(wocheRes?.s ?? "0"),
     umsatzMonat: parseFloat(monatRes?.s ?? "0"),

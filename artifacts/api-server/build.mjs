@@ -5,12 +5,12 @@
 import { build } from "esbuild";
 
 const result = await build({
-  entryPoints: ["src/index.ts"],
+  entryPoints: ["artifacts/api-server/src/index.ts"],
   bundle: true,
   platform: "node",
   target: "node20",
   format: "esm",
-  outfile: "dist/index.mjs",
+  outfile: "artifacts/api-server/dist/index.mjs",
   external: [
     "@google-cloud/storage",
     "pg",
@@ -25,6 +25,12 @@ const result = await build({
     "express",
     "google-auth-library",
     "drizzle-orm",
+    "zod",
+    "@workspace/*",
+    "resend",
+    "form-data",
+    "mailgun.js",
+    "nodemailer",
   ],
   sourcemap: true,
   minify: false,

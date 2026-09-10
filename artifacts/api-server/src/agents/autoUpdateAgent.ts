@@ -141,17 +141,7 @@ export class AutoUpdateAgent extends AgentBase {
   }
 
   private async log(nachricht: string): Promise<void> {
-    try {
-      await db.insert(agentLogsTable).values({
-        agentName: this.agentName,
-        nachricht,
-        level: "info",
-        zeitstempel: new Date(),
-      });
-    } catch {
-      // Logging-Fehler ignorieren
-    }
-    logger.info({ agent: this.agentName }, nachricht);
+    logger.info({ agent: this.agentName, nachricht }, "AutoUpdate-Agent");
   }
 }
 
