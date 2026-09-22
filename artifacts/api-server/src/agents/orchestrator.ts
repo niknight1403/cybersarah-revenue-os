@@ -78,7 +78,7 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
     globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
     globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
   });
-  cron.schedule("0 */2 * * *", () => {
+  // EU Health Influencer Engine: täglich neue Kampagnen-Blueprints erzeugen\n  cron.schedule("0 8 * * *", () => {\n    globalQueue.fuegeHinzu("health_influencer_campaign", { aktion: "health_campaign_generieren" }, { prioritaet: 2, maxVersuche: 2 });\n  });\n\n  cron.schedule("0 */2 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "process_referrals" }, { prioritaet: 2 });
   });
   cron.schedule("0 8 * * *", () => {
