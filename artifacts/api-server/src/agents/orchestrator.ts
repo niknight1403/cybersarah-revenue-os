@@ -78,7 +78,7 @@ import { taeglicheWhatsAppAufgabe } from "./whatsappAgent";
     globalQueue.fuegeHinzu("monetization_auto_optimize", { aktion: "dynamic_pricing" }, { prioritaet: 2 });
     globalQueue.fuegeHinzu("master_optimierung", { aktion: "revenue_priorisierung" }, { prioritaet: 1 });
   });
-  cron.schedule("0 */2 * * *", () => {
+  // EU Health Influencer Engine: täglich neue Kampagnen-Blueprints erzeugen\n  cron.schedule("0 8 * * *", () => {\n    globalQueue.fuegeHinzu("health_influencer_campaign", { aktion: "health_campaign_generieren" }, { prioritaet: 2, maxVersuche: 2 });\n  });\n\n  cron.schedule("0 */2 * * *", () => {
     globalQueue.fuegeHinzu("loyalty_referrals", { aktion: "process_referrals" }, { prioritaet: 2 });
   });
   cron.schedule("0 8 * * *", () => {
@@ -251,6 +251,7 @@ const AGENT_DEFINITIONEN = [
   { name: "Community Agent",          typ: "community",          beschreibung: "Erstellt Kommentar-Antworten, DM-Vorlagen und Lead-Qualifizierungs-Fragen" },
   { name: "Revenue Optimizer Agent",  typ: "revenue_optimizer",  beschreibung: "Analysiert Echtzeit-Umsatzdaten, ROI und Kampagnen-Performance" },
   { name: "Influencer Agent",         typ: "influencer",         beschreibung: "Verwaltet Influencer-Content, analysiert Trends und optimiert Engagement" },
+  { name: "EU Health Influencer Engine", typ: "health_influencer", beschreibung: "Generiert EU-taugliche Wellness-Shorts, Avatar-Prompts, Animation-Anweisungen und nutzt nur konfigurierte Affiliate-Links" },
   { name: "Revenue Agent",            typ: "revenue",            beschreibung: "Echtzeit-Umsatzanalyse, Wachstumsraten-Berechnung und Forecasting" },
   { name: "Monetization Agent",       typ: "monetization",       beschreibung: "Funnel-Optimierung, Upsell-Strategien, Affiliate-Analyse und Preisoptimierung" },
   { name: "Master Agent",             typ: "master",             beschreibung: "Zentrale Kommandozentrale — koordiniert alle Agenten, setzt Prioritäten, optimiert das Gesamtsystem kontinuierlich" },
@@ -404,7 +405,7 @@ export async function initialisiereAgenten(): Promise<void> {
 
 function registriereQueueHandler(): void {
   // ── Influencer Agent ──
-  globalQueue.registriereHandler("influencer_content", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+  globalQueue.registriereHandler("health_influencer_campaign", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {\n    const agent = subAgenten.find(a => a instanceof InfluencerAgent);\n    if (!agent) throw new Error("InfluencerAgent nicht gefunden");\n    return agent.fuehreAufgabeAus({ ...aufgabe, payload: { ...aufgabe.payload, aktion: "health_campaign_generieren" } });\n  });\n\n  globalQueue.registriereHandler("influencer_content", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
     const agent = subAgenten.find(a => a instanceof InfluencerAgent);
     if (!agent) throw new Error("InfluencerAgent nicht gefunden");
     return agent.fuehreAufgabeAus(aufgabe);
