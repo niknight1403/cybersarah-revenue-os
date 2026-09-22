@@ -156,11 +156,11 @@ const eventHandlers: Record<string, EventHandler> = {
         const rawTier = String(
           (session.metadata as Record<string, string> | null)?.planTier ??
           (session.metadata as Record<string, string> | null)?.plan ??
-          "starter"
+          "lite"
         ).toLowerCase() as PlanTier;
         const planTier: PlanTier = (PLAN_TIERS as readonly string[]).includes(rawTier)
           ? rawTier
-          : "starter";
+          : "lite";
 
         await stelleTenantBereit({
           stripeCustomerId: customerId,

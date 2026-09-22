@@ -13,6 +13,7 @@ import {
 } from "@workspace/db";
 import { eq, desc, and, gte } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { pruefeHandelsfreigabe, fuehreEvolutionsZyklusAus } from "./microTradingEvolution";
 import { openai, openaiVerfuegbar } from "../lib/openaiClient";
 import { platziereLiveOrder, LIVE_TRADING_AKTIV } from "../lib/liveTradingExecutor";
 
@@ -31,7 +32,7 @@ async function holeMicroTradingAgentId(): Promise<number | null> {
   return cachedAgentId;
 }
 
-async function loggeAgentEreignis(aktion: string, status: string, nachricht: string): Promise<void> {
+export async function loggeAgentEreignis(aktion: string, status: string, nachricht: string): Promise<void> {
   try {
     const agentId = await holeMicroTradingAgentId();
     if (agentId === null) {
@@ -644,6 +645,17 @@ export async function fuehreTradingZyklusAus(): Promise<{
     strategie
   );
 
+  // ── Sicherheits-Guardrail (Sprint 65): Freigabe prüfen VOR jedem Handel ──
+  const freigabe = await pruefeHandelsfreigabe();
+  if (!freigabe.erlaubt) {
+    await loggeAgentEreignis(
+      "trading_stopp",
+      "warnung",
+      `🛡️ Kein Handel: ${freigabe.gruende.join(" | ")}`,
+    );
+    return { analysen, marktDaten, trades: 0 };
+  }
+
   let trades = 0;
   for (const analyse of analysen) {
     if (analyse.signal !== "HALTEN") {
@@ -672,6 +684,7 @@ export async function fuehreTradingZyklusAus(): Promise<{
 // ─── Agent starten/stoppen ────────────────────────────────────────────────────
 
 let tradingInterval: ReturnType<typeof setInterval> | null = null;
+let evolutionsInterval: ReturnType<typeof setInterval> | null = null;
 
 export function starteTrading(intervalMinuten = 5): void {
   if (aktiv) return;
@@ -684,6 +697,13 @@ export function starteTrading(intervalMinuten = 5): void {
   tradingInterval = setInterval(() => {
     void fuehreTradingZyklusAus();
   }, intervalMinuten * 60 * 1000);
+
+  // Autonome Selbst-Entwicklung: Sicherheits-Check + Parameter-Evolution
+  // läuft stündlich — der Bot wird dadurch kontinuierlich stabiler.
+  evolutionsInterval = setInterval(() => {
+    void fuehreEvolutionsZyklusAus();
+  }, 60 * 60 * 1000);
+  void fuehreEvolutionsZyklusAus(); // sofort einmal beim Start
 }
 
 export function stoppeTrading(): void {
@@ -692,6 +712,10 @@ export function stoppeTrading(): void {
   if (tradingInterval) {
     clearInterval(tradingInterval);
     tradingInterval = null;
+  }
+  if (evolutionsInterval) {
+    clearInterval(evolutionsInterval);
+    evolutionsInterval = null;
   }
   logger.info("⛔ Micro-Trading Agent gestoppt");
 }

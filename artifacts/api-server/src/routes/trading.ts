@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { fuehreEvolutionsZyklusAus, ladeHandelsStatistik } from "../agents/microTradingEvolution";
 import {
   fuehreTradingZyklusAus,
   starteTrading,
@@ -61,3 +62,27 @@ router.get("/trading/status", (req, res) => {
 });
 
 export default router;
+
+// ── Sprint 65: Autonome Selbst-Entwicklung ───────────────────────────────────
+
+// GET /trading/evolution — Handelsstatistik + Sicherheitsstatus
+router.get("/trading/evolution", async (_req, res) => {
+  try {
+    const statistik = await ladeHandelsStatistik();
+    return res.json(statistik);
+  } catch (err) {
+    res.status(500).json({ error: "Statistik nicht verfügbar" });
+    return;
+  }
+});
+
+// POST /trading/evolution/zyklus — Evolutionszyklus manuell auslösen
+router.post("/trading/evolution/zyklus", async (_req, res) => {
+  try {
+    const ergebnis = await fuehreEvolutionsZyklusAus();
+    return res.json(ergebnis);
+  } catch (err) {
+    res.status(500).json({ error: "Evolutionszyklus fehlgeschlagen" });
+    return;
+  }
+});

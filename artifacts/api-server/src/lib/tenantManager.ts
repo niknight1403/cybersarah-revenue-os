@@ -36,7 +36,7 @@ export interface TenantProvisionierung {
  * Idempotent: Mehrfache Ausführung (Stripe-Retries) führt zu keinem Duplikat.
  */
 export async function stelleTenantBereit(input: TenantProvisionierung): Promise<Tenant> {
-  const budgets = PLAN_BUDGETS[input.planTier] ?? PLAN_BUDGETS.starter;
+  const budgets = PLAN_BUDGETS[input.planTier] ?? PLAN_BUDGETS.lite;
   const name = input.name ?? `Tenant ${input.stripeCustomerId}`;
 
   const [bestehend] = await db
@@ -193,9 +193,9 @@ export async function stelleSicherInternerTenant(): Promise<Tenant | undefined> 
       .insert(tenantsTable)
       .values({
         name: INTERNER_TENANT_NAME,
-        planTier: "scale",
-        monthlyTokenBudget: PLAN_BUDGETS.scale.tokens,
-        monthlyLeadBudget: PLAN_BUDGETS.scale.leads,
+        planTier: "elite",
+        monthlyTokenBudget: PLAN_BUDGETS.elite.tokens,
+        monthlyLeadBudget: PLAN_BUDGETS.elite.leads,
         status: "active",
         intern: true,
       })
