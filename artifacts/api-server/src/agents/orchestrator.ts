@@ -218,6 +218,8 @@ import { SubscriptionAgent } from "./SubscriptionAgent";
 import { CrossSellAgent } from "./CrossSellAgent";
 import { ConversionOptimizerAgent } from "./ConversionOptimizerAgent";
 import { EmailSequenceAgent } from "./EmailSequenceAgent";
+import { ReachSwarmAgent } from "./reachSwarmAgent";
+import { LlmRoutingChangerAgent } from "./llmRoutingChangerAgent";
 import { scanneNeueProdukte, synchronisiereVerkaeufe, optimierePreiseUndPausiereFlops } from "./digitalproduktAgent";
 import { generiereSeoArtikel } from "./seoContentAgent";
 import { erstelleFehlendeSequenzen, versendeFaelligeEmails } from "./emailListenAgent";
@@ -294,6 +296,8 @@ const subAgenten: AgentBase[] = [
   new CrossSellAgent(),
   new ConversionOptimizerAgent(),
   new EmailSequenceAgent(),
+  new ReachSwarmAgent(),
+  new LlmRoutingChangerAgent(),
 ];
 
 let mainLoopTimer: NodeJS.Timeout | null = null;
