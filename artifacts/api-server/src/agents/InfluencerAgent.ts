@@ -4,9 +4,10 @@ import { contentTable, agentsTable } from "@workspace/db";
 import { eq, desc, gte } from "drizzle-orm";
 import { generiereContent, type ContentAuftrag } from "./contentAgent";
 import { logger } from "../lib/logger";
+import { generiereHealthCampaign } from "./healthInfluencerEngine";
 
 export interface InfluencerAufgabePayload {
-  aktion: "content_generieren" | "trend_analyse" | "engagement_optimieren";
+  aktion: "content_generieren" | "trend_analyse" | "engagement_optimieren" | "health_campaign_generieren";
   marke?: "CyberSarah" | "GeldPilot AI" | "UnternehmerGPT";
   plattform?: "TikTok" | "Instagram" | "YouTube" | "Google" | "Blog";
   thema?: string;
@@ -25,6 +26,8 @@ export class InfluencerAgent extends AgentBase {
     const payload = aufgabe.payload as unknown as InfluencerAufgabePayload;
 
     switch (payload.aktion) {
+      case "health_campaign_generieren":
+        return this.generiereHealthCampaign();
       case "content_generieren":
         return this.generiereInfluencerContent(payload);
       case "trend_analyse":
@@ -36,7 +39,7 @@ export class InfluencerAgent extends AgentBase {
     }
   }
 
-  private async generiereInfluencerContent(payload: InfluencerAufgabePayload): Promise<AufgabeErgebnis> {
+  private async generiereHealthCampaign(): Promise<AufgabeErgebnis> {\n    const result = await generiereHealthCampaign();\n    return {\n      success: result.success,\n      message: result.message,\n      metadaten: { ...result.campaign, contentId: result.contentId },\n    };\n  }\n\n  private async generiereInfluencerContent(payload: InfluencerAufgabePayload): Promise<AufgabeErgebnis> {
     const auftrag: ContentAuftrag = {
       marke: payload.marke ?? "CyberSarah",
       typ: "reel",
