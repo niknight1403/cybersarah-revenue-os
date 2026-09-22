@@ -17,6 +17,13 @@ import { getStripeClient, getWebhookSecret } from "./stripeClient";
 import { db } from "@workspace/db";
 import { transactionsTable, webhookEventsTable } from "@workspace/db";
 import { logger } from "./logger";
+import {
+  stelleTenantBereit,
+  setzeTenantStatusBySubscription,
+  setzeMonatsZaehlerZurueck,
+  mappeStripeStatus,
+} from "./tenantManager";
+import { PLAN_TIERS, type PlanTier } from "@workspace/db";
 import { sendEmail } from "./emailClient";
 import { orderConfirmation } from "./emailTemplates";
 
@@ -138,6 +145,40 @@ const eventHandlers: Record<string, EventHandler> = {
     const session = event.data.object as Stripe.Checkout.Session;
     const betrag = session.amount_total ? session.amount_total / 100 : 0;
 
+    // ── SPRING 63: Tenant-Auto-Provisioning (idempotent) ────────────────────
+    // Erstellt/aktiviert den Account und weist Token- & Lead-Budget basierend
+    // auf dem gewählten Paket zu. Muss VOR dem Early-Return laufen, damit
+    // auch Subscription-Checkouts provisioniert werden.
+    const customerId =
+      typeof session.customer === "string" ? session.customer : session.customer?.id;
+    if (customerId) {
+      try {
+        const rawTier = String(
+          (session.metadata as Record<string, string> | null)?.planTier ??
+          (session.metadata as Record<string, string> | null)?.plan ??
+          "starter"
+        ).toLowerCase() as PlanTier;
+        const planTier: PlanTier = (PLAN_TIERS as readonly string[]).includes(rawTier)
+          ? rawTier
+          : "starter";
+
+        await stelleTenantBereit({
+          stripeCustomerId: customerId,
+          stripeSubscriptionId:
+            typeof session.subscription === "string"
+              ? session.subscription
+              : session.subscription?.id ?? null,
+          planTier,
+          name:
+            (session.metadata as Record<string, string> | null)?.tenantName ??
+            session.customer_details?.email ??
+            undefined,
+        });
+      } catch (err) {
+        logger.error({ err, sessionId: session.id }, "❌ Tenant-Provisioning fehlgeschlagen");
+      }
+    }
+
     // Doppelzählung vermeiden: PaymentIntent/Subscription → Buchung erfolgt
     // über das jeweilige Event
     if (session.payment_intent || session.subscription) {
@@ -257,6 +298,13 @@ const eventHandlers: Record<string, EventHandler> = {
       { subscriptionId: sub.id, status: sub.status },
       "Stripe Subscription aktualisiert"
     );
+
+    // SPRING 63: Zugriff sofort sperren/entsperren (Zahlungsausfall, Kündigung)
+    try {
+      await setzeTenantStatusBySubscription(sub.id, mappeStripeStatus(sub.status));
+    } catch (err) {
+      logger.error({ err, subscriptionId: sub.id }, "❌ Tenant-Status-Sync fehlgeschlagen");
+    }
   },
 
   // ── customer.subscription.deleted ──────────────────────────────────────
@@ -266,6 +314,13 @@ const eventHandlers: Record<string, EventHandler> = {
       { subscriptionId: sub.id, status: sub.status },
       "Stripe Subscription gekündigt"
     );
+
+    // SPRING 63: Tenant bei Kündigung SOFORT sperren (alle Agenten-Executions)
+    try {
+      await setzeTenantStatusBySubscription(sub.id, "canceled");
+    } catch (err) {
+      logger.error({ err, subscriptionId: sub.id }, "❌ Tenant-Sperre fehlgeschlagen");
+    }
   },
 
   // ── customer.subscription.trial_will_end ───────────────────────────────
@@ -308,6 +363,30 @@ const eventHandlers: Record<string, EventHandler> = {
       logger.info(
         { invoiceId: invoice.id, betrag, neu },
         "Invoice-Zahlung in DB geschrieben"
+      );
+    }
+  },
+
+  // ── invoice.payment_succeeded ───────────────────────────────────────────
+  // SPRING 63: Setzt die monatlichen Token- und Lead-Zähler des Tenants
+  // bei erfolgreicher Rechnungszahlung atomar auf 0 zurück (idempotent).
+  "invoice.payment_succeeded": async (event, ip) => {
+    const invoice = event.data.object as Stripe.Invoice;
+    const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+
+    let zurueckgesetzt = false;
+    if (customerId) {
+      try {
+        zurueckgesetzt = await setzeMonatsZaehlerZurueck(customerId);
+      } catch (err) {
+        logger.error({ err, invoiceId: invoice.id }, "❌ Monats-Reset fehlgeschlagen");
+      }
+    }
+
+    if (zurueckgesetzt) {
+      logger.info(
+        { invoiceId: invoice.id, customerId },
+        "🔄 Tenant-Monatsbudget zurückgesetzt (invoice.payment_succeeded)"
       );
     }
   },
