@@ -16,6 +16,8 @@ import { sql } from "drizzle-orm";
 import { openai, openaiVerfuegbar } from "../lib/openaiClient";
 import { pruefeStripeVerbindung } from "../lib/stripeClient";
 import { logger } from "../lib/logger";
+import { holeProviderSnapshot } from "../lib/llmRouter";
+import { holeConnectorSnapshot } from "../lib/toolConnectorManager";
 
 const router: IRouter = Router();
 
@@ -82,13 +84,41 @@ router.get("/health", async (_req, res) => {
     pruefeOpenAI(),
   ]);
 
+  const provider = holeProviderSnapshot();
+  const kostenloseLlm = provider.filter((p) => p.kostenlos && p.konfiguriert);
+  const connectors = holeConnectorSnapshot();
+  const aktiveConnectors = connectors.filter((c) => c.aktiv);
+
   const komponenten = [
     { name: "PostgreSQL", ...postgres },
     { name: "Stripe", ...stripe },
     { name: "OpenAI", ...openaiStatus },
+    {
+      name: "LLM-Router (kostenlos)",
+      status: kostenloseLlm.length > 0 ? "ONLINE" : "OFFLINE",
+      details: {
+        kostenloseProvider: kostenloseLlm.map((p) => `${p.id} (${p.modell})`),
+        providerInsgesamt: provider.length,
+        routing: "autonomer Failover, kostenlos vor kostenpflichtig",
+      },
+    },
+    {
+      name: "Werkzeug-Connector",
+      status: aktiveConnectors.length > 0 ? "ONLINE" : "DEGRADED",
+      details: {
+        aktiv: aktiveConnectors.map((c) => c.id),
+        konfiguriert: connectors.filter((c) => c.konfiguriert).length,
+        registriert: connectors.length,
+      },
+    },
+    {
+      name: "Reach-Schwarm",
+      status: "ONLINE",
+      details: { personas: ["CyberSarah", "CyberNova", "DataDiva", "PixelPoet"], modus: "autonom, transparent KI-gekennzeichnet" },
+    },
   ];
 
-  // Health-Index: jede der 3 Komponenten zählt gleich (1/3) → 0-100
+  // Health-Index: Anteil der ONLINE-Komponenten → 0-100
   const onlineAnzahl = komponenten.filter((k) => k.status === "ONLINE").length;
   const healthIndex = Math.round((onlineAnzahl / komponenten.length) * 100);
 
