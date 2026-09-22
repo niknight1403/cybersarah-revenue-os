@@ -212,6 +212,26 @@ async function startServer() {
     })();
   }
 
+  // ── Sprint 65: Administrator-Konto autonom sicherstellen ─────────────────
+  try {
+    const { stelleAdminBereit } = await import("./lib/adminAccount");
+    const admin = await stelleAdminBereit();
+    if (admin.erstellt) {
+      logger.info({ email: admin.email }, "👑 Administrator-Konto eingerichtet (alle Rechte, alle Features)");
+    }
+  } catch (e: any) {
+    logger.warn("Admin-Seed übersprungen: " + (e?.message ?? e));
+  }
+
+  // ── Sprint 65: Live-Problem-Löser-Agent starten (alle 5 Minuten) ─────────
+  try {
+    const { starteLiveProblemLoeser } = await import("./agents/liveProblemLoeserAgent");
+    starteLiveProblemLoeser(5 * 60 * 1000);
+    logger.info("🔧 Live-Problem-Löser-Agent aktiv — überwacht und heilt autonom alle 5 Minuten");
+  } catch (e: any) {
+    logger.warn("Live-Problem-Löser konnte nicht gestartet werden: " + (e?.message ?? e));
+  }
+
   app.listen(port, () => {
     logger.info({ port }, "✅ CyberSarah Revenue OS Server gestartet");
   });

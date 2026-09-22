@@ -14,7 +14,13 @@ import { z } from "zod/v4";
 
 // ─── Plan-Tiers mit Budget-Limits ──────────────────────────────────────────────
 
-export const PLAN_TIERS = ["starter", "pro", "scale"] as const;
+// ─── 4-Tier-Abosystem (Sprint 65, Konkurrenz-Benchmark) ────────────────────────
+// Benchmark: Buffer $6–99, Ocoya $15–159, HeyGen $29–99, Instantly $37–97,
+// Jasper $39–69, Copy.ai $49, Apollo $0–99/Seat, Clay $149–800,
+// userevenueos.com $1.500–3.500 (Enterprise) → wir positionieren uns mittig
+// mit klarem Feature-Vorsprung durch volle Autonomie.
+
+export const PLAN_TIERS = ["lite", "standard", "pro", "elite"] as const;
 export type PlanTier = (typeof PLAN_TIERS)[number];
 
 export const TENANT_STATI = ["active", "past_due", "canceled"] as const;
@@ -22,9 +28,26 @@ export type TenantStatus = (typeof TENANT_STATI)[number];
 
 /** Standard-Budgets je Plan-Tier (Token/Monat, Leads/Monat) */
 export const PLAN_BUDGETS: Record<PlanTier, { tokens: number; leads: number }> = {
-  starter: { tokens: 500_000, leads: 100 },
-  pro: { tokens: 2_000_000, leads: 1_000 },
-  scale: { tokens: 10_000_000, leads: 10_000 },
+  lite: { tokens: 500_000, leads: 100 },
+  standard: { tokens: 2_000_000, leads: 1_000 },
+  pro: { tokens: 10_000_000, leads: 10_000 },
+  elite: { tokens: 50_000_000, leads: 100_000 },
+};
+
+/** Abo-Preise je Tier (EUR/Monat) — Konkurrenz-Benchmark Sprint 65 */
+export const PLAN_PREISE: Record<PlanTier, number> = {
+  lite: 29,
+  standard: 79,
+  pro: 199,
+  elite: 499,
+};
+
+/** Upsell-Kette für autonomes Tier-Upgrade bei Budget-Ausschöpfung */
+export const TIER_UPSELL: Record<PlanTier, PlanTier | null> = {
+  lite: "standard",
+  standard: "pro",
+  pro: "elite",
+  elite: null,
 };
 
 // ─── tenants ────────────────────────────────────────────────────────────────────
@@ -36,7 +59,7 @@ export const tenantsTable = pgTable(
     name: varchar("name", { length: 255 }).notNull(),
     stripeCustomerId: varchar("stripe_customer_id", { length: 255 }).unique(),
     stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }).unique(),
-    planTier: varchar("plan_tier", { length: 16 }).notNull().default("starter"), // starter | pro | scale
+    planTier: varchar("plan_tier", { length: 16 }).notNull().default("lite"), // lite | standard | pro | elite
     monthlyTokenBudget: integer("monthly_token_budget").notNull().default(500_000),
     usedTokensThisMonth: integer("used_tokens_this_month").notNull().default(0),
     monthlyLeadBudget: integer("monthly_lead_budget").notNull().default(100),

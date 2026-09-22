@@ -14,7 +14,7 @@
  *     80%-Upsell-Schwelle (automatischer Sales-Agent-Trigger).
  */
 import type { Request, Response, NextFunction, RequestHandler } from "express";
-import { db } from "@workspace/db";
+import { TIER_UPSELL, PLAN_TIERS, type PlanTier, db } from "@workspace/db";
 import { tenantsTable, tokenLogsTable, type Tenant } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
@@ -208,7 +208,11 @@ export async function pruefeUndTriggerUpsell(tenant: Tenant): Promise<void> {
 
   if (!reserviert) return; // Anderer Parallelaufruf hat bereits getriggert
 
-  const naechsteStufe = tenant.planTier === "starter" ? "pro" : "scale";
+  const planTier = (PLAN_TIERS as readonly string[]).includes(tenant.planTier)
+    ? (tenant.planTier as PlanTier)
+    : "lite";
+  const naechsteStufe = TIER_UPSELL[planTier] ?? null;
+  if (!naechsteStufe) return; // Elite: höchste Stufe erreicht
 
   logger.info(
     { tenantId: tenant.id, name: tenant.name, tokenQuote: `${(tokenQuote * 100).toFixed(1)}%`, leadQuote: `${(leadQuote * 100).toFixed(1)}%`, naechsteStufe },

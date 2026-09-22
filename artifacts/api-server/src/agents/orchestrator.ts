@@ -220,6 +220,7 @@ import { ConversionOptimizerAgent } from "./ConversionOptimizerAgent";
 import { EmailSequenceAgent } from "./EmailSequenceAgent";
 import { ReachSwarmAgent } from "./reachSwarmAgent";
 import { LlmRoutingChangerAgent } from "./llmRoutingChangerAgent";
+import { LiveProblemLoeserAgent } from "./liveProblemLoeserAgent";
 import { scanneNeueProdukte, synchronisiereVerkaeufe, optimierePreiseUndPausiereFlops } from "./digitalproduktAgent";
 import { generiereSeoArtikel } from "./seoContentAgent";
 import { erstelleFehlendeSequenzen, versendeFaelligeEmails } from "./emailListenAgent";
@@ -298,6 +299,7 @@ const subAgenten: AgentBase[] = [
   new EmailSequenceAgent(),
   new ReachSwarmAgent(),
   new LlmRoutingChangerAgent(),
+  new LiveProblemLoeserAgent(),
 ];
 
 let mainLoopTimer: NodeJS.Timeout | null = null;
@@ -623,7 +625,7 @@ function registriereQueueHandler(): void {
           },
           {
             role: "user",
-            content: `Aktueller Plan: ${p.aktuellerPlan ?? "starter"}. Nächste Stufe: ${p.naechsteStufe ?? "pro"}. Token-Quote: ${(p.tokenQuote ?? 0.8) * 100}%. Lead-Quote: ${(p.leadQuote ?? 0) * 100}%.`,
+            content: `Aktueller Plan: ${p.aktuellerPlan ?? "lite"}. Nächste Stufe: ${p.naechsteStufe ?? "standard"}. Token-Quote: ${(p.tokenQuote ?? 0.8) * 100}%. Lead-Quote: ${(p.leadQuote ?? 0) * 100}%.`,
           },
         ],
         max_tokens: 400,
@@ -1313,10 +1315,7 @@ export function starteOrchestrator(): void {
   cron.schedule("0 */6 * * *", async () => {
     const agentId = await holeAgentId("trend_analyst");
     if (!agentId) return;
-    fuehreAgentAus(agentId, () => {
-      const agent = subAgenten.find(a => a instanceof TrendAnalystAgent) as TrendAnalystAgent | undefined;
-      return agent?.fuehreTrendAnalyseAus();
-    });
+    fuehreAgentAus(agentId, () => analysiereTrends(agentId).then(() => {}));
   });
 
   // Content Factory: 08:00, 12:00, 18:00
@@ -1576,7 +1575,7 @@ export async function fuehreAlleAgentanAus(): Promise<{ gestartet: number; jobId
   // Content Factory (mit OpenAI — nur wenn Umsatz-relevanter Content generiert wird)
   const agentId = await holeAgentId("content_factory");
   if (agentId) {
-    void fuhreAgentAus(agentId, () => generiereContent({
+    void fuehreAgentAus(agentId, () => generiereContent({
       marke: marken[idx]!,
       typ: typen[idx]!,
       plattform: plattformen[idx]!,
@@ -1625,11 +1624,11 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
   try {
     switch (agent.typ) {
       case "director":
-        await fuhreAgentAus(agentId, () => fuehreStrategieAnalyseDurch(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => fuehreStrategieAnalyseDurch(agentId).then(() => {}));
         return { success: true, message: "Director Agent: Strategische Analyse erfolgreich" };
 
       case "trend_analyst":
-        await fuhreAgentAus(agentId, () => analysiereTrends(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => analysiereTrends(agentId).then(() => {}));
         return { success: true, message: "Trend Analyst: Analyse + Content-Generierung abgeschlossen" };
 
       case "content_factory": {
@@ -1641,7 +1640,7 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
         const typen = ["blogartikel", "tiktok", "reel", "kurzVideo"] as const;
         const plattformen = ["Blog", "TikTok", "Instagram", "YouTube"] as const;
         const idx = Math.floor(Math.random() * themen.length);
-        await fuhreAgentAus(agentId, () => generiereContent({
+        await fuehreAgentAus(agentId, () => generiereContent({
           marke: marken[idx % 3]!,
           typ: typen[idx % 4]!,
           plattform: plattformen[idx % 4]!,
@@ -1651,23 +1650,23 @@ export async function fuehreAgentManuellAus(agentId: number): Promise<{ success:
       }
 
       case "video":
-        await fuhreAgentAus(agentId, () => generiereVideoSkript(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => generiereVideoSkript(agentId).then(() => {}));
         return { success: true, message: "Video Agent: Video-Skript generiert" };
 
       case "sales":
-        await fuhreAgentAus(agentId, () => optimiereSales(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => optimiereSales(agentId).then(() => {}));
         return { success: true, message: "Sales Agent: Optimierungsanalyse abgeschlossen" };
 
       case "funnel":
-        await fuhreAgentAus(agentId, () => generiereFunnelSequenz(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => generiereFunnelSequenz(agentId).then(() => {}));
         return { success: true, message: "Funnel Agent: E-Mail-Sequenz generiert" };
 
       case "community":
-        await fuhreAgentAus(agentId, () => verarbeiteCommunitiy(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => verarbeiteCommunitiy(agentId).then(() => {}));
         return { success: true, message: "Community Agent: Antworten und DM-Vorlagen erstellt" };
 
       case "revenue_optimizer":
-        await fuhreAgentAus(agentId, () => analysiereUmsatz(agentId).then(() => {}));
+        await fuehreAgentAus(agentId, () => analysiereUmsatz(agentId).then(() => {}));
         return { success: true, message: "Revenue Optimizer: Umsatz-Analyse abgeschlossen" };
 
       case "influencer": {
