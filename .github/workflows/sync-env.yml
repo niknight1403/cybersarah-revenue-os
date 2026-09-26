@@ -33,15 +33,19 @@ jobs:
             code=$(probe "$kandidat" $extra)
             echo "Endpunkt $kandidat -> HTTP $code"
             if [ "$code" != "000" ]; then
+              SERVER_URL="$kandidat"
+              TLS_EXTRA="$extra"
               echo "SERVER_URL=$kandidat" >> "$GITHUB_ENV"
               echo "TLS_EXTRA=$extra" >> "$GITHUB_ENV"
               break
             fi
           done
-          if [ -z "${SERVER_URL:-}" ]; then
+          if [ -z "$SERVER_URL" ]; then
             echo "::error::Server unter 167.233.196.20 (Port 3000/443) und cybersarah-ki.de nicht erreichbar. Pruefen: pm2 status cybersarah, ufw/Firewall, nginx-Reverse-Proxy."
             exit 1
           fi
+          # Shell-Variable fuer den aktuellen Step setzen (GITHUB_ENV greift erst ab Step 2)
+          export SERVER_URL TLS_EXTRA
 
       - name: Deploy-Trigger (Server-Code aktualisieren, damit /api/admin/env existiert)
         env:
@@ -114,11 +118,19 @@ jobs:
             echo "::error::Payload leer — keine Secrets/Variablen gesetzt?"
             exit 1
           fi
-          RESP=$(curl -s -X POST "$SERVER_URL/api/admin/env" \
+          HTTP_CODE=$(curl -s -X POST "$SERVER_URL/api/admin/env" \
             -H "X-Deploy-Token: $DEPLOY_TOKEN" \
             -H "Content-Type: application/json" \
             $TLS_EXTRA \
-            -d "$PAYLOAD" --max-time 60) || RESP=""
+            -d "$PAYLOAD" --max-time 60 -w "%{http_code}" -o /tmp/env_resp.json) \
+            || true
+          RESP=$(cat /tmp/env_resp.json 2>/dev/null || echo "")
+          echo "HTTP $HTTP_CODE — Antwort: $RESP"
+          case "$HTTP_CODE" in
+            502|503|504)
+              echo "::error::Reverse-Proxy erreichbar, aber Backend (pm2 cybersarah) antwortet nicht (HTTP $HTTP_CODE). SSH: pm2 status cybersarah && pm2 logs cybersarah --lines 30"
+              exit 1 ;;
+          esac
           echo "Antwort: $RESP"
           echo "$RESP" | jq -e '.success == true' > /dev/null \
             && echo "Env-Sync erfolgreich" \
