@@ -1,0 +1,99 @@
+name: Sync .env to Hetzner Server
+
+on:
+  # Laeuft automatisch nach dem Auto-Deploy (Code inkl. Env-Endpunkt ist dann frisch)
+  workflow_run:
+    workflows: ["Auto-Deploy to Hetzner Server"]
+    types: [completed]
+  workflow_dispatch:
+
+env:
+  SERVER_URL: http://167.233.196.20:3000
+  DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+
+jobs:
+  sync-env:
+    name: Sync secrets to server .env
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Deploy-Trigger (Server-Code aktualisieren, damit /api/admin/env existiert)
+        run: |
+          echo "Trigger API-Deploy, damit der Server den Env-Endpunkt laedt..."
+          curl -s -o /dev/null -w "Deploy HTTP %{http_code}\n" -X POST \
+            "$SERVER_URL/api/admin/deploy" \
+            -H "X-Deploy-Token: $DEPLOY_TOKEN" \
+            --max-time 60 || true
+          echo "Warte 45s auf git-pull + pm2-restart..."
+          sleep 45
+
+      - name: Env-Payload bauen und an /api/admin/env senden
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PAYMENT_LINK: ${{ vars.STRIPE_PAYMENT_LINK }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BACKUP_KEY: ${{ secrets.OPENAI_BACKUP_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_BACKUP_KEY: ${{ secrets.GEMINI_BACKUP_KEY }}
+          DIGISTORE24_API_KEY: ${{ secrets.DIGISTORE24_API_KEY }}
+          DIGISTORE24_USERNAME: ${{ vars.DIGISTORE24_USERNAME }}
+          DIGISTORE24_IPN_SECRET: ${{ secrets.DIGISTORE24_IPN_SECRET }}
+          DIGISTORE24_VENDOR_ID: ${{ vars.DIGISTORE24_VENDOR_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TIKTOK_CLIENT_KEY: ${{ vars.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          SERVER_IP: ${{ vars.SERVER_IP }}
+          LIVE_MODE: ${{ vars.LIVE_MODE }}
+          SIMULATION_MODE: ${{ vars.SIMULATION_MODE }}
+          NODE_ENV: ${{ vars.NODE_ENV }}
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+          API_AUTH_TOKEN: ${{ secrets.API_AUTH_TOKEN }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          PAYLOAD=$(jq -n \
+            'reduce inputs as $item ({}; .)
+            | { env: (with_entries(select(.value != "" and .value != null))) }' \
+            --arg DATABASE_URL "$DATABASE_URL" \
+            --arg STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY" \
+            --arg STRIPE_PUBLISHABLE_KEY "$STRIPE_PUBLISHABLE_KEY" \
+            --arg STRIPE_WEBHOOK_SECRET "$STRIPE_WEBHOOK_SECRET" \
+            --arg STRIPE_PAYMENT_LINK "$STRIPE_PAYMENT_LINK" \
+            --arg OPENAI_API_KEY "$OPENAI_API_KEY" \
+            --arg OPENAI_BACKUP_KEY "$OPENAI_BACKUP_KEY" \
+            --arg GEMINI_API_KEY "$GEMINI_API_KEY" \
+            --arg GEMINI_BACKUP_KEY "$GEMINI_BACKUP_KEY" \
+            --arg DIGISTORE24_API_KEY "$DIGISTORE24_API_KEY" \
+            --arg DIGISTORE24_USERNAME "$DIGISTORE24_USERNAME" \
+            --arg DIGISTORE24_IPN_SECRET "$DIGISTORE24_IPN_SECRET" \
+            --arg DIGISTORE24_VENDOR_ID "$DIGISTORE24_VENDOR_ID" \
+            --arg TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN" \
+            --arg TIKTOK_CLIENT_KEY "$TIKTOK_CLIENT_KEY" \
+            --arg TIKTOK_CLIENT_SECRET "$TIKTOK_CLIENT_SECRET" \
+            --arg SERVER_IP "$SERVER_IP" \
+            --arg LIVE_MODE "$LIVE_MODE" \
+            --arg SIMULATION_MODE "$SIMULATION_MODE" \
+            --arg NODE_ENV "$NODE_ENV" \
+            --arg ALLOWED_ORIGINS "$ALLOWED_ORIGINS" \
+            --arg API_AUTH_TOKEN "$API_AUTH_TOKEN" \
+            --arg ADMIN_EMAIL "$ADMIN_EMAIL" \
+            --arg RESEND_API_KEY "$RESEND_API_KEY")
+          echo "Sende $(echo "$PAYLOAD" | jq '.env | length') Schluessel an den Server..."
+          RESP=$(curl -s -X POST "$SERVER_URL/api/admin/env" \
+            -H "X-Deploy-Token: $DEPLOY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" --max-time 60) || RESP=""
+          echo "Antwort: $RESP"
+          echo "$RESP" | jq -e '.success == true' > /dev/null \
+            && echo "Env-Sync erfolgreich" \
+            || (echo "::error::Env-Sync fehlgeschlagen" && exit 1)
+
+      - name: Verifikation (GET /api/admin/env, maskiert)
+        run: |
+          sleep 8
+          curl -s "$SERVER_URL/api/admin/env" -H "X-Deploy-Token: $DEPLOY_TOKEN" --max-time 30 \
+            | jq '.' || true
