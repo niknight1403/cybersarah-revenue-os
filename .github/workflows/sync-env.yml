@@ -7,29 +7,57 @@ on:
     types: [completed]
   workflow_dispatch:
 
-env:
-  SERVER_URL: http://167.233.196.20:3000
-  DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
-
 jobs:
   sync-env:
     name: Sync secrets to server .env
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
-      - name: Deploy-Trigger (Server-Code aktualisieren, damit /api/admin/env existiert)
+      - name: Server-Endpunkt ermitteln (3000 oder 443)
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
         run: |
-          echo "Trigger API-Deploy, damit der Server den Env-Endpunkt laedt..."
+          probe() {
+            local url="$1"; shift
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 \
+              -H "X-Deploy-Token: $DEPLOY_TOKEN" "$@" "$url/api/admin/env" 2>/dev/null)
+            echo "$code"
+          }
+          for kandidat in "http://167.233.196.20:3000" "https://167.233.196.20" "https://cybersarah-ki.de"; do
+            if [ "$kandidat" = "https://167.233.196.20" ] || [ "$kandidat" = "https://cybersarah-ki.de" ]; then
+              extra="-k"
+            else
+              extra=""
+            fi
+            code=$(probe "$kandidat" $extra)
+            echo "Endpunkt $kandidat -> HTTP $code"
+            if [ "$code" != "000" ]; then
+              echo "SERVER_URL=$kandidat" >> "$GITHUB_ENV"
+              echo "TLS_EXTRA=$extra" >> "$GITHUB_ENV"
+              break
+            fi
+          done
+          if [ -z "${SERVER_URL:-}" ]; then
+            echo "::error::Server unter 167.233.196.20 (Port 3000/443) und cybersarah-ki.de nicht erreichbar. Pruefen: pm2 status cybersarah, ufw/Firewall, nginx-Reverse-Proxy."
+            exit 1
+          fi
+
+      - name: Deploy-Trigger (Server-Code aktualisieren, damit /api/admin/env existiert)
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          echo "Trigger API-Deploy auf $SERVER_URL ..."
           curl -s -o /dev/null -w "Deploy HTTP %{http_code}\n" -X POST \
             "$SERVER_URL/api/admin/deploy" \
-            -H "X-Deploy-Token: $DEPLOY_TOKEN" \
-            --max-time 60 || true
-          echo "Warte 45s auf git-pull + pm2-restart..."
-          sleep 45
+            -H "X-Deploy-Token: $DEPLOY_TOKEN" $TLS_EXTRA \
+            --max-time 90 || echo "Deploy-Trigger fehlgeschlagen (setze fort)"
+          echo "Warte 50s auf git-pull + pm2-restart..."
+          sleep 50
 
       - name: Env-Payload bauen und an /api/admin/env senden
         env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
@@ -55,9 +83,7 @@ jobs:
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: |
-          PAYLOAD=$(jq -n \
-            'reduce inputs as $item ({}; .)
-            | { env: (with_entries(select(.value != "" and .value != null))) }' \
+          PAYLOAD=$(jq -cn '$ARGS.named | with_entries(select(.value != "")) | { env: . }' \
             --arg DATABASE_URL "$DATABASE_URL" \
             --arg STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY" \
             --arg STRIPE_PUBLISHABLE_KEY "$STRIPE_PUBLISHABLE_KEY" \
@@ -82,10 +108,16 @@ jobs:
             --arg API_AUTH_TOKEN "$API_AUTH_TOKEN" \
             --arg ADMIN_EMAIL "$ADMIN_EMAIL" \
             --arg RESEND_API_KEY "$RESEND_API_KEY")
-          echo "Sende $(echo "$PAYLOAD" | jq '.env | length') Schluessel an den Server..."
+          ANZAHL=$(echo "$PAYLOAD" | jq '.env | length')
+          echo "Sende $ANZAHL Schluessel an $SERVER_URL ..."
+          if [ "$ANZAHL" -eq 0 ]; then
+            echo "::error::Payload leer — keine Secrets/Variablen gesetzt?"
+            exit 1
+          fi
           RESP=$(curl -s -X POST "$SERVER_URL/api/admin/env" \
             -H "X-Deploy-Token: $DEPLOY_TOKEN" \
             -H "Content-Type: application/json" \
+            $TLS_EXTRA \
             -d "$PAYLOAD" --max-time 60) || RESP=""
           echo "Antwort: $RESP"
           echo "$RESP" | jq -e '.success == true' > /dev/null \
@@ -93,7 +125,9 @@ jobs:
             || (echo "::error::Env-Sync fehlgeschlagen" && exit 1)
 
       - name: Verifikation (GET /api/admin/env, maskiert)
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
         run: |
-          sleep 8
-          curl -s "$SERVER_URL/api/admin/env" -H "X-Deploy-Token: $DEPLOY_TOKEN" --max-time 30 \
-            | jq '.' || true
+          sleep 10
+          curl -s "$SERVER_URL/api/admin/env" -H "X-Deploy-Token: $DEPLOY_TOKEN" $TLS_EXTRA \
+            --max-time 30 | jq '.' || true
