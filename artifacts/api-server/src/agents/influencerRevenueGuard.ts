@@ -3,6 +3,7 @@ export interface RevenueGuardInput {
   variableCostCents: number;
   affiliateCommissionRate?: number;
   paidBoostCents?: number;
+  approvedPaidBudgetCents?: number;
 }
 
 export interface RevenueGuardResult {
@@ -18,7 +19,10 @@ export function evaluateRevenueGuard(input: RevenueGuardInput): RevenueGuardResu
   const projectedMarginCents = input.expectedRevenueCents + commission - costs;
   const base = Math.max(1, input.expectedRevenueCents + commission);
   const projectedMarginRate = Math.round((projectedMarginCents / base) * 10000) / 100;
-  const allowed = (input.paidBoostCents ?? 0) === 0 || (projectedMarginCents > 0 && projectedMarginRate >= 20);
+  const boost = input.paidBoostCents ?? 0;
+  const approved = input.approvedPaidBudgetCents ?? 0;
+  const allowed = [input.expectedRevenueCents, input.variableCostCents, boost, approved].every((v) => Number.isSafeInteger(v) && v >= 0) &&
+    (boost === 0 || (boost <= approved && projectedMarginCents > 0 && projectedMarginRate >= 20));
 
   return {
     allowed,
@@ -26,6 +30,6 @@ export function evaluateRevenueGuard(input: RevenueGuardInput): RevenueGuardResu
     projectedMarginRate,
     reason: allowed
       ? "Kostenlose/positive-Marge-Ausführung zulässig."
-      : "Bezahlte Skalierung blockiert: erwartete Marge unter Sicherheitsgrenze.",
+      : "Bezahlte Skalierung blockiert: Freigabe, gültige Kosten oder Sicherheitsmarge fehlen.",
   };
 }
