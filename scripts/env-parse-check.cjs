@@ -14,5 +14,5 @@ const KEYS = [
 
 for (const k of KEYS) {
   const v = process.env[k];
-  console.log(`${k}: ${v ? `geladen laenge=${v.length} endet=...${v.slice(-4)}` : "FEHLT"}`);
+  console.log(`${k}: ${v ? `geladen laenge=${v.length} ende=${JSON.stringify(v.slice(-8))}` : "FEHLT"}`);
 }
