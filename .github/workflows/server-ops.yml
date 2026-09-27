@@ -70,7 +70,7 @@ jobs:
             echo "== Env-Endpunkt direkt (Port 3000) =="
             curl -sS -X POST http://127.0.0.1:3000/api/admin/env -H "X-Deploy-Token: $DEPLOY_TOKEN" -H "Content-Type: application/json" -d '{"env":{}}' -m 10 | head -c 300; echo
             echo "== Health direkt (Port 3000) =="; curl -sS http://127.0.0.1:3000/api/health -m 10 | head -c 300; echo
-            echo "== Build-Fehler reproduzieren =="; cd /opt/cybersarah && pnpm --filter @workspace/api-server run build 2>&1 | tail -15
+            echo "== Build-Fehler reproduzieren =="; cd /opt/cybersarah && NODE_ENV=development pnpm --filter @workspace/api-server run build 2>&1 | tail -15 || true
             echo "== Listener =="; ss -tlnp | grep -E ":(3000|443|80)" || true
             echo "== Nginx-Vollconfig (gefiltert) =="; nginx -T 2>/dev/null | grep -nE "server_name|listen |proxy_pass|server \{|# configuration file" | head -40
             echo "== sites-enabled =="; ls -la /etc/nginx/sites-enabled/ 2>/dev/null || true
@@ -94,8 +94,8 @@ jobs:
             git log --oneline -1
             echo "== .env synchronisieren =="
             test -f .env && cp .env artifacts/api-server/.env && echo ".env kopiert"
-            echo "== Dependencies =="
-            pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+            echo "== Dependencies (devDeps inklusive — NODE_ENV muss fuer den Build development sein) =="
+            NODE_ENV=development pnpm install --frozen-lockfile 2>/dev/null || NODE_ENV=development pnpm install
             echo "== pnpm-Store bereinigen (Disk ~95%) =="
             pnpm store prune 2>/dev/null || true
             echo "== Workspace-Libs bauen (Voraussetzung fuer api-server-Build) =="
@@ -106,7 +106,8 @@ jobs:
             ls -la artifacts/api-server/dist/ | head -4
             echo "== pm2-Prozess-Definition =="
             pm2 describe cybersarah | grep -E "script|exec|interpreter" | head -8
-            echo "== pm2 neustarten =="
+            export NODE_ENV=production
+            echo "== pm2 neustarten (NODE_ENV=production) =="
             pm2 restart cybersarah 2>/dev/null || pm2 start "pnpm --filter @workspace/api-server start" --name cybersarah
             pm2 save
             echo "== 15s warten, dann Health =="
