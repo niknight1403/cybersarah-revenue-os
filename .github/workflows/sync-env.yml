@@ -88,7 +88,7 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ADMIN_GITHUB_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
           HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
         run: |
@@ -119,7 +119,7 @@ jobs:
             --arg RESEND_API_KEY "$RESEND_API_KEY" \
             --arg HUGGINGFACE_API_KEY "$HUGGINGFACE_API_KEY" \
             --arg HF_TOKEN "$HF_TOKEN" \
-            --arg GITHUB_TOKEN "$GITHUB_TOKEN" \
+            --arg ADMIN_GITHUB_TOKEN "$ADMIN_GITHUB_TOKEN" \
             --arg GITLAB_TOKEN "$GITLAB_TOKEN" \
             --arg HUBSPOT_ACCESS_TOKEN "$HUBSPOT_ACCESS_TOKEN")
           ANZAHL=$(echo "$PAYLOAD" | jq '.env | length')
