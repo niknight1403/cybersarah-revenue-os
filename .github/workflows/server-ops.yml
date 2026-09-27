@@ -83,6 +83,20 @@ jobs:
             echo "Env-Endpoint lokal mit .env-Token:"
             curl -s -m 10 -X POST -H "X-Deploy-Token: $TOK" -H "Content-Type: application/json" -d "{}" -w "\nHTTP %{http_code}\n" http://127.0.0.1:3000/api/admin/env | head -c 400' 
 
+      - name: Port-3000-Prozess forensik
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'PPID3000=$(ss -tlnp 2>/dev/null | grep ":3000" | grep -oE "pid=[0-9]+" | head -1 | cut -d= -f2)
+            echo "Port-3000-PID: $PPID3000"
+            [ -n "$PPID3000" ] || exit 0
+            echo "cwd: $(readlink /proc/$PPID3000/cwd 2>/dev/null)"
+            ps -o pid,ppid,user,lstart --no-headers -p $PPID3000 2>/dev/null
+            echo "DEPLOY_TOKEN in spawn-env: $(tr "\0" "\n" < /proc/$PPID3000/environ 2>/dev/null | grep -c "^DEPLOY_TOKEN=")"
+            echo "spawn-env DEPLOY_TOKEN MD5: $(tr "\0" "\n" < /proc/$PPID3000/environ 2>/dev/null | grep "^DEPLOY_TOKEN=" | cut -d= -f2 | tr -d "\n" | md5sum | cut -d\  -f1)"
+            echo "cmdline: $(tr "\0" " " < /proc/$PPID3000/cmdline 2>/dev/null | head -c 200)"'
+
       - name: Diagnose (immer)
         env:
           DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
