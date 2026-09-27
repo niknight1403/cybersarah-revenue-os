@@ -7,6 +7,7 @@ on:
       - "artifacts/api-server/src/agents/influencerContentEngine.ts"
       - "artifacts/api-server/src/agents/influencerContentEngine.test.ts"
       - "artifacts/api-server/src/agents/influencerAutopilot*.ts"
+      - "artifacts/api-server/src/agents/influencerHardening.test.ts"
       - "artifacts/api-server/src/agents/influencerTrendIntelligence.ts"
       - "artifacts/api-server/src/agents/influencerEvidenceGuard.ts"
       - "artifacts/api-server/src/agents/influencerQualityGate.ts"
@@ -39,4 +40,4 @@ jobs:
       - name: API typecheck
         run: pnpm --filter @workspace/api-server run typecheck
       - name: Influencer tests
-        run: pnpm --filter @workspace/api-server exec vitest run src/agents/influencerContentEngine.test.ts src/agents/influencerAutopilot.test.ts
+        run: pnpm --filter @workspace/api-server exec vitest run src/agents/influencerContentEngine.test.ts src/agents/influencerAutopilot.test.ts src/agents/influencerHardening.test.ts
