@@ -95,7 +95,9 @@ jobs:
             echo "== .env synchronisieren =="
             test -f .env && cp .env artifacts/api-server/.env && echo ".env kopiert"
             echo "== Dependencies (devDeps inklusive — NODE_ENV muss fuer den Build development sein) =="
-            NODE_ENV=development pnpm install --frozen-lockfile 2>/dev/null || NODE_ENV=development pnpm install
+            echo "== Disk vorher =="; df -h / | tail -1
+            CI=true NODE_ENV=development pnpm install --frozen-lockfile 2>&1 | tail -4 || CI=true NODE_ENV=development pnpm install 2>&1 | tail -4
+            echo "== Disk nachher =="; df -h / | tail -1
             echo "== pnpm-Store bereinigen (Disk ~95%) =="
             pnpm store prune 2>/dev/null || true
             echo "== Workspace-Libs bauen (Voraussetzung fuer api-server-Build) =="
