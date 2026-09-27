@@ -130,6 +130,12 @@ jobs:
             echo "cmdline: $(cat /proc/$PM2PID2/cmdline 2>/dev/null | tr "\0" " ")"
             echo "== pm2-Boot-Log (letzte 20 Zeilen, Keys maskiert) =="
             tail -20 ~/.pm2/logs/cybersarah-out.log 2>/dev/null | sed -E "s/(sk-[a-zA-Z0-9]{4})[a-zA-Z0-9_-]+/\1***/g" | head -20
+            echo "== dotenv-Parse-Test (node mit api-.env, wie die App) =="
+            git -C /opt/cybersarah/cybersarah-revenue-os show origin/main:scripts/env-parse-check.cjs > /tmp/epc.cjs 2>/dev/null || true
+            cd /opt/cybersarah/artifacts/api-server
+            node /tmp/epc.cjs 2>&1 | head -8
+            echo "== pm2-Prozesskonfig (cwd) =="
+            pm2 describe cybersarah 2>/dev/null | grep -i "cwd\|exec cwd\|script path" | head -4
             echo "== .env-Lagen-Vergleich (laenge + letzte 4 Zeichen) =="
             for f in /opt/cybersarah/.env /opt/cybersarah/artifacts/api-server/.env; do
               echo "--- $f ---"
