@@ -361,8 +361,11 @@ jobs:
             else
               echo "WARNUNG: keine pm2 resurrect-Unit gefunden"
             fi
-            echo "== Orphan-Prozesse beenden + PM2-Daemon sauber neu starten =="
+            echo "== App anhalten, Port freimachen, Dump ohne App speichern =="
             pm2 delete cybersarah 2>/dev/null || true
+            pm2 delete all 2>/dev/null || true
+            sleep 1
+            echo "App nach delete noch vorhanden: $(pm2 jlist 2>/dev/null | grep -c \"name\":\"cybersarah\") (erwartet 0)"
             fuser -k -KILL 3000/tcp 2>/dev/null || true
             sleep 2
             pm2 save 2>/dev/null || true
@@ -379,14 +382,21 @@ jobs:
               echo "WARNUNG: keine pm2-Unit gefunden — Daemon startet aus Shell (Env-Leak moeglich)"
             fi
             sleep 8
+            APPVORHER=$(pm2 jlist 2>/dev/null | grep -c \"name\":\"cybersarah\")
+            echo "App nach resurrect vorhanden: $APPVORHER (erwartet 0)"
+            if [ "$APPVORHER" -gt 0 ]; then pm2 delete cybersarah 2>/dev/null || true; fi
             echo "== App sauber NEU starten (frisches Env via dotenv aus api-.env) =="
             cd /opt/cybersarah/artifacts/api-server
-            if env -i HOME=$HOME PATH="$PATH" USER=$(id -un) LOGNAME=$(id -un) SHELL=/bin/bash TERM=xterm NODE_ENV=production pm2 start bash --name cybersarah --cwd /opt/cybersarah/artifacts/api-server -- -c "pnpm --filter @workspace/api-server start"; then
-              echo "sauberer env-i-Start ok"
-            else
-              echo "env-i-Start fehlgeschlagen — Normalstart (Daemon-Env ist jetzt sauber)"
-              pm2 start bash --name cybersarah --cwd /opt/cybersarah/artifacts/api-server -- -c "pnpm --filter @workspace/api-server start"
+            env -i HOME=$HOME PATH="$PATH" USER=$(id -un) LOGNAME=$(id -un) SHELL=/bin/bash TERM=xterm NODE_ENV=production pm2 start bash --name cybersarah --cwd /opt/cybersarah/artifacts/api-server -- -c "pnpm --filter @workspace/api-server start"
+            ANZAHL=$(pm2 jlist 2>/dev/null | grep -c \"name\":\"cybersarah\")
+            echo "App-Instanzen nach Start: $ANZAHL (erwartet 1)"
+            if [ "$ANZAHL" -gt 1 ]; then
+              echo "mehrere Instanzen — reduzieren"
+              pm2 delete cybersarah 2>/dev/null || true
+              env -i HOME=$HOME PATH="$PATH" USER=$(id -un) LOGNAME=$(id -un) SHELL=/bin/bash TERM=xterm NODE_ENV=production pm2 start bash --name cybersarah --cwd /opt/cybersarah/artifacts/api-server -- -c "pnpm --filter @workspace/api-server start"
             fi
+            APPPID=$(pm2 pid cybersarah 2>/dev/null | head -1)
+            echo "App-PID: $APPPID | GITHUB_TOKEN im Fork-Env: $(tr "\0" "\n" < /proc/$APPPID/environ 2>/dev/null | grep -c "^GITHUB_TOKEN=") (erwartet 0)"
             pm2 save
             echo "Dump mit sauberem Env ueberschrieben"
             sleep 18
