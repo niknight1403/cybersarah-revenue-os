@@ -88,6 +88,8 @@ jobs:
             echo "== Build-Fehler reproduzieren =="; cd /opt/cybersarah && NODE_ENV=development pnpm --filter @workspace/api-server run build 2>&1 | tail -15 || true
             echo "== Alle Node/TSX-Prozesse =="; ps aux | grep -E "node|tsx|pnpm" | grep -v grep | head -15
             echo "== systemd-Einheiten (cyber) =="; systemctl list-units --all 2>/dev/null | grep -i cyber | head -5 || true
+            echo "== Unit cybersarah-automation =="; systemctl cat cybersarah-automation.service 2>/dev/null | head -25 || true
+            echo "== Unit-Status =="; systemctl status cybersarah-automation.service --no-pager 2>/dev/null | head -12 || true
             echo "== Listener =="; ss -tlnp | grep -E ":(3000|443|80)" || true
             echo "== Nginx-Vollconfig (gefiltert) =="; nginx -T 2>/dev/null | grep -nE "server_name|listen |proxy_pass|server \{|# configuration file" | head -40
             echo "== sites-enabled =="; ls -la /etc/nginx/sites-enabled/ 2>/dev/null || true
