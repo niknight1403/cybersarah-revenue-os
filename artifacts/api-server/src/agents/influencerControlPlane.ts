@@ -27,7 +27,7 @@ export function buildControlPlaneSnapshot(input: ControlPlaneInput): ControlPlan
   if (!input.measuredWinner) nextActions.push("Varianten erst messen, dann skalieren.");
 
   const state: AutopilotState =
-    blockers.some((item) => /Evidenz|Qualität/.test(item))
+    blockers.length > 0
       ? "blocked"
       : blockers.length > 0 || nextActions.length > 0
         ? "degraded"

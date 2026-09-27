@@ -2,6 +2,7 @@ export interface QualityGateInput {
   hook: string;
   script: string;
   hasDisclosure: boolean;
+  isSponsored?: boolean;
   hasComplianceNote: boolean;
   targetSeconds: number;
   estimatedSeconds: number;
@@ -25,7 +26,7 @@ export function scoreContentQuality(input: QualityGateInput): QualityGateResult 
     score -= 20;
     issues.push("Skript liefert zu wenig Substanz.");
   }
-  if (!input.hasDisclosure) {
+  if (input.isSponsored && !input.hasDisclosure) {
     score -= 15;
     issues.push("Affiliate-/Werbehinweis fehlt.");
   }
@@ -40,5 +41,5 @@ export function scoreContentQuality(input: QualityGateInput): QualityGateResult 
   }
 
   score = Math.max(0, Math.min(100, score));
-  return { score, ready: score >= 70 && issues.every((issue) => !issue.includes("Compliance")), issues };
+  return { score, ready: score >= 70 && input.hasComplianceNote && (!input.isSponsored || input.hasDisclosure) && issues.every((issue) => !issue.includes("Compliance")), issues };
 }

@@ -98,6 +98,7 @@ describe("Influencer Autopilot Sprints 4-13", () => {
       claim: "Eine einfache Abendroutine kann beim Entspannen helfen.",
       sourceCount: 3,
       sourceTypes: ["systematic review", "guideline", "study"],
+      references: [{url:"https://www.who.int/",title:"WHO source for review",type:"authority",checkedAt:"2026-09-27T00:00:00Z"}],
       hook: "Diese drei kleinen Schritte machen eine Abendroutine leichter.",
       script: "Eine sachliche, ausreichend lange Erklärung mit drei alltagstauglichen Schritten, realistischer Einordnung und transparentem Hinweis auf allgemeine Wellness-Informationen.",
       hasDisclosure: true,
@@ -107,6 +108,7 @@ describe("Influencer Autopilot Sprints 4-13", () => {
       platforms: ["Instagram"],
       metrics: [
         { variantId: "ig-a", platform: "Instagram", impressions: 2500, views: 1900, clicks: 130, saves: 150, conversions: 18 },
+        { variantId: "ig-b", platform: "Instagram", impressions: 2500, views: 1200, clicks: 65, saves: 75, conversions: 9 },
       ],
       expectedRevenueCents: 2000,
       variableCostCents: 200,

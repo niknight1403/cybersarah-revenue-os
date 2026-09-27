@@ -15,6 +15,8 @@ export interface RankedTrend extends TrendSignal {
 
 export function rankTrendSignals(signals: TrendSignal[]): RankedTrend[] {
   return signals
+    .filter((signal) => Boolean(signal.topic.trim()) &&
+      [signal.velocity, signal.engagement, signal.saturation, signal.euRelevance].every((value) => Number.isFinite(value) && value >= 0 && value <= 100))
     .map((signal) => ({
       ...signal,
       opportunityScore: Math.max(0, Math.min(100, Math.round(
