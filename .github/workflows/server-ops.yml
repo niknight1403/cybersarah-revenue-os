@@ -50,6 +50,21 @@ jobs:
             *) echo "::error::Unbekannter Modus: $MODUS"; exit 1 ;;
           esac
 
+      - name: DEPLOY_TOKEN auf Server angleichen (nur Reparatur)
+        if: github.event.inputs.modus == 'reparatur'
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+          TOKEN_WERT: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          printf '%s' "$TOKEN_WERT" | ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'read -r NEU; [ -n "$NEU" ] || { echo "Token leer — abbruch"; exit 1; }
+            if grep -q "^DEPLOY_TOKEN=" /opt/cybersarah/.env; then
+              sed -i "s#^DEPLOY_TOKEN=.*#DEPLOY_TOKEN=$NEU#" /opt/cybersarah/.env
+            else
+              printf "\nDEPLOY_TOKEN=%s\n" "$NEU" >> /opt/cybersarah/.env
+            fi
+            echo "DEPLOY_TOKEN in /opt/cybersarah/.env aktualisiert (Laenge: ${#NEU})"'
+
       - name: Diagnose (immer)
         env:
           DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
