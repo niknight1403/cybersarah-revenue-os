@@ -198,7 +198,9 @@ jobs:
             DBPW=$(python3 -c "import urllib.parse as u,sys; s=sys.argv[1]; i=s.find('://'); r=s[i+3:]; at=r.rfind('@'); up=r[:at].split(':',1); print(u.unquote(up[1]) if len(up)>1 else '')" "$DBURL" 2>/dev/null || printf "%s" "$DBURL" | sed -nE "s#^postgres(ql)?://[^:]+:([^@]+)@.*#\2#p")
             echo "Extrahierte PW-Laenge: ${#DBPW}"
             if [ -n "$DBPW" ]; then
-              sudo -u postgres psql -v pw="$DBPW" -c "ALTER USER cybersarah WITH PASSWORD :'pw';" 2>&1 | head -3
+              DBPW_ESC=${DBPW//\'/\'\'}
+              sudo -u postgres psql -c "ALTER USER cybersarah WITH PASSWORD '$DBPW_ESC';" 2>&1 | head -3
+              sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='cybersarah'" | head -1
             else
               echo "Kein Passwort in DATABASE_URL extrahierbar"
             fi
