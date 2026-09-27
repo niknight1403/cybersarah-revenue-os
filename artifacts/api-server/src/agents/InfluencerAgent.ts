@@ -6,6 +6,8 @@ import { generiereContent, type ContentAuftrag } from "./contentAgent";
 import { globalQueue } from "./JobQueue";
 import {
   buildContentEnginePackage,
+  buildCampaignVariants,
+  selectBestReadyVariant,
   scoreEngagementDistribution,
   type HealthContentPlatform,
   type HealthContentAngle,
@@ -135,6 +137,13 @@ export class InfluencerAgent extends AgentBase {
     // Jede Plattform wird als eigener Queue-Job ausgeführt. Dadurch sind Retries
     // pro Plattform isoliert und bereits erfolgreiche Plattformen werden bei einem
     // transienten Fehler einer anderen Plattform nicht erneut erzeugt.
+    const variants = buildCampaignVariants({
+      thema,
+      zielgruppe: payload.zielgruppe,
+      affiliateProdukt: payload.affiliateProdukt,
+    }, plattformen);
+    const bestVariant = selectBestReadyVariant(variants);
+
     const jobs = plattformen.map((plattform) => ({
       plattform,
       jobId: globalQueue.fuegeHinzu("influencer_content", {
@@ -151,7 +160,14 @@ export class InfluencerAgent extends AgentBase {
     return {
       success: true,
       message: `Autonome Influencer-Kampagne für ${thema} auf ${plattformen.length} Plattformen eingeplant.`,
-      metadaten: { thema, anzahl: jobs.length, jobs },
+      metadaten: {
+        thema,
+        anzahl: jobs.length,
+        jobs,
+        experiments: variants,
+        bestVariant,
+        experimentPolicy: "2 Hook-Angles pro Plattform; primäre Plattform-Metrik messen; Gewinner erst nach Messdaten skalieren.",
+      },
     };
   }
 
