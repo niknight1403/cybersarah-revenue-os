@@ -360,16 +360,19 @@ jobs:
             else
               echo "WARNUNG: keine pm2-Unit gefunden — Daemon startet aus Shell (Env-Leak moeglich)"
             fi
-            sleep 18
-            if curl -sS -m 20 http://127.0.0.1:3000/api/health >/dev/null 2>&1; then
-              echo "App nach resurrect erreichbar"
+            sleep 12
+            echo "== App sauber NEU starten — der Dump traegt evtl. alte Env-Werte =="
+            pm2 delete cybersarah 2>/dev/null || true
+            cd /opt/cybersarah/artifacts/api-server
+            if env -i HOME=$HOME PATH="$PATH" USER=$(id -un) LOGNAME=$(id -un) SHELL=/bin/bash TERM=xterm NODE_ENV=production pm2 start bash --name cybersarah --cwd /opt/cybersarah/artifacts/api-server -- -c "pnpm --filter @workspace/api-server start"; then
+              echo "sauberer env-i-Start ok"
             else
-              echo "resurrect brachte App nicht hoch — env-i-Fallbackstart"
-              cd /opt/cybersarah/artifacts/api-server
-              env -i HOME=$HOME PATH="$PATH" USER=$(id -un) LOGNAME=$(id -un) SHELL=/bin/bash TERM=xterm NODE_ENV=production pm2 start bash --name cybersarah --cwd /opt/cybersarah/artifacts/api-server -- -c "pnpm --filter @workspace/api-server start"
-              pm2 save
-              sleep 15
+              echo "env-i-Start fehlgeschlagen — Normalstart (Daemon-Env ist jetzt sauber)"
+              pm2 start bash --name cybersarah --cwd /opt/cybersarah/artifacts/api-server -- -c "pnpm --filter @workspace/api-server start"
             fi
+            pm2 save
+            echo "Dump mit sauberem Env ueberschrieben"
+            sleep 15
             echo "== 15s warten, dann Health =="
             sleep 15
             echo "== /api/health — muss JSON sein, kein HTML =="
