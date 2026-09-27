@@ -107,10 +107,11 @@ jobs:
             echo "alle konfigurierten Connector (id/aktiv/notiz):"
             grep -oE "\"id\":\"[a-z0-9_]+\",\"name\":\"[^\"]*\",\"kategorie\":\"[^\"]*\",\"konfiguriert\":(true|false),\"aktiv\":(true|false),[^}]*\"notiz\":\"[^\"]*\"" /tmp/conn.json | sed -E "s/.*\"id\":\"([a-z0-9_]+)\".*\"aktiv\":(true|false),.*\"notiz\":\"([^\"]*)\".*/\1 aktiv=\2 notiz=\3/" | head -30
             echo "== bearerCheck-Nachbau (node, App-env) =="
-            git -C /opt/cybersarah/cybersarah-revenue-os pull --ff-only origin main 2>&1 | head -2 || true
+            git -C /opt/cybersarah/cybersarah-revenue-os fetch origin main 2>&1 | head -2 || true
+            git -C /opt/cybersarah/cybersarah-revenue-os show origin/main:scripts/connector-bearer-check.mjs > /tmp/cbc.mjs 2>/dev/null || true
             cd /opt/cybersarah/cybersarah-revenue-os
             set -a; . /opt/cybersarah/artifacts/api-server/.env 2>/dev/null; set +a
-            node scripts/connector-bearer-check.mjs 2>&1 | head -12
+            node /tmp/cbc.mjs 2>&1 | head -12
             echo "== env des laufenden App-Prozesses =="
             PM2PID=$(pm2 pid cybersarah 2>/dev/null | head -1)
             echo "pm2-pid: $PM2PID"
@@ -293,7 +294,7 @@ jobs:
             echo "== pm2 NEU STARTEN (delete + start) — killt den veralteten Env-Cache mit altem DEPLOY_TOKEN =="
             pm2 delete cybersarah 2>/dev/null || true
             cd /opt/cybersarah
-            env -u DEPLOY_TOKEN -u OPENAI_API_KEY -u STRIPE_SECRET_KEY -u DATABASE_URL pm2 start bash --name cybersarah -- -c "pnpm --filter @workspace/api-server start" || pm2 start "pnpm --filter @workspace/api-server start" --name cybersarah
+            env -i HOME=$HOME PATH="$PATH" USER=$(id -un) LOGNAME=$(id -un) SHELL=/bin/bash TERM=xterm NODE_ENV=production pm2 start bash --name cybersarah -- -c "pnpm --filter @workspace/api-server start" || pm2 start "pnpm --filter @workspace/api-server start" --name cybersarah
             pm2 save
             echo "== Boot-Resilienz: pm2 resurrect konsolidieren =="
             if [ -f /etc/systemd/system/pm2-cybersarah.service ]; then
