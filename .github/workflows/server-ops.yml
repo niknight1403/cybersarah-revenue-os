@@ -130,10 +130,13 @@ jobs:
             echo "cmdline: $(cat /proc/$PM2PID2/cmdline 2>/dev/null | tr "\0" " ")"
             echo "== pm2-Boot-Log (letzte 20 Zeilen, Keys maskiert) =="
             tail -20 ~/.pm2/logs/cybersarah-out.log 2>/dev/null | sed -E "s/(sk-[a-zA-Z0-9]{4})[a-zA-Z0-9_-]+/\1***/g" | head -20
-            echo "== DEPLOY_TOKEN-Lagen (nur Laengen) =="
+            echo "== .env-Lagen-Vergleich (laenge + letzte 4 Zeichen) =="
             for f in /opt/cybersarah/.env /opt/cybersarah/artifacts/api-server/.env; do
-              T=$(grep "^DEPLOY_TOKEN=" $f 2>/dev/null | cut -d= -f2- | tr -d "\n")
-              echo "  $f: DEPLOY_TOKEN laenge=${#T}"
+              echo "--- $f ---"
+              for k in DATABASE_URL STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET DEPLOY_TOKEN TELEGRAM_BOT_TOKEN RESEND_API_KEY GEMINI_API_KEY DIGISTORE24_API_KEY OPENAI_API_KEY OPENAI_BACKUP_KEY ADMIN_GITHUB_TOKEN GITHUB_TOKEN; do
+                v=$(grep "^$k=" "$f" 2>/dev/null | head -1 | cut -d= -f2- | tr -d "\n")
+                if [ -n "$v" ]; then echo "  $k: laenge=${#v} endet=...${v: -4}"; else echo "  $k: FEHLT"; fi
+              done
             done
             echo'
 
