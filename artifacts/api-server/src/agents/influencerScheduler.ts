@@ -5,6 +5,7 @@ export interface ScheduleSlot {
   hourLocal: number;
   minuteLocal: number;
   rationale: string;
+  timezone?: "UTC";
 }
 
 const DEFAULT_SLOTS: Record<HealthContentPlatform, ScheduleSlot[]> = {
@@ -25,10 +26,11 @@ const DEFAULT_SLOTS: Record<HealthContentPlatform, ScheduleSlot[]> = {
 export function buildPostingSchedule(platforms: HealthContentPlatform[], start = new Date()): Array<ScheduleSlot & { scheduledAt: string }> {
   return platforms.map((platform, index) => {
     const slot = DEFAULT_SLOTS[platform][index % DEFAULT_SLOTS[platform].length]!;
+    // Explicit UTC schedule: never silently depend on the Render host timezone.
     const scheduled = new Date(start);
-    scheduled.setDate(start.getDate() + index);
-    scheduled.setHours(slot.hourLocal, slot.minuteLocal, 0, 0);
-    if (scheduled <= start) scheduled.setDate(scheduled.getDate() + 1);
-    return { ...slot, scheduledAt: scheduled.toISOString() };
+    scheduled.setUTCDate(start.getUTCDate() + index);
+    scheduled.setUTCHours(slot.hourLocal, slot.minuteLocal, 0, 0);
+    if (scheduled <= start) scheduled.setUTCDate(scheduled.getUTCDate() + 1);
+    return { ...slot, timezone: "UTC" as const, scheduledAt: scheduled.toISOString() };
   });
 }
