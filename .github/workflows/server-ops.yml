@@ -147,7 +147,7 @@ jobs:
             free -h
             df -h / | tail -1
             echo "== systemd-pm2-Units =="
-            systemctl list-units --all 2>/dev/null | grep -iE "pm2" | head -5
+            systemctl list-units --all 2>/dev/null | grep -iE "pm2" | head -5'
 
       - name: Rogue-Prozess- und DB-URL-Diagnose
         env:
