@@ -76,8 +76,8 @@ jobs:
           ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'echo "root .env Token-Laenge: $(grep "^DEPLOY_TOKEN=" /opt/cybersarah/.env | cut -d= -f2 | tr -d "\n" | wc -c)"; echo "api .env Token-Laenge: $(grep "^DEPLOY_TOKEN=" /opt/cybersarah/artifacts/api-server/.env 2>/dev/null | cut -d= -f2 | tr -d "\n" | wc -c)"; echo "pm2-Env DEPLOY_TOKEN: $(pm2 env cybersarah 2>/dev/null | grep -c DEPLOY_TOKEN)"'
           ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'echo "== .env-Uebersicht =="; ls -la /opt/cybersarah/.env* /opt/cybersarah/artifacts/api-server/.env* 2>/dev/null | head -10; echo "root .env Keys:"; grep -oE "^[A-Z_0-9]+" /opt/cybersarah/.env 2>/dev/null | sort | tr "\n" " "; echo; echo "api .env Keys:"; grep -oE "^[A-Z_0-9]+" /opt/cybersarah/artifacts/api-server/.env 2>/dev/null | sort | tr "\n" " "; echo; echo "== Postgres =="; systemctl is-active postgresql 2>/dev/null; sudo -u postgres psql -lqt 2>/dev/null | cut -d"|" -f1 | tr -s " " | grep -v "^$" | head -8; echo "== DATABASE_URL-Quellen =="; grep -rl "DATABASE_URL" /opt/cybersarah --include="*.env*" --include="*.bak*" --include="*.example" --include="*.env" 2>/dev/null | head -6'
           echo "Runner-Secret MD5: $(printf '%s' "$DEPLOY_TOKEN" | md5sum | cut -d' ' -f1)"
-          CODE=$(curl -sk -o /tmp/tok_test -w '%{http_code}' -m 15 -X POST -H "X-Deploy-Token: $DEPLOY_TOKEN" -H 'Content-Type: application/json' -d '{}' "https://$SSH_HOST/api/admin/env")
-          echo "Env-Endpoint mit echtem Token: HTTP $CODE"
+          CODE=$(curl -sk -o /tmp/tok_test -w '%{http_code}' -m 15 -H "X-Deploy-Token: $DEPLOY_TOKEN" "https://$SSH_HOST/api/admin/env")
+          echo "Env-Endpoint (GET, mit echtem Token): HTTP $CODE"
           head -c 250 /tmp/tok_test; echo
           ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'TOK=$(grep "^DEPLOY_TOKEN=" /opt/cybersarah/artifacts/api-server/.env | cut -d= -f2 | tr -d "\n")
             echo "api .env Token MD5: $(printf "%s" "$TOK" | md5sum | cut -d\  -f1)"
@@ -185,10 +185,22 @@ jobs:
             echo "== pm2-Prozess-Definition =="
             pm2 describe cybersarah | grep -E "script|exec|interpreter" | head -8
             export NODE_ENV=production
-            echo "== systemd cybersarah-peer stoppen (alter August-dist klaut Port 3000) =="
+            echo "== systemd cybersarah-peer MASKIEREN (Healthcheck-Timer reaktiviert ihn immer wieder) =="
             systemctl stop cybersarah-peer.service 2>/dev/null || true
             systemctl disable cybersarah-peer.service 2>/dev/null || true
-            echo "cybersarah-peer gestoppt und deaktiviert"
+            systemctl mask cybersarah-peer.service 2>/dev/null || true
+            systemctl is-enabled cybersarah-peer.service 2>&1 || true
+            echo "== Wer reaktiviert peer? =="
+            grep -rln "cybersarah-peer" /etc/systemd/system/ /srv/cybersarah-loop-agent/ /opt/cybersarah-automation/ 2>/dev/null | head -6
+            echo "== DB-Passwort an .env-DATABASE_URL angleichen =="
+            DBURL=$(grep "^DATABASE_URL=" /opt/cybersarah/.env | cut -d= -f2- | tr -d "\r\n")
+            DBPW=$(printf "%s" "$DBURL" | sed -nE "s#^postgres(ql)?://[^:]+:([^@]+)@.*#\2#p")
+            if [ -n "$DBPW" ]; then
+              if sudo -u postgres psql -v pw="$DBPW" -c "ALTER USER cybersarah WITH PASSWORD :'pw';" >/dev/null 2>&1; then echo "PG-Passwort auf .env-Wert gesetzt"; else echo "ALTER USER fehlgeschlagen"; fi
+            else
+              echo "Kein Passwort in DATABASE_URL extrahierbar"
+            fi
+            psql "$DBURL" -tAc "SELECT 1" >/dev/null 2>&1 && echo "DB-URL aus .env funktioniert (select 1 ok)" || echo "WARNUNG: DB-URL aus .env funktioniert NICHT"
             echo "== Verwaiste Alt-Prozesse auf Port 3000 beenden =="
             pkill -f "t[s]x artifacts/api-server" 2>/dev/null || true
             pkill -f "api-server/dist/index[.]mjs" 2>/dev/null || true
