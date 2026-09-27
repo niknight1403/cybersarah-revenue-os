@@ -1188,7 +1188,7 @@ async function mainLoop(): Promise<void> {
     // für TikTok, Instagram und YouTube erzeugen. Die bestehende Queue serialisiert
     // Ausführung und AgentBase übernimmt Retry/Circuit-Breaker/Fallback.
     if (mainLoopZyklus % 240 === 0) {
-      globalQueue.fuegeHinzu("influencer_trend_analyse", {
+      globalQueue.fuegeHinzu("influencer_content", {
         aktion: "kampagne_generieren",
         marke: "CyberSarah",
         thema: "alltagstaugliche Wellness-Routinen für Erwachsene 35-60",
