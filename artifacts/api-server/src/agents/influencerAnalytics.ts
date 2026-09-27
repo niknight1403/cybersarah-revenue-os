@@ -17,12 +17,20 @@ export interface NormalizedMetrics extends VariantMetrics {
   conversionRate: number;
 }
 
+export function validVariantMetrics(metrics: VariantMetrics): boolean {
+  const values = [metrics.impressions, metrics.views, metrics.clicks, metrics.saves, metrics.conversions];
+  return values.every((value) => Number.isSafeInteger(value) && value >= 0) &&
+    metrics.views <= metrics.impressions && metrics.clicks <= metrics.impressions &&
+    metrics.saves <= metrics.views && metrics.conversions <= metrics.clicks;
+}
+
 function ratio(part: number, whole: number): number {
   if (whole <= 0) return 0;
   return Math.round((part / whole) * 10000) / 100;
 }
 
 export function normalizeVariantMetrics(metrics: VariantMetrics): NormalizedMetrics {
+  if (!validVariantMetrics(metrics)) throw new Error("Ungültige oder inkonsistente Plattform-Metriken.");
   return {
     ...metrics,
     retentionRate: ratio(metrics.views, metrics.impressions),
@@ -33,5 +41,5 @@ export function normalizeVariantMetrics(metrics: VariantMetrics): NormalizedMetr
 }
 
 export function isSufficientSample(metrics: VariantMetrics, minImpressions = 500): boolean {
-  return metrics.impressions >= minImpressions;
+  return validVariantMetrics(metrics) && metrics.impressions >= minImpressions;
 }
