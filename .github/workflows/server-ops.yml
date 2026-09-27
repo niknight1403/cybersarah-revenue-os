@@ -188,8 +188,15 @@ jobs:
             echo "== systemd cybersarah-peer MASKIEREN (Healthcheck-Timer reaktiviert ihn immer wieder) =="
             systemctl stop cybersarah-peer.service 2>/dev/null || true
             systemctl disable cybersarah-peer.service 2>/dev/null || true
-            systemctl mask cybersarah-peer.service 2>/dev/null || true
-            systemctl is-enabled cybersarah-peer.service 2>&1 || true
+            if [ -f /etc/systemd/system/cybersarah-peer.service ] && [ ! -L /etc/systemd/system/cybersarah-peer.service ]; then
+              mv /etc/systemd/system/cybersarah-peer.service /etc/systemd/system/cybersarah-peer.service.unit-bak-20260927
+              echo "Unit-Datei verschoben (systemctl mask verweigert bei echten Dateien)"
+            fi
+            [ -d /etc/systemd/system/cybersarah-peer.service.d ] && mv /etc/systemd/system/cybersarah-peer.service.d /etc/systemd/system/cybersarah-peer.service.d-bak-20260927
+            systemctl daemon-reload
+            systemctl mask cybersarah-peer.service 2>&1 | head -2 || true
+            echo "is-enabled jetzt: $(systemctl is-enabled cybersarah-peer.service 2>&1 || true)"
+            systemctl start cybersarah-peer.service 2>&1 | head -2 || true
             echo "== Wer reaktiviert peer? =="
             grep -rln "cybersarah-peer" /etc/systemd/system/ /srv/cybersarah-loop-agent/ /opt/cybersarah-automation/ 2>/dev/null | head -6
             echo "== DB-Passwort an .env-DATABASE_URL angleichen (URL-dekodiert) =="
