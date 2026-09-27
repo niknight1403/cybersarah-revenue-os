@@ -280,6 +280,33 @@ jobs:
             cd /opt/cybersarah
             env -u DEPLOY_TOKEN -u OPENAI_API_KEY -u STRIPE_SECRET_KEY -u DATABASE_URL pm2 start bash --name cybersarah -- -c "pnpm --filter @workspace/api-server start" || pm2 start "pnpm --filter @workspace/api-server start" --name cybersarah
             pm2 save
+            echo "== Boot-Resilienz: pm2 resurrect konsolidieren =="
+            if [ -f /etc/systemd/system/pm2-cybersarah.service ]; then
+              systemctl stop pm2-cybersarah.service 2>/dev/null || true
+              systemctl disable pm2-cybersarah.service 2>&1 | head -2 || true
+              mv /etc/systemd/system/pm2-cybersarah.service /etc/systemd/system/pm2-cybersarah.service.bak-$(date +%Y%m%d%H%M)
+              echo "Legacy-Unit (PM2_HOME=/srv, Rogue-Quelle) deaktiviert und weggesichert"
+            else
+              echo "Legacy-Unit bereits weg"
+            fi
+            PM2BIN=$(command -v pm2 || echo /usr/lib/node_modules/pm2/bin/pm2)
+            PnpmDIR=$(dirname "$(command -v pnpm 2>/dev/null || echo /usr/local/bin/pnpm)")
+            PMU=""
+            for f in /etc/systemd/system/pm2-*.service; do
+              case "$f" in *.bak*) continue;; esac
+              if grep -q "resurrect" "$f" 2>/dev/null; then PMU="$f"; fi
+            done
+            if [ -n "$PMU" ]; then
+              echo "Root-pm2-Unit gefunden: $PMU — als robusten oneshot resurrect neu schreiben"
+              printf "%s\n" "[Unit]" "Description=PM2 resurrect for CyberSarah Revenue OS" "Documentation=https://pm2.keymetrics.io/" "After=network-online.target" "Wants=network-online.target" "" "[Service]" "Type=oneshot" "ExecStart=$PM2BIN resurrect" "RemainAfterExit=yes" "User=$(id -un)" "Environment=HOME=$HOME" "Environment=PM2_HOME=$HOME/.pm2" "Environment=PATH=$HOME/.local/bin:$PnpmDIR:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" "" "[Install]" "WantedBy=multi-user.target" > "$PMU"
+              systemctl daemon-reload
+              systemctl reset-failed "$(basename "$PMU")" 2>/dev/null || true
+              systemctl enable "$(basename "$PMU")" 2>&1 | head -2
+              systemd-analyze verify "$PMU" 2>&1 | head -3 || true
+              echo "Unit-Status: $(systemctl is-enabled "$(basename "$PMU")" 2>&1 || true)"
+            else
+              echo "WARNUNG: keine pm2 resurrect-Unit gefunden"
+            fi
             echo "== 15s warten, dann Health =="
             sleep 15
             echo "== /api/health — muss JSON sein, kein HTML =="
