@@ -109,6 +109,12 @@ jobs:
             echo "== pm2-Prozess-Definition =="
             pm2 describe cybersarah | grep -E "script|exec|interpreter" | head -8
             export NODE_ENV=production
+            echo "== Verwaiste Alt-Prozesse auf Port 3000 beenden =="
+            pkill -f "tsx artifacts/api-server" 2>/dev/null || true
+            pkill -f "api-server/dist/index.mjs" 2>/dev/null || true
+            fuser -k 3000/tcp 2>/dev/null || true
+            sleep 3
+            ss -tlnp | grep ":3000" || echo "Port 3000 frei"
             echo "== pm2 neustarten (NODE_ENV=production) =="
             pm2 restart cybersarah 2>/dev/null || pm2 start "pnpm --filter @workspace/api-server start" --name cybersarah
             pm2 save
