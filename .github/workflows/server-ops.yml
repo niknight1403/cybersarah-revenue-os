@@ -382,13 +382,13 @@ jobs:
               echo "WARNUNG: keine pm2-Unit gefunden — Daemon startet aus Shell (Env-Leak moeglich)"
             fi
             sleep 8
-            APPVORHER=$(pm2 jlist 2>/dev/null | grep -c \"name\":\"cybersarah\")
+            APPVORHER=$(pm2 jlist 2>/dev/null | grep -c \"name\":\"cybersarah\" || true)
             echo "App nach resurrect vorhanden: $APPVORHER (erwartet 0)"
             if [ "$APPVORHER" -gt 0 ]; then pm2 delete cybersarah 2>/dev/null || true; fi
             echo "== App sauber NEU starten (frisches Env via dotenv aus api-.env) =="
             cd /opt/cybersarah/artifacts/api-server
             env -i HOME=$HOME PATH="$PATH" USER=$(id -un) LOGNAME=$(id -un) SHELL=/bin/bash TERM=xterm NODE_ENV=production pm2 start bash --name cybersarah --cwd /opt/cybersarah/artifacts/api-server -- -c "pnpm --filter @workspace/api-server start"
-            ANZAHL=$(pm2 jlist 2>/dev/null | grep -c \"name\":\"cybersarah\")
+            ANZAHL=$(pm2 jlist 2>/dev/null | grep -c \"name\":\"cybersarah\" || true)
             echo "App-Instanzen nach Start: $ANZAHL (erwartet 1)"
             if [ "$ANZAHL" -gt 1 ]; then
               echo "mehrere Instanzen — reduzieren"
