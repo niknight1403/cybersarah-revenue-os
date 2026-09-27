@@ -74,9 +74,14 @@ jobs:
           LOKAL=$(printf '%s' "$DEPLOY_TOKEN" | wc -c)
           echo "Runner-Secret DEPLOY_TOKEN Laenge: $LOKAL"
           ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'echo "root .env Token-Laenge: $(grep "^DEPLOY_TOKEN=" /opt/cybersarah/.env | cut -d= -f2 | tr -d "\n" | wc -c)"; echo "api .env Token-Laenge: $(grep "^DEPLOY_TOKEN=" /opt/cybersarah/artifacts/api-server/.env 2>/dev/null | cut -d= -f2 | tr -d "\n" | wc -c)"; echo "pm2-Env DEPLOY_TOKEN: $(pm2 env cybersarah 2>/dev/null | grep -c DEPLOY_TOKEN)"'
+          echo "Runner-Secret MD5: $(printf '%s' "$DEPLOY_TOKEN" | md5sum | cut -d' ' -f1)"
           CODE=$(curl -sk -o /tmp/tok_test -w '%{http_code}' -m 15 -X POST -H "X-Deploy-Token: $DEPLOY_TOKEN" -H 'Content-Type: application/json' -d '{}' "https://$SSH_HOST/api/admin/env")
           echo "Env-Endpoint mit echtem Token: HTTP $CODE"
           head -c 250 /tmp/tok_test; echo
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'TOK=$(grep "^DEPLOY_TOKEN=" /opt/cybersarah/artifacts/api-server/.env | cut -d= -f2 | tr -d "\n")
+            echo "api .env Token MD5: $(printf "%s" "$TOK" | md5sum | cut -d\  -f1)"
+            echo "Env-Endpoint lokal mit .env-Token:"
+            curl -s -m 10 -X POST -H "X-Deploy-Token: $TOK" -H "Content-Type: application/json" -d "{}" -w "\nHTTP %{http_code}\n" http://127.0.0.1:3000/api/admin/env | head -c 400' 
 
       - name: Diagnose (immer)
         env:
