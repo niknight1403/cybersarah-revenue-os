@@ -84,6 +84,22 @@ jobs:
             echo "Env-Endpoint lokal mit .env-Token:"
             curl -s -m 10 -X POST -H "X-Deploy-Token: $TOK" -H "Content-Type: application/json" -d "{}" -w "\nHTTP %{http_code}\n" http://127.0.0.1:3000/api/admin/env | head -c 400' 
 
+      - name: Connector-Verifikation (GitHub live)
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'TOK=$(grep "^ADMIN_GITHUB_TOKEN=" /opt/cybersarah/artifacts/api-server/.env | cut -d= -f2 | tr -d "\n")
+            if [ -z "$TOK" ]; then echo "GitHub-Connector: KEIN TOKEN in api .env"; exit 0; fi
+            echo "GitHub-Connector: Token in api .env (Laenge ${#TOK})"
+            APP_TOK=$(tr "\0" "\n" < /proc/$(ss -tlnp 2>/dev/null | grep ":3000" | grep -oE "pid=[0-9]+" | head -1 | cut -d= -f2)/environ 2>/dev/null | grep "^ADMIN_GITHUB_TOKEN=" | cut -d= -f2)
+            if [ -n "$APP_TOK" ]; then echo "App-Prozess: Token geladen (Laenge ${#APP_TOK})"; else echo "App-Prozess: Token NICHT im Prozess-Env (dotenv laedt zur Laufzeit)"; fi
+            RESP=$(curl -s -m 15 -H "Authorization: Bearer $TOK" -H "Accept: application/vnd.github+json" https://api.github.com/user)
+            LOGIN=$(echo "$RESP" | grep -oE "\"login\":\"[a-z0-9-]+\"" | head -1)
+            if [ -n "$LOGIN" ]; then echo "api.github.com/user: OK $LOGIN"; else echo "api.github.com/user: FEHLER $(echo "$RESP" | head -c 200)"; fi
+            curl -s -m 15 -o /dev/null -D /tmp/gh_hdr -H "Authorization: Bearer $TOK" https://api.github.com/user
+            grep -iE "^(x-ratelimit-limit|x-oauth-scopes|x-ratelimit-remaining)" /tmp/gh_hdr | tr -d "\r"'
+
       - name: Port-3000-Prozess forensik
         env:
           SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
