@@ -146,6 +146,17 @@ jobs:
             && echo "Env-Sync erfolgreich" \
             || (echo "::error::Env-Sync fehlgeschlagen" && exit 1)
 
+      - name: Reparatur nachziehen (wendet die neue .env per sauberem pm2-Start an)
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Dispatche Server-Ops Reparatur, damit die frische .env wirksam wird ..."
+          curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/niknight1403/cybersarah-revenue-os/actions/workflows/server-ops.yml/dispatches" \
+            -d '{"ref":"main","inputs":{"modus":"reparatur"}}' -w "\ndispatch HTTP %{http_code}\n"
+
       - name: Verifikation (GET /api/admin/env, maskiert)
         env:
           DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}

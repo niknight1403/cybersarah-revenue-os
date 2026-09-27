@@ -173,8 +173,10 @@ jobs:
             fuser -k 3000/tcp 2>/dev/null || true
             sleep 3
             ss -tlnp | grep ":3000" || echo "Port 3000 frei"
-            echo "== pm2 neustarten (NODE_ENV=production) =="
-            pm2 restart cybersarah 2>/dev/null || pm2 start "pnpm --filter @workspace/api-server start" --name cybersarah
+            echo "== pm2 NEU STARTEN (delete + start) — killt den veralteten Env-Cache mit altem DEPLOY_TOKEN =="
+            pm2 delete cybersarah 2>/dev/null || true
+            cd /opt/cybersarah
+            env -u DEPLOY_TOKEN -u OPENAI_API_KEY -u STRIPE_SECRET_KEY -u DATABASE_URL pm2 start bash --name cybersarah -- -c "pnpm --filter @workspace/api-server start" || pm2 start "pnpm --filter @workspace/api-server start" --name cybersarah
             pm2 save
             echo "== 15s warten, dann Health =="
             sleep 15
