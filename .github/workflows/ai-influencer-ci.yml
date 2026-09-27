@@ -6,6 +6,16 @@ on:
       - "artifacts/api-server/src/agents/InfluencerAgent.ts"
       - "artifacts/api-server/src/agents/influencerContentEngine.ts"
       - "artifacts/api-server/src/agents/influencerContentEngine.test.ts"
+      - "artifacts/api-server/src/agents/influencerAutopilot*.ts"
+      - "artifacts/api-server/src/agents/influencerTrendIntelligence.ts"
+      - "artifacts/api-server/src/agents/influencerEvidenceGuard.ts"
+      - "artifacts/api-server/src/agents/influencerQualityGate.ts"
+      - "artifacts/api-server/src/agents/influencerScheduler.ts"
+      - "artifacts/api-server/src/agents/influencerAnalytics.ts"
+      - "artifacts/api-server/src/agents/influencerExperimentWinner.ts"
+      - "artifacts/api-server/src/agents/influencerRevenueGuard.ts"
+      - "artifacts/api-server/src/agents/influencerLearningLoop.ts"
+      - "artifacts/api-server/src/agents/influencerControlPlane.ts"
       - "artifacts/api-server/src/agents/orchestrator.ts"
       - ".github/workflows/ai-influencer-ci.yml"
   workflow_dispatch:
@@ -29,4 +39,4 @@ jobs:
       - name: API typecheck
         run: pnpm --filter @workspace/api-server run typecheck
       - name: Influencer tests
-        run: pnpm --filter @workspace/api-server exec vitest run src/agents/influencerContentEngine.test.ts
+        run: pnpm --filter @workspace/api-server exec vitest run src/agents/influencerContentEngine.test.ts src/agents/influencerAutopilot.test.ts

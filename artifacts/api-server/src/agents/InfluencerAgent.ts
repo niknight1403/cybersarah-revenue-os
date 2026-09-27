@@ -12,6 +12,7 @@ import {
   type HealthContentPlatform,
   type HealthContentAngle,
 } from "./influencerContentEngine";
+import { buildInfluencerAutopilotPlan, type AutopilotPlanInput } from "./influencerAutopilot";
 
 export interface InfluencerAufgabePayload {
   aktion:
@@ -19,7 +20,8 @@ export interface InfluencerAufgabePayload {
     | "trend_analyse"
     | "engagement_optimieren"
     | "content_paket"
-    | "kampagne_generieren";
+    | "kampagne_generieren"
+    | "autopilot_plan";
   marke?: "CyberSarah" | "GeldPilot AI" | "UnternehmerGPT";
   plattform?: "TikTok" | "Instagram" | "YouTube" | "Google" | "Blog";
   plattformen?: HealthContentPlatform[];
@@ -27,6 +29,7 @@ export interface InfluencerAufgabePayload {
   zielgruppe?: string;
   angle?: HealthContentAngle;
   affiliateProdukt?: string;
+  autopilot?: AutopilotPlanInput;
 }
 
 const DEFAULT_HEALTH_TOPIC = "alltagstaugliche Wellness-Routinen für Erwachsene 35-60";
@@ -50,6 +53,8 @@ export class InfluencerAgent extends AgentBase {
         return this.erstelleContentPaket(payload);
       case "kampagne_generieren":
         return this.generiereKampagne(payload);
+      case "autopilot_plan":
+        return this.erstelleAutopilotPlan(payload);
       case "trend_analyse":
         return this.analysiereTrends();
       case "engagement_optimieren":
@@ -57,6 +62,21 @@ export class InfluencerAgent extends AgentBase {
       default:
         return { success: false, message: `Unbekannte Aktion: ${payload.aktion}` };
     }
+  }
+
+  private erstelleAutopilotPlan(payload: InfluencerAufgabePayload): Promise<AufgabeErgebnis> {
+    if (!payload.autopilot) {
+      return Promise.resolve({
+        success: false,
+        message: "Autopilot-Plan benötigt ein vollständiges autopilot-Payload.",
+      });
+    }
+    const plan = buildInfluencerAutopilotPlan(payload.autopilot);
+    return Promise.resolve({
+      success: plan.control.state !== "blocked",
+      message: `Influencer-Autopilot: ${plan.control.state} — ${plan.control.blockers.length} Blocker, ${plan.control.nextActions.length} nächste Aktionen.`,
+      metadaten: plan,
+    });
   }
 
   private normalisierePlattform(plattform?: InfluencerAufgabePayload["plattform"]): HealthContentPlatform {
