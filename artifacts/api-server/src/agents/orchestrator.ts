@@ -1183,6 +1183,19 @@ async function mainLoop(): Promise<void> {
       globalQueue.fuegeHinzu("video_skript", {}, { prioritaet: 3 });
       globalQueue.fuegeHinzu("revenue_analyst_stripe", { aktion: "stripe_link_erstellen" }, { prioritaet: 2 });
     }
+
+    // AI Influencer & Content Engine: alle 4h eine sichere EU-Health/Wellness-Kampagne
+    // für TikTok, Instagram und YouTube erzeugen. Die bestehende Queue serialisiert
+    // Ausführung und AgentBase übernimmt Retry/Circuit-Breaker/Fallback.
+    if (mainLoopZyklus % 240 === 0) {
+      globalQueue.fuegeHinzu("influencer_content", {
+        aktion: "kampagne_generieren",
+        marke: "CyberSarah",
+        thema: "alltagstaugliche Wellness-Routinen für Erwachsene 35-60",
+        plattformen: ["TikTok", "Instagram", "YouTube"],
+        angle: "problem_loesung",
+      }, { prioritaet: 3 });
+    }
     // Alle 2 Stunden: KI-Chancen-Analyse (OpenAI — nur wenn Umsatz-Kontext vorhanden)
     if (mainLoopZyklus % 120 === 0) {
       globalQueue.fuegeHinzu("revenue_analyst_ki", { aktion: "ki_chancen_analysieren" }, { prioritaet: 2 });

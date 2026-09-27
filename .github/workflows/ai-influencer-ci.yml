@@ -1,0 +1,32 @@
+name: AI Influencer CI
+
+on:
+  pull_request:
+    paths:
+      - "artifacts/api-server/src/agents/InfluencerAgent.ts"
+      - "artifacts/api-server/src/agents/influencerContentEngine.ts"
+      - "artifacts/api-server/src/agents/influencerContentEngine.test.ts"
+      - "artifacts/api-server/src/agents/orchestrator.ts"
+      - ".github/workflows/ai-influencer-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: API typecheck
+        run: pnpm --filter @workspace/api-server run typecheck
+      - name: Influencer tests
+        run: pnpm --filter @workspace/api-server exec vitest run src/agents/influencerContentEngine.test.ts
