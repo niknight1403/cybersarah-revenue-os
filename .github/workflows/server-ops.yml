@@ -65,6 +65,8 @@ jobs:
             echo "== Node/PNPM =="; node -v 2>/dev/null; pnpm -v 2>/dev/null || true
             echo "== /opt/cybersarah =="; cd /opt/cybersarah 2>/dev/null && git log --oneline -1 && ls artifacts/api-server/.env >/dev/null 2>&1 && echo ".env vorhanden" || echo "WARNUNG: /opt/cybersarah oder .env fehlt"
             echo "== Listener =="; ss -tlnp | grep -E ":(3000|443|80)" || true
+            echo "== Nginx-Vollconfig (gefiltert) =="; nginx -T 2>/dev/null | grep -nE "server_name|listen |proxy_pass|server \{|# configuration file" | head -40
+            echo "== sites-enabled =="; ls -la /etc/nginx/sites-enabled/ 2>/dev/null || true
             echo "== Nginx-Upstream =="; grep -rE "proxy_pass|listen" /etc/nginx/sites-enabled/ /etc/nginx/conf.d/ 2>/dev/null | head -20
             echo "== Nginx-Status =="; nginx -t 2>&1 | tail -2; systemctl is-active nginx
             echo "== via Nginx lokal =="; curl -sSk -o /dev/null -w "HTTPS /api/health HTTP %{http_code}" -m 10 https://127.0.0.1/api/health || true
