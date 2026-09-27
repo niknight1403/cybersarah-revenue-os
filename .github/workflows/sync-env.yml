@@ -47,18 +47,6 @@ jobs:
           # Shell-Variable fuer den aktuellen Step setzen (GITHUB_ENV greift erst ab Step 2)
           export SERVER_URL TLS_EXTRA
 
-      - name: Deploy-Trigger (Server-Code aktualisieren, damit /api/admin/env existiert)
-        env:
-          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
-        run: |
-          echo "Trigger API-Deploy auf $SERVER_URL ..."
-          curl -s -o /dev/null -w "Deploy HTTP %{http_code}\n" -X POST \
-            "$SERVER_URL/api/admin/deploy" \
-            -H "X-Deploy-Token: $DEPLOY_TOKEN" $TLS_EXTRA \
-            --max-time 90 || echo "Deploy-Trigger fehlgeschlagen (setze fort)"
-          echo "Warte 50s auf git-pull + pm2-restart..."
-          sleep 50
-
       - name: Env-Payload bauen und an /api/admin/env senden
         env:
           DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
