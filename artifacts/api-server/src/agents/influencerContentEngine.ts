@@ -9,12 +9,56 @@ export interface InfluencerContentBrief {
   affiliateProdukt?: string;
 }
 
+export interface AvatarProfile {
+  id: string;
+  alter: string;
+  rolle: string;
+  look: string;
+  ton: string;
+}
+
+export interface PlatformPlaybook {
+  platform: HealthContentPlatform;
+  targetSeconds: number;
+  hookWindowSeconds: number;
+  cadence: string;
+  ctaStyle: string;
+}
+
+export interface ProductionPlan {
+  hook: string;
+  structure: string[];
+  onScreenText: string[];
+  bRoll: string[];
+  avatar: AvatarProfile;
+  playbook: PlatformPlaybook;
+}
+
+export interface AffiliateAssessment {
+  score: number;
+  eligible: boolean;
+  disclosure: string;
+  reasons: string[];
+}
+
+export interface CampaignVariant {
+  id: string;
+  platform: HealthContentPlatform;
+  angle: HealthContentAngle;
+  hook: string;
+  readinessScore: number;
+  primaryMetric: "retention" | "saves" | "ctr";
+}
+
 export interface ContentEnginePackage {
   scriptBrief: string;
   imagePrompt: string;
   affiliateStrategy: string;
   complianceNotes: string[];
   hashtags: string[];
+  productionPlan: ProductionPlan;
+  affiliateAssessment: AffiliateAssessment;
+  sanitizedTopic: string;
 }
 
 const RISKY_CLAIMS = [
@@ -22,8 +66,103 @@ const RISKY_CLAIMS = [
   /ersetzt.*medikament/i, /100\s*%/i, /sofortige heilung/i,
 ];
 
+const AVATAR: AvatarProfile = {
+  id: "cybersarah-health-eu-v1",
+  alter: "45-55",
+  rolle: "vertrauenswürdige Health- und Wellness-Erklärerin",
+  look: "natürlich, modern, europäisch, warme Ausstrahlung, realistische Haut und Hände",
+  ton: "sachlich, warm, klar, neugierig machend, nie medizinisch autoritär",
+};
+
+const PLATFORM_PLAYBOOKS: Record<HealthContentPlatform, PlatformPlaybook> = {
+  TikTok: {
+    platform: "TikTok",
+    targetSeconds: 22,
+    hookWindowSeconds: 2,
+    cadence: "schnelle Pattern-Interrupts, kurze Sätze, visuelle Wechsel alle 2-4 Sekunden",
+    ctaStyle: "eine einfache nächste Aktion, kein harter Verkauf",
+  },
+  Instagram: {
+    platform: "Instagram",
+    targetSeconds: 27,
+    hookWindowSeconds: 3,
+    cadence: "ästhetischer Einstieg, klare Untertitel, 3 kompakte Value-Beats",
+    ctaStyle: "Save/Share-orientierter CTA plus transparenter Link-Hinweis",
+  },
+  YouTube: {
+    platform: "YouTube",
+    targetSeconds: 30,
+    hookWindowSeconds: 3,
+    cadence: "problemorientierter Einstieg, schneller Beweiswert, klare Zusammenfassung",
+    ctaStyle: "Weiterführende Ressource oder nächstes Video nennen",
+  },
+};
+
+const HOOKS: Record<HealthContentAngle, (topic: string) => string[]> = {
+  problem_loesung: (topic) => [
+    `Wenn ${topic} bei dir kompliziert wirkt, starte mit diesem einfachen Schritt.`,
+    `Der häufigste Fehler bei ${topic}: zu viel auf einmal ändern.`,
+  ],
+  mythos_fakt: (topic) => [
+    `Mythos oder sinnvoll? Das solltest du über ${topic} wissen.`,
+    `Bei ${topic} klingt vieles überzeugend – aber dieser Punkt ist entscheidend.`,
+  ],
+  routine: (topic) => [
+    `Diese Mini-Routine macht ${topic} im Alltag leichter.`,
+    `30 Sekunden Vorbereitung für eine realistische ${topic}-Routine.`,
+  ],
+  checkliste: (topic) => [
+    `3 Dinge, die ich bei ${topic} zuerst prüfen würde.`,
+    `Speichere diese kurze ${topic}-Checkliste für später.`,
+  ],
+};
+
 export function containsRiskyHealthClaim(text: string): boolean {
   return RISKY_CLAIMS.some((pattern) => pattern.test(text));
+}
+
+export function sanitizeHealthCopy(text: string): string {
+  return text
+    .replace(/\bheilt?\b/gi, "kann das Wohlbefinden unterstützen")
+    .replace(/\bgarantiert\b/gi, "möglicherweise")
+    .replace(/\bmedizinisch bewiesen\b/gi, "mit verfügbarer Evidenz abgleichen")
+    .replace(/\bersetzt\s+(dein\s+)?medikament(e)?\b/gi, "ist kein Ersatz für verordnete Medikamente")
+    .replace(/\b100\s*%\b/gi, "ohne Ergebnisgarantie")
+    .replace(/\bsofortige heilung\b/gi, "keine sofortige Wirkung versprechen");
+}
+
+export function evaluateAffiliateFit(brief: InfluencerContentBrief): AffiliateAssessment {
+  const reasons: string[] = [];
+  let score = 50;
+  const produkt = brief.affiliateProdukt?.trim();
+
+  if (produkt) {
+    score += 25;
+    reasons.push("Konkretes Affiliate-Produkt vorhanden.");
+  } else {
+    reasons.push("Kein konkretes Produkt: nur Soft-CTA verwenden.");
+  }
+
+  if (containsRiskyHealthClaim(brief.thema)) {
+    score -= 40;
+    reasons.push("Riskante Health-Claim-Formulierung erkannt.");
+  } else {
+    score += 15;
+    reasons.push("Keine offensichtliche Heilungs- oder Garantieaussage erkannt.");
+  }
+
+  if ((brief.zielgruppe ?? "").length > 20) {
+    score += 10;
+    reasons.push("Zielgruppe ausreichend konkret beschrieben.");
+  }
+
+  score = Math.max(0, Math.min(100, score));
+  return {
+    score,
+    eligible: Boolean(produkt) && score >= 60,
+    disclosure: "Werbung / Affiliate-Link: Bei einem Kauf kann eine Provision entstehen.",
+    reasons,
+  };
 }
 
 export function buildComplianceNotes(thema: string): string[] {
@@ -40,17 +179,57 @@ export function buildComplianceNotes(thema: string): string[] {
   return notes;
 }
 
+export function getPlatformPlaybook(plattform: HealthContentPlatform): PlatformPlaybook {
+  return PLATFORM_PLAYBOOKS[plattform];
+}
+
+export function buildHook(brief: InfluencerContentBrief): string {
+  const angle = brief.angle ?? "problem_loesung";
+  const candidates = HOOKS[angle](brief.thema.trim());
+  const seed = [...brief.thema].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  return candidates[seed % candidates.length]!;
+}
+
+export function buildProductionPlan(brief: InfluencerContentBrief): ProductionPlan {
+  const playbook = getPlatformPlaybook(brief.plattform);
+  const hook = buildHook(brief);
+  return {
+    hook,
+    structure: [
+      `0-${playbook.hookWindowSeconds}s: visueller Hook + Kernversprechen ohne Health-Claim`,
+      `${playbook.hookWindowSeconds}-18s: 2-3 konkrete, sichere und alltagstaugliche Punkte`,
+      `18-${playbook.targetSeconds}s: kurze Zusammenfassung + ${playbook.ctaStyle}`,
+    ],
+    onScreenText: [
+      hook,
+      "1. Einfach starten",
+      "2. Alltagstauglich bleiben",
+      "3. Wirkung realistisch einordnen",
+    ],
+    bRoll: [
+      "Avatar spricht direkt in die Kamera",
+      "Detailaufnahme einer neutralen Wellness-Routine",
+      "Checklisten- oder Routine-Visual ohne medizinische Symbolik",
+    ],
+    avatar: AVATAR,
+    playbook,
+  };
+}
+
 export function buildScriptBrief(brief: InfluencerContentBrief): string {
   const angle = brief.angle ?? "problem_loesung";
   const zielgruppe = brief.zielgruppe ?? "Erwachsene 35-60 in der EU mit Interesse an Wellness und natürlichen Routinen";
+  const plan = buildProductionPlan(brief);
   return [
-    "Erstelle ein deutschsprachiges Short-Video-Skript mit 15-30 Sekunden Laufzeit.",
-    "Rolle: vertrauenswürdige/r Health- und Wellness-Experte/Expertin, sachlich, warm, nicht medizinisch auftretend.",
+    `Erstelle ein deutschsprachiges Short-Video-Skript mit ca. ${plan.playbook.targetSeconds} Sekunden Laufzeit.`,
+    `Avatar-ID: ${plan.avatar.id}. Rolle: ${plan.avatar.rolle}. Ton: ${plan.avatar.ton}.`,
     `Thema: ${brief.thema}`,
     `Zielgruppe: ${zielgruppe}`,
     `Plattform: ${brief.plattform}`,
     `Erzählwinkel: ${angle}`,
-    "Struktur: 0-3s visueller Hook; 3-20s 2-3 konkrete, sichere Punkte; 20-30s CTA.",
+    `Hook: ${plan.hook}`,
+    `Cadence: ${plan.playbook.cadence}.`,
+    `Struktur: ${plan.structure.join(" | ")}.`,
     "Nutze einfache EU-taugliche Sprache. Keine Heilversprechen, keine Diagnose, keine erfundenen Statistiken.",
     "Wenn ein Produkt erwähnt wird: Nutzen vorsichtig formulieren und Affiliate-Hinweis in den CTA integrieren.",
     "Liefere zusätzlich: On-Screen-Text, B-Roll-Hinweise und 5 passende Hashtags.",
@@ -60,7 +239,7 @@ export function buildScriptBrief(brief: InfluencerContentBrief): string {
 export function buildImagePrompt(brief: InfluencerContentBrief): string {
   return [
     "Photorealistic vertical 9:16 social media frame, premium European wellness aesthetic.",
-    "Consistent avatar: trusted health/wellness expert, age 35-60, approachable, confident, natural skin texture, realistic hands.",
+    `Consistent avatar ID ${AVATAR.id}: ${AVATAR.rolle}, age ${AVATAR.alter}, ${AVATAR.look}.`,
     "Setting: bright modern European kitchen or wellness studio, clean neutral background, natural daylight.",
     `Visual topic: ${brief.thema}.`,
     "Composition: strong visual hook in foreground, avatar mid-shot, room for subtitles in lower third, no embedded text, no logos.",
@@ -93,13 +272,50 @@ export function buildHashtags(thema: string): string[] {
 }
 
 export function buildContentEnginePackage(brief: InfluencerContentBrief): ContentEnginePackage {
+  const sanitizedTopic = sanitizeHealthCopy(brief.thema);
+  const safeBrief = { ...brief, thema: sanitizedTopic };
   return {
-    scriptBrief: buildScriptBrief(brief),
-    imagePrompt: buildImagePrompt(brief),
-    affiliateStrategy: buildAffiliateStrategy(brief),
+    scriptBrief: buildScriptBrief(safeBrief),
+    imagePrompt: buildImagePrompt(safeBrief),
+    affiliateStrategy: buildAffiliateStrategy(safeBrief),
     complianceNotes: buildComplianceNotes(brief.thema),
-    hashtags: buildHashtags(brief.thema),
+    hashtags: buildHashtags(sanitizedTopic),
+    productionPlan: buildProductionPlan(safeBrief),
+    affiliateAssessment: evaluateAffiliateFit(brief),
+    sanitizedTopic,
   };
+}
+
+export function buildCampaignVariants(
+  brief: Omit<InfluencerContentBrief, "plattform">,
+  platforms: HealthContentPlatform[] = ["TikTok", "Instagram", "YouTube"],
+): CampaignVariant[] {
+  const angles: HealthContentAngle[] = ["problem_loesung", "mythos_fakt", "routine", "checkliste"];
+  const uniquePlatforms = [...new Set(platforms)];
+  return uniquePlatforms.flatMap((platform, platformIndex) =>
+    angles.slice(0, 2).map((angle, angleIndex) => {
+      const variantBrief: InfluencerContentBrief = { ...brief, plattform: platform, angle };
+      const affiliate = evaluateAffiliateFit(variantBrief);
+      const riskPenalty = containsRiskyHealthClaim(brief.thema) ? 25 : 0;
+      const readinessScore = Math.max(
+        0,
+        Math.min(100, 65 + Math.min(affiliate.score, 20) - riskPenalty + angleIndex * 3),
+      );
+      const primaryMetric = platform === "TikTok" ? "retention" : platform === "Instagram" ? "saves" : "ctr";
+      return {
+        id: `${platform.toLowerCase()}-${angle}-${platformIndex + 1}`,
+        platform,
+        angle,
+        hook: buildHook(variantBrief),
+        readinessScore,
+        primaryMetric,
+      };
+    }),
+  );
+}
+
+export function selectBestReadyVariant(variants: CampaignVariant[]): CampaignVariant | null {
+  return [...variants].sort((a, b) => b.readinessScore - a.readinessScore || a.id.localeCompare(b.id))[0] ?? null;
 }
 
 export function scoreEngagementDistribution(counts: Record<string, number>): {

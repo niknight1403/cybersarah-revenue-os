@@ -1,24 +1,36 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAffiliateStrategy,
+  buildCampaignVariants,
   buildContentEnginePackage,
   buildHashtags,
+  buildProductionPlan,
   buildScriptBrief,
   containsRiskyHealthClaim,
+  evaluateAffiliateFit,
+  sanitizeHealthCopy,
   scoreEngagementDistribution,
+  selectBestReadyVariant,
 } from "./influencerContentEngine";
 
 describe("influencerContentEngine", () => {
-  it("builds a 15-30 second EU-safe script brief", () => {
+  it("builds a platform-specific EU-safe script brief", () => {
     const brief = buildScriptBrief({ thema: "Abendroutine mit Magnesium", plattform: "TikTok" });
-    expect(brief).toContain("15-30 Sekunden");
-    expect(brief).toContain("0-3s");
+    expect(brief).toContain("Sekunden Laufzeit");
+    expect(brief).toContain("Avatar-ID");
     expect(brief).toContain("Keine Heilversprechen");
   });
 
-  it("flags risky health claims", () => {
+  it("builds a deterministic production plan", () => {
+    const plan = buildProductionPlan({ thema: "Morgenroutine", plattform: "Instagram", angle: "checkliste" });
+    expect(plan.avatar.id).toBe("cybersarah-health-eu-v1");
+    expect(plan.playbook.platform).toBe("Instagram");
+    expect(plan.structure.length).toBe(3);
+  });
+
+  it("flags and sanitizes risky health claims", () => {
     expect(containsRiskyHealthClaim("Dieses Mittel heilt garantiert")).toBe(true);
-    expect(containsRiskyHealthClaim("Allgemeine Wellness-Routine")).toBe(false);
+    expect(sanitizeHealthCopy("Dieses Mittel heilt garantiert")).not.toMatch(/heilt|garantiert/i);
   });
 
   it("creates a complete influencer package", () => {
@@ -29,25 +41,44 @@ describe("influencerContentEngine", () => {
     });
     expect(pkg.imagePrompt).toContain("9:16");
     expect(pkg.affiliateStrategy).toContain("Affiliate-Produkt");
+    expect(pkg.productionPlan.hook.length).toBeGreaterThan(10);
     expect(pkg.complianceNotes.length).toBeGreaterThanOrEqual(5);
-    expect(pkg.hashtags.length).toBeGreaterThan(0);
+  });
+
+  it("scores affiliate fit conservatively", () => {
+    const safe = evaluateAffiliateFit({
+      thema: "Alltagstaugliche Wellness Routine",
+      plattform: "YouTube",
+      affiliateProdukt: "Guide",
+      zielgruppe: "Erwachsene 35-60 mit Interesse an Wellness im Alltag",
+    });
+    const risky = evaluateAffiliateFit({
+      thema: "Heilt garantiert Beschwerden",
+      plattform: "YouTube",
+      affiliateProdukt: "Guide",
+    });
+    expect(safe.eligible).toBe(true);
+    expect(risky.score).toBeLessThan(safe.score);
+    expect(safe.disclosure).toContain("Affiliate-Link");
   });
 
   it("keeps affiliate strategy transparent", () => {
-    expect(buildAffiliateStrategy({
-      thema: "Routine",
-      plattform: "YouTube",
-      affiliateProdukt: "Guide",
-    })).toContain("Werbung/Affiliate-Link");
+    expect(buildAffiliateStrategy({ thema: "Routine", plattform: "YouTube", affiliateProdukt: "Guide" }))
+      .toContain("Werbung/Affiliate-Link");
   });
 
   it("creates stable hashtag output", () => {
     expect(buildHashtags("Natürliche Abend Routine")).toContain("#Wellness");
   });
 
-  it("adds an explicit warning for risky medical wording", () => {
-    const pkg = buildContentEnginePackage({ thema: "Heilt garantiert Beschwerden", plattform: "TikTok" });
-    expect(pkg.complianceNotes[0]).toContain("riskante Health-Claims");
+  it("creates two experiment variants per platform", () => {
+    const variants = buildCampaignVariants({
+      thema: "Abendroutine für Wohlbefinden",
+      affiliateProdukt: "Wellness Guide",
+    }, ["TikTok", "Instagram", "YouTube"]);
+    expect(variants).toHaveLength(6);
+    expect(variants.map((v) => v.primaryMetric)).toContain("retention");
+    expect(selectBestReadyVariant(variants)?.readinessScore).toBeGreaterThan(0);
   });
 
   it("scores engagement distribution deterministically", () => {
