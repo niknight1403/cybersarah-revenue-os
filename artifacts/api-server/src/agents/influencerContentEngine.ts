@@ -34,6 +34,13 @@ export interface ProductionPlan {
   playbook: PlatformPlaybook;
 }
 
+export interface AffiliateAssessment {
+  score: number;
+  eligible: boolean;
+  disclosure: string;
+  reasons: string[];
+}
+
 export interface ContentEnginePackage {
   scriptBrief: string;
   imagePrompt: string;
@@ -41,6 +48,8 @@ export interface ContentEnginePackage {
   complianceNotes: string[];
   hashtags: string[];
   productionPlan: ProductionPlan;
+  affiliateAssessment: AffiliateAssessment;
+  sanitizedTopic: string;
 }
 
 const RISKY_CLAIMS = [
@@ -101,6 +110,50 @@ const HOOKS: Record<HealthContentAngle, (topic: string) => string[]> = {
 
 export function containsRiskyHealthClaim(text: string): boolean {
   return RISKY_CLAIMS.some((pattern) => pattern.test(text));
+}
+
+export function sanitizeHealthCopy(text: string): string {
+  return text
+    .replace(/\bheilt?\b/gi, "kann das Wohlbefinden unterstützen")
+    .replace(/\bgarantiert\b/gi, "möglicherweise")
+    .replace(/\bmedizinisch bewiesen\b/gi, "mit verfügbarer Evidenz abgleichen")
+    .replace(/\bersetzt\s+(dein\s+)?medikament(e)?\b/gi, "ist kein Ersatz für verordnete Medikamente")
+    .replace(/\b100\s*%\b/gi, "ohne Ergebnisgarantie")
+    .replace(/\bsofortige heilung\b/gi, "keine sofortige Wirkung versprechen");
+}
+
+export function evaluateAffiliateFit(brief: InfluencerContentBrief): AffiliateAssessment {
+  const reasons: string[] = [];
+  let score = 50;
+  const produkt = brief.affiliateProdukt?.trim();
+
+  if (produkt) {
+    score += 25;
+    reasons.push("Konkretes Affiliate-Produkt vorhanden.");
+  } else {
+    reasons.push("Kein konkretes Produkt: nur Soft-CTA verwenden.");
+  }
+
+  if (containsRiskyHealthClaim(brief.thema)) {
+    score -= 40;
+    reasons.push("Riskante Health-Claim-Formulierung erkannt.");
+  } else {
+    score += 15;
+    reasons.push("Keine offensichtliche Heilungs- oder Garantieaussage erkannt.");
+  }
+
+  if ((brief.zielgruppe ?? "").length > 20) {
+    score += 10;
+    reasons.push("Zielgruppe ausreichend konkret beschrieben.");
+  }
+
+  score = Math.max(0, Math.min(100, score));
+  return {
+    score,
+    eligible: Boolean(produkt) && score >= 60,
+    disclosure: "Werbung / Affiliate-Link: Bei einem Kauf kann eine Provision entstehen.",
+    reasons,
+  };
 }
 
 export function buildComplianceNotes(thema: string): string[] {
@@ -210,13 +263,17 @@ export function buildHashtags(thema: string): string[] {
 }
 
 export function buildContentEnginePackage(brief: InfluencerContentBrief): ContentEnginePackage {
+  const sanitizedTopic = sanitizeHealthCopy(brief.thema);
+  const safeBrief = { ...brief, thema: sanitizedTopic };
   return {
-    scriptBrief: buildScriptBrief(brief),
-    imagePrompt: buildImagePrompt(brief),
-    affiliateStrategy: buildAffiliateStrategy(brief),
+    scriptBrief: buildScriptBrief(safeBrief),
+    imagePrompt: buildImagePrompt(safeBrief),
+    affiliateStrategy: buildAffiliateStrategy(safeBrief),
     complianceNotes: buildComplianceNotes(brief.thema),
-    hashtags: buildHashtags(brief.thema),
-    productionPlan: buildProductionPlan(brief),
+    hashtags: buildHashtags(sanitizedTopic),
+    productionPlan: buildProductionPlan(safeBrief),
+    affiliateAssessment: evaluateAffiliateFit(brief),
+    sanitizedTopic,
   };
 }
 
