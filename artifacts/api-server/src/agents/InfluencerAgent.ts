@@ -1,16 +1,32 @@
 import { AgentBase, type Aufgabe, type AufgabeErgebnis } from "./AgentBase";
 import { db } from "@workspace/db";
-import { contentTable, agentsTable } from "@workspace/db";
-import { eq, desc, gte } from "drizzle-orm";
+import { contentTable } from "@workspace/db";
+import { desc, gte } from "drizzle-orm";
 import { generiereContent, type ContentAuftrag } from "./contentAgent";
-import { logger } from "../lib/logger";
+import {
+  buildContentEnginePackage,
+  scoreEngagementDistribution,
+  type HealthContentPlatform,
+  type HealthContentAngle,
+} from "./influencerContentEngine";
 
 export interface InfluencerAufgabePayload {
-  aktion: "content_generieren" | "trend_analyse" | "engagement_optimieren";
+  aktion:
+    | "content_generieren"
+    | "trend_analyse"
+    | "engagement_optimieren"
+    | "content_paket"
+    | "kampagne_generieren";
   marke?: "CyberSarah" | "GeldPilot AI" | "UnternehmerGPT";
   plattform?: "TikTok" | "Instagram" | "YouTube" | "Google" | "Blog";
+  plattformen?: HealthContentPlatform[];
   thema?: string;
+  zielgruppe?: string;
+  angle?: HealthContentAngle;
+  affiliateProdukt?: string;
 }
+
+const DEFAULT_HEALTH_TOPIC = "alltagstaugliche Wellness-Routinen für Erwachsene 35-60";
 
 export class InfluencerAgent extends AgentBase {
   constructor() {
@@ -18,7 +34,7 @@ export class InfluencerAgent extends AgentBase {
   }
 
   protected beschreibungText(): string {
-    return "Verwaltet Influencer-Content, analysiert Trends und optimiert Engagement für alle 3 Marken.";
+    return "AI Influencer & Content Engine: erstellt EU-taugliche Health/Wellness-Shorts, visuelle Prompts, Affiliate-Strategien und autonome Multi-Plattform-Kampagnen.";
   }
 
   async ausfuehren(aufgabe: Aufgabe): Promise<AufgabeErgebnis> {
@@ -27,6 +43,10 @@ export class InfluencerAgent extends AgentBase {
     switch (payload.aktion) {
       case "content_generieren":
         return this.generiereInfluencerContent(payload);
+      case "content_paket":
+        return this.erstelleContentPaket(payload);
+      case "kampagne_generieren":
+        return this.generiereKampagne(payload);
       case "trend_analyse":
         return this.analysiereTrends();
       case "engagement_optimieren":
@@ -36,12 +56,45 @@ export class InfluencerAgent extends AgentBase {
     }
   }
 
+  private normalisierePlattform(plattform?: InfluencerAufgabePayload["plattform"]): HealthContentPlatform {
+    if (plattform === "Instagram" || plattform === "YouTube") return plattform;
+    return "TikTok";
+  }
+
+  private erstelleContentPaket(payload: InfluencerAufgabePayload): Promise<AufgabeErgebnis> {
+    const plattform = this.normalisierePlattform(payload.plattform);
+    const thema = payload.thema?.trim() || DEFAULT_HEALTH_TOPIC;
+    const paket = buildContentEnginePackage({
+      thema,
+      plattform,
+      zielgruppe: payload.zielgruppe,
+      angle: payload.angle,
+      affiliateProdukt: payload.affiliateProdukt,
+    });
+
+    return Promise.resolve({
+      success: true,
+      message: `Content-Paket für ${plattform} erstellt: Script-Brief, Image-Prompt, Affiliate-Strategie und Compliance-Checks.`,
+      metadaten: { thema, plattform, ...paket },
+    });
+  }
+
   private async generiereInfluencerContent(payload: InfluencerAufgabePayload): Promise<AufgabeErgebnis> {
+    const plattform = this.normalisierePlattform(payload.plattform);
+    const thema = payload.thema?.trim() || DEFAULT_HEALTH_TOPIC;
+    const paket = buildContentEnginePackage({
+      thema,
+      plattform,
+      zielgruppe: payload.zielgruppe,
+      angle: payload.angle,
+      affiliateProdukt: payload.affiliateProdukt,
+    });
+
     const auftrag: ContentAuftrag = {
       marke: payload.marke ?? "CyberSarah",
-      typ: "reel",
-      plattform: payload.plattform ?? "Instagram",
-      thema: payload.thema ?? "KI & Automatisierung 2026",
+      typ: plattform === "Instagram" ? "reel" : plattform === "TikTok" ? "tiktok" : "kurzVideo",
+      plattform,
+      thema: `${thema}\n\nPRODUKTIONS-BRIEF:\n${paket.scriptBrief}\n\nCOMPLIANCE:\n- ${paket.complianceNotes.join("\n- ")}`,
     };
 
     const agentId = this.holeAgentId() ?? 0;
@@ -49,8 +102,56 @@ export class InfluencerAgent extends AgentBase {
 
     return {
       success: true,
-      message: `Influencer-Content generiert (ID: ${contentId}) für ${auftrag.marke} auf ${auftrag.plattform}`,
-      metadaten: { contentId, marke: auftrag.marke, plattform: auftrag.plattform },
+      message: `AI-Influencer-Content generiert (ID: ${contentId}) für ${auftrag.marke} auf ${auftrag.plattform}`,
+      metadaten: {
+        contentId,
+        marke: auftrag.marke,
+        plattform: auftrag.plattform,
+        imagePrompt: paket.imagePrompt,
+        affiliateStrategy: paket.affiliateStrategy,
+        hashtags: paket.hashtags,
+        complianceNotes: paket.complianceNotes,
+      },
+    };
+  }
+
+  private async generiereKampagne(payload: InfluencerAufgabePayload): Promise<AufgabeErgebnis> {
+    const thema = payload.thema?.trim() || DEFAULT_HEALTH_TOPIC;
+    const plattformen = payload.plattformen?.length
+      ? [...new Set(payload.plattformen)]
+      : ["TikTok", "Instagram", "YouTube"] as HealthContentPlatform[];
+
+    const ergebnisse: Array<Record<string, unknown>> = [];
+    for (const plattform of plattformen) {
+      const paket = buildContentEnginePackage({
+        thema,
+        plattform,
+        zielgruppe: payload.zielgruppe,
+        angle: payload.angle,
+        affiliateProdukt: payload.affiliateProdukt,
+      });
+      const typ: ContentAuftrag["typ"] =
+        plattform === "TikTok" ? "tiktok" : plattform === "Instagram" ? "reel" : "kurzVideo";
+      const contentId = await generiereContent({
+        marke: payload.marke ?? "CyberSarah",
+        typ,
+        plattform,
+        thema: `${thema}\n\nPRODUKTIONS-BRIEF:\n${paket.scriptBrief}\n\nCOMPLIANCE:\n- ${paket.complianceNotes.join("\n- ")}`,
+      }, this.holeAgentId() ?? 0);
+
+      ergebnisse.push({
+        plattform,
+        contentId,
+        imagePrompt: paket.imagePrompt,
+        affiliateStrategy: paket.affiliateStrategy,
+        hashtags: paket.hashtags,
+      });
+    }
+
+    return {
+      success: true,
+      message: `Autonome Influencer-Kampagne für ${thema} auf ${plattformen.length} Plattformen erstellt.`,
+      metadaten: { thema, anzahl: ergebnisse.length, ergebnisse },
     };
   }
 
@@ -62,40 +163,44 @@ export class InfluencerAgent extends AgentBase {
       .select({ plattform: contentTable.plattform, marke: contentTable.marke })
       .from(contentTable)
       .where(gte(contentTable.createdAt, letzteWoche))
-      .limit(50);
+      .limit(100);
 
-    const plattformVerteilung = recentContent.reduce(
-      (acc, c) => {
-        acc[c.plattform] = (acc[c.plattform] ?? 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-
-    const topPlattform = Object.entries(plattformVerteilung).sort(([, a], [, b]) => b - a)[0]?.[0] ?? "TikTok";
+    const plattformVerteilung = recentContent.reduce<Record<string, number>>((acc, c) => {
+      acc[c.plattform] = (acc[c.plattform] ?? 0) + 1;
+      return acc;
+    }, {});
+    const score = scoreEngagementDistribution(plattformVerteilung);
 
     return {
       success: true,
-      message: `Trend-Analyse: Top-Plattform ist ${topPlattform} (${recentContent.length} Contents analysiert)`,
-      metadaten: { plattformVerteilung, topPlattform, analysiertContent: recentContent.length },
+      message: `Trend-Analyse: Top-Plattform ist ${score.topPlatform} (${score.total} Contents analysiert)`,
+      metadaten: {
+        plattformVerteilung,
+        topPlattform: score.topPlatform,
+        analysiertContent: score.total,
+        konzentration: score.concentration,
+        naechsteAktion: score.total < 6 ? "Mehr Test-Content über alle Plattformen verteilen" : "Top-Plattform priorisieren und Varianten testen",
+      },
     };
   }
 
   private async optimiereEngagement(): Promise<AufgabeErgebnis> {
     const letzterContent = await db
-      .select()
+      .select({ plattform: contentTable.plattform, typ: contentTable.typ, status: contentTable.status })
       .from(contentTable)
       .orderBy(desc(contentTable.createdAt))
-      .limit(5);
+      .limit(30);
 
-    const empfehlungen = [
-      "TikTok-Posts zwischen 19:00-21:00 Uhr posten für maximale Reichweite",
-      "Instagram Reels mit 3-5 Hashtags haben 40% höheres Engagement",
-      "YouTube Shorts täglich posten für algorithmischen Boost",
-      "Frage-Posts generieren 2x mehr Kommentare als Aussage-Posts",
-    ];
-
-    const empfehlung = empfehlungen[Math.floor(Math.random() * empfehlungen.length)]!;
+    const counts = letzterContent.reduce<Record<string, number>>((acc, item) => {
+      acc[item.plattform] = (acc[item.plattform] ?? 0) + 1;
+      return acc;
+    }, {});
+    const score = scoreEngagementDistribution(counts);
+    const empfehlung = score.total === 0
+      ? "Starte mit je einem TikTok, Reel und YouTube Short und messe CTR/Retention als Baseline."
+      : score.concentration > 0.65
+        ? `Content ist stark auf ${score.topPlatform} konzentriert. Teste mindestens 30% der nächsten Inhalte auf den anderen Plattformen.`
+        : `${score.topPlatform} führt aktuell. Erzeuge dort zwei Hook-Varianten und behalte parallel Cross-Platform-Tests bei.`;
 
     return {
       success: true,
@@ -103,7 +208,9 @@ export class InfluencerAgent extends AgentBase {
       metadaten: {
         empfehlung,
         analysierteInhalte: letzterContent.length,
-        naechsteAktion: "Posting-Zeiten anpassen",
+        topPlattform: score.topPlatform,
+        konzentration: score.concentration,
+        naechsteAktion: "Hook-A/B-Test + Retention/CTR messen",
       },
     };
   }
