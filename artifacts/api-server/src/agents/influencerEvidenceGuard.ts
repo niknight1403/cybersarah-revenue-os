@@ -5,6 +5,7 @@ export interface EvidenceAssessment {
   publishable: boolean;
   requiresDisclaimer: boolean;
   reasons: string[];
+  verifiedReferences: number;
 }
 
 const HIGH_RISK = [
@@ -19,10 +20,19 @@ export function assessEvidenceSafety(input: {
   claim: string;
   sourceCount?: number;
   sourceTypes?: string[];
+  references?: Array<{ url: string; title: string; type: string; checkedAt: string }>;
 }): EvidenceAssessment {
   const claim = input.claim.trim();
   const sourceCount = input.sourceCount ?? 0;
   const sourceTypes = input.sourceTypes ?? [];
+  const verifiedReferences = (input.references ?? []).filter((ref) => {
+    try {
+      const parsed = new URL(ref.url);
+      return parsed.protocol === "https:" && Boolean(parsed.hostname) &&
+        Boolean(ref.title.trim()) && Number.isFinite(Date.parse(ref.checkedAt));
+    } catch { return false; }
+  }).length;
+  const hasProvenance = verifiedReferences > 0;
   const highRisk = HIGH_RISK.some((pattern) => pattern.test(claim));
   const authoritative = sourceTypes.some((type) => /guideline|systematic|authority|study/i.test(type));
 
@@ -34,13 +44,15 @@ export function assessEvidenceSafety(input: {
   const reasons: string[] = [];
   if (highRisk) reasons.push("Riskante Health-Claim-Formulierung erkannt.");
   if (sourceCount === 0) reasons.push("Keine Evidenzquelle hinterlegt.");
+  if (!hasProvenance) reasons.push("Keine prüfbaren Quellen-URLs mit Titel und Prüfdatum hinterlegt.");
   if (!authoritative && sourceCount > 0) reasons.push("Keine belastbare Leitlinie, Studie oder Behörde als Quelle markiert.");
 
   return {
     level,
-    publishable: !highRisk && level !== "unknown",
-    requiresDisclaimer: level !== "high" || highRisk,
+    publishable: !highRisk && level !== "unknown" && hasProvenance,
+    requiresDisclaimer: level !== "high" || highRisk || !hasProvenance,
     reasons,
+    verifiedReferences,
   };
 }
 
