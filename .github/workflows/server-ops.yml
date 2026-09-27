@@ -110,8 +110,8 @@ jobs:
             pm2 describe cybersarah | grep -E "script|exec|interpreter" | head -8
             export NODE_ENV=production
             echo "== Verwaiste Alt-Prozesse auf Port 3000 beenden =="
-            pkill -f "tsx artifacts/api-server" 2>/dev/null || true
-            pkill -f "api-server/dist/index.mjs" 2>/dev/null || true
+            pkill -f "t[s]x artifacts/api-server" 2>/dev/null || true
+            pkill -f "api-server/dist/index[.]mjs" 2>/dev/null || true
             fuser -k 3000/tcp 2>/dev/null || true
             sleep 3
             ss -tlnp | grep ":3000" || echo "Port 3000 frei"
