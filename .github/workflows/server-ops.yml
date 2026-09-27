@@ -95,7 +95,7 @@ jobs:
             APP_TOK=$(tr "\0" "\n" < /proc/$(ss -tlnp 2>/dev/null | grep ":3000" | grep -oE "pid=[0-9]+" | head -1 | cut -d= -f2)/environ 2>/dev/null | grep "^ADMIN_GITHUB_TOKEN=" | cut -d= -f2)
             if [ -n "$APP_TOK" ]; then echo "App-Prozess: Token geladen (Laenge ${#APP_TOK})"; else echo "App-Prozess: Token NICHT im Prozess-Env (dotenv laedt zur Laufzeit)"; fi
             RESP=$(curl -s -m 15 -H "Authorization: Bearer $TOK" -H "Accept: application/vnd.github+json" https://api.github.com/user)
-            LOGIN=$(echo "$RESP" | grep -oE "\"login\":\"[a-z0-9-]+\"" | head -1)
+            LOGIN=$(echo "$RESP" | grep -oE "\"login\": ?\"[^\"]+\"" | head -1)
             if [ -n "$LOGIN" ]; then echo "api.github.com/user: OK $LOGIN"; else echo "api.github.com/user: FEHLER $(echo "$RESP" | head -c 200)"; fi
             curl -s -m 15 -o /dev/null -D /tmp/gh_hdr -H "Authorization: Bearer $TOK" https://api.github.com/user
             grep -iE "^(x-ratelimit-limit|x-oauth-scopes|x-ratelimit-remaining)" /tmp/gh_hdr | tr -d "\r"'
