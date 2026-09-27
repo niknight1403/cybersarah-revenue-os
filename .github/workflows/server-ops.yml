@@ -65,6 +65,19 @@ jobs:
             fi
             echo "DEPLOY_TOKEN in /opt/cybersarah/.env aktualisiert (Laenge: ${#NEU})"'
 
+      - name: Token-Verifikation (Längen + echter Endpoint-Test)
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          LOKAL=$(printf '%s' "$DEPLOY_TOKEN" | wc -c)
+          echo "Runner-Secret DEPLOY_TOKEN Laenge: $LOKAL"
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'echo "root .env Token-Laenge: $(grep "^DEPLOY_TOKEN=" /opt/cybersarah/.env | cut -d= -f2 | tr -d "\n" | wc -c)"; echo "api .env Token-Laenge: $(grep "^DEPLOY_TOKEN=" /opt/cybersarah/artifacts/api-server/.env 2>/dev/null | cut -d= -f2 | tr -d "\n" | wc -c)"; echo "pm2-Env DEPLOY_TOKEN: $(pm2 env cybersarah 2>/dev/null | grep -c DEPLOY_TOKEN)"'
+          CODE=$(curl -sk -o /tmp/tok_test -w '%{http_code}' -m 15 -X POST -H "X-Deploy-Token: $DEPLOY_TOKEN" -H 'Content-Type: application/json' -d '{}' "https://$SSH_HOST/api/admin/env")
+          echo "Env-Endpoint mit echtem Token: HTTP $CODE"
+          head -c 250 /tmp/tok_test; echo
+
       - name: Diagnose (immer)
         env:
           DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
