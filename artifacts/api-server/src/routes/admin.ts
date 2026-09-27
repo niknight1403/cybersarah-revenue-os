@@ -59,19 +59,8 @@ router.post("/deploy", async (req: Request, res: Response) => {
       pullOutput: pullResult.slice(-500),
     });
 
-    // Restart PM2 process in background
-    setTimeout(() => {
-      try {
-        execSync("pkill -f 'tsx.*api-server/src/index.ts' || true", {
-          cwd: path.join(PROJECT_DIR, "artifacts/api-server"),
-          timeout: 10000,
-          stdio: "pipe",
-        });
-        logger.info("✅ Server-Prozess via pkill neu gestartet (pm2 relauncht frisch)");
-      } catch (e) {
-        logger.error({ err: e }, "Server restart failed after deploy");
-      }
-    }, 1000);
+    // Sauberer Selbst-Neustart: pm2 relauncht den Prozess mit frischem Code/Env
+    planeSelbstNeustart();
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
@@ -143,6 +132,18 @@ function schreibeEnvDatei(pfad: string, werte: Map<string, string>) {
   fs.writeFileSync(pfad, zeilen.join("\n") + "\n", { encoding: "utf-8" });
 }
 
+/**
+ * Plant den sauberen Selbst-Neustart des Servers: pm2 relauncht den Prozess
+ * danach frisch (inkl. neuem Env aus .env). Ein pkill nach Cmdline-Muster
+ * traf den tsx-Prozess nie und killte nur die eigene Shell (Bugfix).
+ */
+export function planeSelbstNeustart(verzoegerungMs = 1000): void {
+  setTimeout(() => {
+    logger.info("Server-Prozess beendet — pm2 relauncht mit frischem Env");
+    process.exit(0);
+  }, verzoegerungMs);
+}
+
 // POST /api/admin/env — .env auf dem Server setzen/aktualisieren (Merge).
 // Body: { "env": { "KEY": "wert", ... }, "restart": true }
 router.post("/env", (req: Request, res: Response) => {
@@ -193,18 +194,7 @@ router.post("/env", (req: Request, res: Response) => {
     });
 
     if (body?.restart !== false) {
-      setTimeout(() => {
-        try {
-          execSync("pkill -f 'tsx.*api-server/src/index.ts' || true", {
-            cwd: path.join(PROJECT_DIR, "artifacts/api-server"),
-            timeout: 10000,
-            stdio: "pipe",
-          });
-          logger.info("Server nach .env-Sync via pkill neu gestartet (pm2 relauncht frisch)");
-        } catch (e) {
-          logger.error({ err: e }, "Restart nach .env-Sync fehlgeschlagen");
-        }
-      }, 1000);
+      planeSelbstNeustart();
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
