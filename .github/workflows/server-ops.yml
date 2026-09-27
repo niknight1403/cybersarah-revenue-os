@@ -131,6 +131,10 @@ jobs:
             echo "== pm2-Prozess-Definition =="
             pm2 describe cybersarah | grep -E "script|exec|interpreter" | head -8
             export NODE_ENV=production
+            echo "== systemd cybersarah-peer stoppen (alter August-dist klaut Port 3000) =="
+            systemctl stop cybersarah-peer.service 2>/dev/null || true
+            systemctl disable cybersarah-peer.service 2>/dev/null || true
+            echo "cybersarah-peer gestoppt und deaktiviert"
             echo "== Verwaiste Alt-Prozesse auf Port 3000 beenden =="
             pkill -f "t[s]x artifacts/api-server" 2>/dev/null || true
             pkill -f "api-server/dist/index[.]mjs" 2>/dev/null || true
