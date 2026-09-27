@@ -81,8 +81,10 @@ jobs:
           ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" '
             set -e
             cd /opt/cybersarah
-            echo "== git pull =="
-            git pull origin main
+            echo "== Code auf origin/main hart setzen =="
+            git fetch origin main
+            git reset --hard origin/main
+            git log --oneline -1
             echo "== .env synchronisieren =="
             test -f .env && cp .env artifacts/api-server/.env && echo ".env kopiert"
             echo "== Dependencies =="
