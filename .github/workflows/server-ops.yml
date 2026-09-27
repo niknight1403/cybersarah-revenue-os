@@ -339,6 +339,30 @@ jobs:
             else
               echo "WARNUNG: keine pm2 resurrect-Unit gefunden"
             fi
+            echo "== PM2-Daemon mit sauberem Env neu starten (kill + resurrect via Unit) =="
+            pm2 save 2>/dev/null || true
+            pm2 kill 2>/dev/null || true
+            sleep 2
+            PMU2=""
+            for f in /etc/systemd/system/pm2-*.service; do
+              case "$f" in *.bak*) continue;; esac
+              PMU2="$f"
+            done
+            if [ -n "$PMU2" ]; then
+              systemctl start "$(basename "$PMU2")" && echo "PM2-Daemon sauber via $(basename "$PMU2") gestartet"
+            else
+              echo "WARNUNG: keine pm2-Unit gefunden — Daemon startet aus Shell (Env-Leak moeglich)"
+            fi
+            sleep 18
+            if curl -sS -m 20 http://127.0.0.1:3000/api/health >/dev/null 2>&1; then
+              echo "App nach resurrect erreichbar"
+            else
+              echo "resurrect brachte App nicht hoch — env-i-Fallbackstart"
+              cd /opt/cybersarah/artifacts/api-server
+              env -i HOME=$HOME PATH="$PATH" USER=$(id -un) LOGNAME=$(id -un) SHELL=/bin/bash TERM=xterm NODE_ENV=production pm2 start bash --name cybersarah --cwd /opt/cybersarah/artifacts/api-server -- -c "pnpm --filter @workspace/api-server start"
+              pm2 save
+              sleep 15
+            fi
             echo "== 15s warten, dann Health =="
             sleep 15
             echo "== /api/health — muss JSON sein, kein HTML =="
