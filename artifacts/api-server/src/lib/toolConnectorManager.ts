@@ -34,21 +34,24 @@ export interface ConnectorZustand {
  * antwortet — der Connector ist damit nicht nur "konfiguriert", sondern
  * nachweislich mit gueltigen Credentials verbunden.
  */
-async function bearerCheck(url: string, token: string | undefined): Promise<boolean> {
-  if (!token) return false;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 5_000);
-  try {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    });
-    return res.ok;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timer);
+async function bearerCheck(url: string, tokens: Array<string | undefined>): Promise<boolean> {
+  const kandidaten = tokens.map((t) => (t ?? "").trim()).filter((t) => t.length > 0);
+  for (const token of kandidaten) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5_000);
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      });
+      if (res.ok) return true;
+    } catch {
+      // Naechster Kandidat wird probiert
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  return false;
 }
 
 /** Wie bearerCheck, aber mit ?key= Query-Parameter (Google/Gemini-Stil). */
@@ -75,6 +78,26 @@ const envValue = (keys: string[]): string | undefined => {
   }
   return undefined;
 };
+
+/** Liefert ALLE gesetzten Werte der Keys in Reihenfolge (fuer Multi-Key-Checks). */
+const envValues = (keys: string[]): string[] =>
+  keys.map((k) => (process.env[k] ?? "").trim()).filter((v) => v.length > 0);
+
+/** OpenAI-Key-Kandidaten, konsistent mit openaiClient (inkl. Additional-Keys). */
+function openaiKeyKandidaten(): string[] {
+  const direkt = envValues([
+    "OPENAI_API_KEY",
+    "OPENAI_BACKUP_KEY",
+    "NIKOKEY",
+    "Openaiapi",
+    "Openai",
+  ]);
+  const zusaetzliche = (process.env["OPENAI_ADDITIONAL_KEYS"] ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
+  return [...direkt, ...zusaetzliche];
+}
 
 const CONNECTORS: ToolConnectorDef[] = [
   // ── Social (Reichweite) ──────────────────────────────────────────────────
@@ -105,7 +128,7 @@ const CONNECTORS: ToolConnectorDef[] = [
   {
     id: "openai", name: "OpenAI API", kategorie: "ki", envKeys: ["OPENAI_API_KEY", "OPENAI_BACKUP_KEY"],
     kostenpflichtig: true,
-    gesundheit: async () => bearerCheck("https://api.openai.com/v1/models", envValue(["OPENAI_API_KEY", "OPENAI_BACKUP_KEY"])),
+    gesundheit: async () => bearerCheck("https://api.openai.com/v1/models", openaiKeyKandidaten()),
   },
   {
     id: "gemini", name: "Google Gemini API", kategorie: "ki", envKeys: ["GEMINI_API_KEY", "GEMINI_BACKUP_KEY"],
@@ -115,24 +138,24 @@ const CONNECTORS: ToolConnectorDef[] = [
   {
     id: "huggingface", name: "HuggingFace (Modelle & Inference)", kategorie: "ki", envKeys: ["HUGGINGFACE_API_KEY", "HF_TOKEN"],
     kostenpflichtig: false,
-    gesundheit: async () => bearerCheck("https://huggingface.co/api/whoami-v2", envValue(["HUGGINGFACE_API_KEY", "HF_TOKEN"])),
+    gesundheit: async () => bearerCheck("https://huggingface.co/api/whoami-v2", envValues(["HUGGINGFACE_API_KEY", "HF_TOKEN"])),
   },
   // ── Dev-/Plattform-Connectoren (Autonomie: Repo- & Release-Verwaltung) ──
   {
     id: "github", name: "GitHub API (Repos & Releases)", kategorie: "dev", envKeys: ["GITHUB_TOKEN", "ADMIN_GITHUB_TOKEN"],
     kostenpflichtig: false,
-    gesundheit: async () => bearerCheck("https://api.github.com/user", envValue(["GITHUB_TOKEN", "ADMIN_GITHUB_TOKEN"])),
+    gesundheit: async () => bearerCheck("https://api.github.com/user", envValues(["GITHUB_TOKEN", "ADMIN_GITHUB_TOKEN"])),
   },
   {
     id: "gitlab", name: "GitLab API (Spiegel & Pipelines)", kategorie: "dev", envKeys: ["GITLAB_TOKEN"],
     kostenpflichtig: false,
-    gesundheit: async () => bearerCheck("https://gitlab.com/api/v4/user", envValue(["GITLAB_TOKEN"])),
+    gesundheit: async () => bearerCheck("https://gitlab.com/api/v4/user", envValues(["GITLAB_TOKEN"])),
   },
   // ── CRM (Kundenbeziehungen) ──────────────────────────────────────────────
   {
     id: "hubspot", name: "HubSpot CRM", kategorie: "crm", envKeys: ["HUBSPOT_ACCESS_TOKEN"],
     kostenpflichtig: true,
-    gesundheit: async () => bearerCheck("https://api.hubapi.com/crm/v3/objects/contacts?limit=1", envValue(["HUBSPOT_ACCESS_TOKEN"])),
+    gesundheit: async () => bearerCheck("https://api.hubapi.com/crm/v3/objects/contacts?limit=1", envValues(["HUBSPOT_ACCESS_TOKEN"])),
   },
 ];
 
