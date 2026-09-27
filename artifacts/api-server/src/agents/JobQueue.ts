@@ -94,6 +94,8 @@ export class JobQueue extends EventEmitter {
       logger.warn({ typ: job.aufgabe.typ }, "Kein Handler für Aufgabentyp registriert");
       job.status = "fehlgeschlagen";
       job.fehler = `Kein Handler für Typ: ${job.aufgabe.typ}`;
+      job.abgeschlossenAm = new Date();
+      this.emit("job:fehlgeschlagen", job.aufgabe, job.fehler);
       return;
     }
 

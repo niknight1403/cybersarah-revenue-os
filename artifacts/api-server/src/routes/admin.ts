@@ -3,6 +3,7 @@ import { execSync } from "child_process";
 import path from "path";
 import fs from "fs";
 import { logger } from "../lib/logger";
+import { baueConnectorStatusBericht } from "../lib/connectorStatusService";
 
 const router: IRouter = Router();
 
@@ -208,6 +209,20 @@ router.post("/env", (req: Request, res: Response) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     logger.error({ err }, ".env-Sync fehlgeschlagen");
+    res.status(500).json({ success: false, message: msg });
+  }
+});
+
+// GET /api/admin/connectors — Live-Status aller Tool-Connectoren (Konfiguration + Erreichbarkeit).
+router.get("/connectors", async (req: Request, res: Response) => {
+  if (!checkToken(req, res)) return;
+
+  try {
+    const bericht = await baueConnectorStatusBericht();
+    res.json({ success: true, ...bericht });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    logger.error({ err }, "Connector-Status fehlgeschlagen");
     res.status(500).json({ success: false, message: msg });
   }
 });

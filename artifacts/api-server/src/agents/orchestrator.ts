@@ -206,6 +206,7 @@ import { RevenueAgent } from "./RevenueAgentModule";
 import { MonetizationAgent } from "./MonetizationAgent";
 import { MasterAgent } from "./MasterAgent";
 import { RevenueAnalystAgent } from "./RevenueAnalystAgent";
+import { fuehreRevenueAnalystAutoAus } from "./handler/revenueAnalystAuto";
 import { AffiliateRegistrarAgent } from "./AffiliateRegistrarAgent";
 import { FinanceTeamAgent } from "./FinanceTeamAgent";
 import { HaraAgent } from "./HaraAgent";
@@ -490,6 +491,11 @@ function registriereQueueHandler(): void {
     const agent = subAgenten.find(a => a instanceof RevenueAnalystAgent);
     if (!agent) throw new Error("RevenueAnalystAgent nicht gefunden");
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "ki_chancen_analysieren" } });
+  });
+
+  // ── Revenue Analyst: Auto-Optimize-All (Alle-5-Minuten-Loop) ──
+  globalQueue.registriereHandler("revenue_analyst_auto", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    return fuehreRevenueAnalystAutoAus(subAgenten, aufgabe);
   });
 
 

@@ -98,7 +98,15 @@ jobs:
             LOGIN=$(echo "$RESP" | grep -oE "\"login\": ?\"[^\"]+\"" | head -1)
             if [ -n "$LOGIN" ]; then echo "api.github.com/user: OK $LOGIN"; else echo "api.github.com/user: FEHLER $(echo "$RESP" | head -c 200)"; fi
             curl -s -m 15 -o /dev/null -D /tmp/gh_hdr -H "Authorization: Bearer $TOK" https://api.github.com/user
-            grep -iE "^(x-ratelimit-limit|x-oauth-scopes|x-ratelimit-remaining)" /tmp/gh_hdr | tr -d "\r"'
+            grep -iE "^(x-ratelimit-limit|x-oauth-scopes|x-ratelimit-remaining)" /tmp/gh_hdr | tr -d "\r"
+            echo "== Connector-Status-API =="
+            DTOK=$(grep "^DEPLOY_TOKEN=" /opt/cybersarah/artifacts/api-server/.env | cut -d= -f2 | tr -d "\n")
+            curl -s -m 30 -H "X-Deploy-Token: $DTOK" http://127.0.0.1:3000/api/admin/connectors -o /tmp/conn.json -w "HTTP %{http_code}\n"
+            grep -oE "\"success\":(true|false)" /tmp/conn.json | head -1
+            echo "gesamt=$(grep -oE "\"gesamt\":[0-9]+" /tmp/conn.json | head -1) konfiguriert=$(grep -oE "\"konfiguriert\":[0-9]+" /tmp/conn.json | head -1) aktiv=$(grep -oE "\"aktiv\":[0-9]+" /tmp/conn.json | head -1) inaktiv=$(grep -oE "\"inaktiv\":[0-9]+" /tmp/conn.json | head -1)"
+            echo "aktive Connector-IDs:"
+            grep -oE "\"id\":\"[a-z0-9_]+\",\"name\":\"[^\"]*\",\"kategorie\":\"[^\"]*\",\"konfiguriert\":true,\"aktiv\":true" /tmp/conn.json | grep -oE "\"id\":\"[a-z0-9_]+\"" | tr "\n" " "
+            echo
 
       - name: Port-3000-Prozess forensik
         env:
