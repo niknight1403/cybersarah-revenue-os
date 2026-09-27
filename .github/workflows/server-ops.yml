@@ -98,6 +98,27 @@ jobs:
             echo "spawn-env DEPLOY_TOKEN MD5: $(tr "\0" "\n" < /proc/$PPID3000/environ 2>/dev/null | grep "^DEPLOY_TOKEN=" | cut -d= -f2 | tr -d "\n" | md5sum | cut -d\  -f1)"
             echo "cmdline: $(tr "\0" " " < /proc/$PPID3000/cmdline 2>/dev/null | head -c 200)"'
 
+      - name: Rogue-Prozess- und DB-URL-Diagnose
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'echo "== Rogue dist/index.js Prozesse =="
+            for pr in $(pgrep -f "node dist/index[.]js" 2>/dev/null); do echo "PID $pr: cgroup=$(cat /proc/$pr/cgroup 2>/dev/null | head -1) cwd=$(readlink /proc/$pr/cwd 2>/dev/null) ppid=$(ps -o ppid= -p $pr)"; done
+            echo "== Wer referenziert die verschachtelte Kopie? =="
+            grep -l "cybersarah-revenue-os" /srv/cybersarah-loop-agent/*.mjs 2>/dev/null | head -3
+            grep -n "dist/index" /srv/cybersarah-loop-agent/agent.mjs 2>/dev/null | head -5 || true
+            echo "== crontabs =="
+            crontab -l 2>/dev/null | grep -iE "dist|cybersarah-revenue|node" | head -5
+            crontab -l -u cybersarah 2>/dev/null | grep -iE "dist|node" | head -5 || true
+            ls /etc/cron.d/ 2>/dev/null | head -10
+            echo "== systemd timer =="; systemctl list-timers --all --no-pager 2>/dev/null | grep -i cyber | head -5 || true
+            echo "== .env.backup DATABASE_URL =="
+            grep "^DATABASE_URL=" /opt/cybersarah/.env.backup 2>/dev/null | cut -d= -f2 | tr -d "\n" | wc -c
+            DBURL=$(grep "^DATABASE_URL=" /opt/cybersarah/.env.backup 2>/dev/null | cut -d= -f2 | tr -d "\n")
+            [ -n "$DBURL" ] && PGPASSWORD=$(echo "$DBURL" | sed -nE "s#.*:([^@]+)@[^:]+.*#\1#p") psql "host=127.0.0.1 dbname=cybersarah user=cybersarah" -tAc "select 1" 2>&1 | head -2 || true
+            echo "== pm2 status =="; pm2 jlist 2>/dev/null | head -c 600; echo'
+
       - name: Diagnose (immer)
         env:
           DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
