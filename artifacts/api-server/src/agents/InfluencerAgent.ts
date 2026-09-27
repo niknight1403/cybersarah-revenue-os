@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { contentTable } from "@workspace/db";
 import { desc, gte } from "drizzle-orm";
 import { generiereContent, type ContentAuftrag } from "./contentAgent";
+import { globalQueue } from "./JobQueue";
 import {
   buildContentEnginePackage,
   scoreEngagementDistribution,
@@ -80,21 +81,31 @@ export class InfluencerAgent extends AgentBase {
   }
 
   private async generiereInfluencerContent(payload: InfluencerAufgabePayload): Promise<AufgabeErgebnis> {
-    const plattform = this.normalisierePlattform(payload.plattform);
+    const angefordertePlattform = payload.plattform ?? "Instagram";
+    const shortPlattform = this.normalisierePlattform(angefordertePlattform);
     const thema = payload.thema?.trim() || DEFAULT_HEALTH_TOPIC;
     const paket = buildContentEnginePackage({
       thema,
-      plattform,
+      plattform: shortPlattform,
       zielgruppe: payload.zielgruppe,
       angle: payload.angle,
       affiliateProdukt: payload.affiliateProdukt,
     });
+    const istLongform = angefordertePlattform === "Google" || angefordertePlattform === "Blog";
 
     const auftrag: ContentAuftrag = {
       marke: payload.marke ?? "CyberSarah",
-      typ: plattform === "Instagram" ? "reel" : plattform === "TikTok" ? "tiktok" : "kurzVideo",
-      plattform,
-      thema: `${thema}\n\nPRODUKTIONS-BRIEF:\n${paket.scriptBrief}\n\nCOMPLIANCE:\n- ${paket.complianceNotes.join("\n- ")}`,
+      typ: istLongform
+        ? "blogartikel"
+        : shortPlattform === "Instagram"
+          ? "reel"
+          : shortPlattform === "TikTok"
+            ? "tiktok"
+            : "kurzVideo",
+      plattform: angefordertePlattform,
+      thema: istLongform
+        ? `${thema}\n\nCOMPLIANCE:\n- ${paket.complianceNotes.join("\n- ")}`
+        : `${thema}\n\nPRODUKTIONS-BRIEF:\n${paket.scriptBrief}\n\nCOMPLIANCE:\n- ${paket.complianceNotes.join("\n- ")}`,
     };
 
     const agentId = this.holeAgentId() ?? 0;
@@ -121,37 +132,26 @@ export class InfluencerAgent extends AgentBase {
       ? [...new Set(payload.plattformen)]
       : ["TikTok", "Instagram", "YouTube"] as HealthContentPlatform[];
 
-    const ergebnisse: Array<Record<string, unknown>> = [];
-    for (const plattform of plattformen) {
-      const paket = buildContentEnginePackage({
-        thema,
+    // Jede Plattform wird als eigener Queue-Job ausgeführt. Dadurch sind Retries
+    // pro Plattform isoliert und bereits erfolgreiche Plattformen werden bei einem
+    // transienten Fehler einer anderen Plattform nicht erneut erzeugt.
+    const jobs = plattformen.map((plattform) => ({
+      plattform,
+      jobId: globalQueue.fuegeHinzu("influencer_content", {
+        aktion: "content_generieren",
+        marke: payload.marke ?? "CyberSarah",
         plattform,
+        thema,
         zielgruppe: payload.zielgruppe,
         angle: payload.angle,
         affiliateProdukt: payload.affiliateProdukt,
-      });
-      const typ: ContentAuftrag["typ"] =
-        plattform === "TikTok" ? "tiktok" : plattform === "Instagram" ? "reel" : "kurzVideo";
-      const contentId = await generiereContent({
-        marke: payload.marke ?? "CyberSarah",
-        typ,
-        plattform,
-        thema: `${thema}\n\nPRODUKTIONS-BRIEF:\n${paket.scriptBrief}\n\nCOMPLIANCE:\n- ${paket.complianceNotes.join("\n- ")}`,
-      }, this.holeAgentId() ?? 0);
-
-      ergebnisse.push({
-        plattform,
-        contentId,
-        imagePrompt: paket.imagePrompt,
-        affiliateStrategy: paket.affiliateStrategy,
-        hashtags: paket.hashtags,
-      });
-    }
+      }, { prioritaet: 3, maxVersuche: 3 }),
+    }));
 
     return {
       success: true,
-      message: `Autonome Influencer-Kampagne für ${thema} auf ${plattformen.length} Plattformen erstellt.`,
-      metadaten: { thema, anzahl: ergebnisse.length, ergebnisse },
+      message: `Autonome Influencer-Kampagne für ${thema} auf ${plattformen.length} Plattformen eingeplant.`,
+      metadaten: { thema, anzahl: jobs.length, jobs },
     };
   }
 
