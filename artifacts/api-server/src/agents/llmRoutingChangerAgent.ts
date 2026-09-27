@@ -18,6 +18,7 @@ import {
 } from "../lib/llmRouter";
 import { pruefeAlleConnector, holeConnectorSnapshot } from "../lib/toolConnectorManager";
 import { logger } from "../lib/logger";
+import { selectFreeDeploymentFallback } from "../lib/deploymentFallback";
 
 export class LlmRoutingChangerAgent extends AgentBase {
   constructor() {
@@ -25,7 +26,7 @@ export class LlmRoutingChangerAgent extends AgentBase {
   }
 
   protected beschreibungText(): string {
-    return "Wechselt autonom zwischen kostenlosen LLM-Anbietern (Groq, Gemini, OpenRouter, Cerebras, HF, Mistral, Ollama) und verwaltet alle Werkzeug-Anbindungen — Ziel: maximale Autonomie bei minimalen laufenden Kosten.";
+    return "Wechselt autonom zwischen kostenlosen LLM-Anbietern, verwaltet Werkzeug-Anbindungen und bewertet bei Deployment-Ausfällen kostenlose Hosting-Fallbacks (Render vor Koyeb) — ohne kostenpflichtige Ressourcen automatisch zu aktivieren.";
   }
 
   async ausfuehren(aufgabe: Aufgabe): Promise<AufgabeErgebnis> {
@@ -54,6 +55,20 @@ export class LlmRoutingChangerAgent extends AgentBase {
       const connectorSnapshot = holeConnectorSnapshot();
       const aktiveConnectors = connectorSnapshot.filter((c) => c.aktiv);
 
+      // ── Phase 3: Deployment-Fallback ──────────────────────────────────────
+      const payload = (aufgabe.payload ?? {}) as Record<string, unknown>;
+      const deploymentSignal = payload["deploymentFailure"] as
+        | { provider?: string; context?: string; reason?: string; status?: string }
+        | undefined;
+      const deploymentDecision = deploymentSignal?.provider
+        ? selectFreeDeploymentFallback({
+            provider: deploymentSignal.provider,
+            context: deploymentSignal.context,
+            reason: deploymentSignal.reason,
+            status: deploymentSignal.status,
+          })
+        : null;
+
       // ── Buchhaltung ───────────────────────────────────────────────────────
       const zusammenfassung =
         `LLM-Route: ${providerErgebnis?.providerId ?? "keiner"} ` +
@@ -73,6 +88,7 @@ export class LlmRoutingChangerAgent extends AgentBase {
               aktiverProvider: aktiv?.id ?? null,
               provider: providerSnapshot,
               connector: connectorSnapshot,
+              deploymentFallback: deploymentDecision,
             }),
           });
         }
@@ -91,6 +107,7 @@ export class LlmRoutingChangerAgent extends AgentBase {
           providerInsgesamt: providerSnapshot.length,
           connectorSweep,
           aktiveConnectors: aktiveConnectors.map((c) => c.id),
+          deploymentFallback: deploymentDecision,
         },
         dauer: Date.now() - start,
       };
