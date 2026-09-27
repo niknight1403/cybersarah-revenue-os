@@ -137,6 +137,21 @@ jobs:
             rm -f .diagnose-env-check.cjs
             echo "== pm2-Prozesskonfig (cwd) =="
             pm2 describe cybersarah 2>/dev/null | grep -i "cwd\|exec cwd\|script path" | head -4
+            echo "== Port-3000-Halter + PM2-Daemon-Env =="
+            ss -tlnp 2>/dev/null | grep ":3000" | head -2
+            DPID=$(pgrep -f "God Daemon" | head -1)
+            echo "PM2-Daemon: pid=$DPID start=$(ps -o lstart= -p "$DPID" 2>/dev/null)"
+            if [ -n "$DPID" ]; then
+              tr "\0" "\n" < /proc/$DPID/environ 2>/dev/null | grep -E "^(GITHUB_TOKEN|ADMIN_GITHUB_TOKEN|STRIPE_SECRET_KEY|DATABASE_URL|DEPLOY_TOKEN|OPENAI_API_KEY)=" | sed -E "s/=.*/=gesetzt/" | sort
+            fi
+            echo "== DB- und Stripe-Test je .env-Datei =="
+            for f in /opt/cybersarah/.env /opt/cybersarah/artifacts/api-server/.env; do
+              echo "--- $f ---"
+              U=$(grep "^DATABASE_URL=" "$f" 2>/dev/null | head -1 | cut -d= -f2-)
+              S=$(grep "^STRIPE_SECRET_KEY=" "$f" 2>/dev/null | head -1 | cut -d= -f2-)
+              if [ -n "$U" ]; then psql "$U" -t -c "select 'DB ok'" 2>&1 | head -1; else echo "DATABASE_URL fehlt"; fi
+              if [ -n "$S" ]; then echo "Stripe HTTP: $(curl -s -o /dev/null -w "%{http_code}" -m 10 https://api.stripe.com/v1/balance -u "$S:")"; else echo "STRIPE_SECRET_KEY fehlt"; fi
+            done
             echo "== .env-Lagen-Vergleich (laenge + letzte 4 Zeichen) =="
             for f in /opt/cybersarah/.env /opt/cybersarah/artifacts/api-server/.env; do
               echo "--- $f ---"
