@@ -86,6 +86,11 @@ jobs:
           API_AUTH_TOKEN: ${{ secrets.API_AUTH_TOKEN }}
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
         run: |
           PAYLOAD=$(jq -cn '$ARGS.named | with_entries(select(.value != "")) | { env: . }' \
             --arg DATABASE_URL "$DATABASE_URL" \
@@ -111,7 +116,12 @@ jobs:
             --arg ALLOWED_ORIGINS "$ALLOWED_ORIGINS" \
             --arg API_AUTH_TOKEN "$API_AUTH_TOKEN" \
             --arg ADMIN_EMAIL "$ADMIN_EMAIL" \
-            --arg RESEND_API_KEY "$RESEND_API_KEY")
+            --arg RESEND_API_KEY "$RESEND_API_KEY" \
+            --arg HUGGINGFACE_API_KEY "$HUGGINGFACE_API_KEY" \
+            --arg HF_TOKEN "$HF_TOKEN" \
+            --arg GITHUB_TOKEN "$GITHUB_TOKEN" \
+            --arg GITLAB_TOKEN "$GITLAB_TOKEN" \
+            --arg HUBSPOT_ACCESS_TOKEN "$HUBSPOT_ACCESS_TOKEN")
           ANZAHL=$(echo "$PAYLOAD" | jq '.env | length')
           echo "Sende $ANZAHL Schluessel an $SERVER_URL ..."
           if [ "$ANZAHL" -eq 0 ]; then

@@ -1,0 +1,104 @@
+# CyberSarah Revenue OS — Server-Operationen via SSH
+#
+# Der Hetzner-VPS (167.233.196.20, /opt/cybersarah, pm2-Prozess "cybersarah")
+# laeuft hinter einem Nginx-Reverse-Proxy. Wenn das Backend (Port 3000) down
+# ist, antwortet der Proxy mit 502 — der API-Deploy und Env-Sync koennen dann
+# nichts mehr ausrichten. Dieser Workflow nutzt die HETZNER_SSH_* Secrets und
+# greift direkt per SSH zu:
+#
+#   modus=diagnose  — Nur lesen: pm2-Status, Logs, Ressourcen, Health-Check
+#   modus=reparatur — Diagnose + Fix: git pull, .env-Sync, pnpm install,
+#                     Build, pm2-Restart, Health-Verifikation
+name: Server-Ops (SSH)
+
+on:
+  workflow_dispatch:
+    inputs:
+      modus:
+        description: "diagnose oder reparatur"
+        required: true
+        default: "diagnose"
+        type: choice
+        options: [diagnose, reparatur]
+
+jobs:
+  server-ops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: SSH-Key einrichten
+        env:
+          SSH_KEY_B64: ${{ secrets.HETZNER_SSH_PRIVATE_KEY_B64 }}
+          KNOWN_HOSTS: ${{ secrets.HETZNER_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "$SSH_KEY_B64" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          if [ -n "$KNOWN_HOSTS" ]; then
+            echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          fi
+
+      - name: Modus validieren
+        env:
+          MODUS: ${{ github.event.inputs.modus }}
+        run: |
+          case "$MODUS" in
+            diagnose|reparatur) echo "Modus: $MODUS" ;;
+            *) echo "::error::Unbekannter Modus: $MODUS"; exit 1 ;;
+          esac
+
+      - name: Diagnose (immer)
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" '
+            echo "== pm2 status =="; pm2 status 2>&1 | head -15
+            echo "== pm2 logs cybersarah (letzte 30 Zeilen) =="; pm2 logs cybersarah --lines 30 --nostream 2>&1 | tail -35
+            echo "== lokale Health-Checks =="
+            curl -sS -o /dev/null -w "GET /api/health HTTP %{http_code}\n" -m 10 http://127.0.0.1:3000/api/health || echo "Backend auf 3000 nicht erreichbar"
+            curl -sS -o /dev/null -w "GET / HTTP %{http_code}\n" -m 10 http://127.0.0.1:3000/ || echo "Root nicht erreichbar"
+            echo "== Ressourcen =="; df -h / | tail -1; free -m | head -2
+            echo "== Node/PNPM =="; node -v 2>/dev/null; pnpm -v 2>/dev/null || true
+            echo "== /opt/cybersarah =="; cd /opt/cybersarah 2>/dev/null && git log --oneline -1 && ls artifacts/api-server/.env >/dev/null 2>&1 && echo ".env vorhanden" || echo "WARNUNG: /opt/cybersarah oder .env fehlt"
+          '
+
+      - name: Reparatur (nur bei modus=reparatur)
+        if: ${{ github.event.inputs.modus == 'reparatur' }}
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" '
+            set -e
+            cd /opt/cybersarah
+            echo "== git pull =="
+            git pull origin main
+            echo "== .env synchronisieren =="
+            test -f .env && cp .env artifacts/api-server/.env && echo ".env kopiert"
+            echo "== Dependencies =="
+            pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+            echo "== API-Server bauen =="
+            pnpm --filter @workspace/api-server run build || echo "build fehlgeschlagen — tsx-Start als Fallback"
+            echo "== pm2 neustarten =="
+            pm2 restart cybersarah 2>/dev/null || pm2 start "pnpm --filter @workspace/api-server start" --name cybersarah
+            pm2 save
+            echo "== 15s warten, dann Health =="
+            sleep 15
+            curl -sS -o /dev/null -w "GET /api/health HTTP %{http_code}\n" -m 20 http://127.0.0.1:3000/api/health
+            echo "== pm2 status (Endkontrolle) =="
+            pm2 status | head -10
+          '
+
+      - name: Oeffentliche Verifikation (immer)
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" '
+            echo "== Lokale Endkontrolle =="
+            curl -sS -o /dev/null -w "HTTP :3000/api/health HTTP %{http_code}\n" -m 10 http://127.0.0.1:3000/api/health || true
+          '

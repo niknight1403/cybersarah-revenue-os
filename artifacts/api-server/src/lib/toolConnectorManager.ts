@@ -10,7 +10,7 @@ import { logger } from "./logger";
 export interface ToolConnectorDef {
   id: string;
   name: string;
-  kategorie: "social" | "payments" | "email" | "sonstiges";
+  kategorie: "social" | "payments" | "email" | "ki" | "crm" | "dev" | "sonstiges";
   envKeys: string[];
   gesundheit?: () => Promise<boolean>;
   url?: string;
@@ -27,6 +27,54 @@ export interface ConnectorZustand {
   fehlerHintereinander: number;
   notiz: string;
 }
+
+/**
+ * Authentifizierter API-Check: GET mit Bearer-Token (oder Query-Key) gegen den
+ * jeweiligen Endpunkt. Gibt true zurueck, wenn der Dienst mit HTTP 2xx
+ * antwortet — der Connector ist damit nicht nur "konfiguriert", sondern
+ * nachweislich mit gueltigen Credentials verbunden.
+ */
+async function bearerCheck(url: string, token: string | undefined): Promise<boolean> {
+  if (!token) return false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5_000);
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Wie bearerCheck, aber mit ?key= Query-Parameter (Google/Gemini-Stil). */
+async function keyCheck(url: string, token: string | undefined): Promise<boolean> {
+  if (!token) return false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5_000);
+  try {
+    const res = await fetch(`${url}?key=${encodeURIComponent(token)}`, {
+      signal: controller.signal,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const envValue = (keys: string[]): string | undefined => {
+  for (const k of keys) {
+    const v = (process.env[k] ?? "").trim();
+    if (v) return v;
+  }
+  return undefined;
+};
 
 const CONNECTORS: ToolConnectorDef[] = [
   // ── Social (Reichweite) ──────────────────────────────────────────────────
@@ -53,6 +101,39 @@ const CONNECTORS: ToolConnectorDef[] = [
   { id: "resend", name: "Resend E-Mail", kategorie: "email", envKeys: ["RESEND_API_KEY"], url: "https://api.resend.com", kostenpflichtig: false },
   { id: "mailgun", name: "Mailgun", kategorie: "email", envKeys: ["MAILGUN_API_KEY"], url: "https://api.mailgun.net", kostenpflichtig: false },
   { id: "brevo", name: "Brevo (Sendinblue)", kategorie: "email", envKeys: ["BREVO_API_KEY"], url: "https://api.brevo.com/v3", kostenpflichtig: false },
+  // ── KI-Anbieter (Inferenz & Modelle) ───────────────────────────────────
+  {
+    id: "openai", name: "OpenAI API", kategorie: "ki", envKeys: ["OPENAI_API_KEY", "OPENAI_BACKUP_KEY"],
+    kostenpflichtig: true,
+    gesundheit: async () => bearerCheck("https://api.openai.com/v1/models", envValue(["OPENAI_API_KEY", "OPENAI_BACKUP_KEY"])),
+  },
+  {
+    id: "gemini", name: "Google Gemini API", kategorie: "ki", envKeys: ["GEMINI_API_KEY", "GEMINI_BACKUP_KEY"],
+    kostenpflichtig: false,
+    gesundheit: async () => keyCheck("https://generativelanguage.googleapis.com/v1beta/models", envValue(["GEMINI_API_KEY", "GEMINI_BACKUP_KEY"])),
+  },
+  {
+    id: "huggingface", name: "HuggingFace (Modelle & Inference)", kategorie: "ki", envKeys: ["HUGGINGFACE_API_KEY", "HF_TOKEN"],
+    kostenpflichtig: false,
+    gesundheit: async () => bearerCheck("https://huggingface.co/api/whoami-v2", envValue(["HUGGINGFACE_API_KEY", "HF_TOKEN"])),
+  },
+  // ── Dev-/Plattform-Connectoren (Autonomie: Repo- & Release-Verwaltung) ──
+  {
+    id: "github", name: "GitHub API (Repos & Releases)", kategorie: "dev", envKeys: ["GITHUB_TOKEN", "ADMIN_GITHUB_TOKEN"],
+    kostenpflichtig: false,
+    gesundheit: async () => bearerCheck("https://api.github.com/user", envValue(["GITHUB_TOKEN", "ADMIN_GITHUB_TOKEN"])),
+  },
+  {
+    id: "gitlab", name: "GitLab API (Spiegel & Pipelines)", kategorie: "dev", envKeys: ["GITLAB_TOKEN"],
+    kostenpflichtig: false,
+    gesundheit: async () => bearerCheck("https://gitlab.com/api/v4/user", envValue(["GITLAB_TOKEN"])),
+  },
+  // ── CRM (Kundenbeziehungen) ──────────────────────────────────────────────
+  {
+    id: "hubspot", name: "HubSpot CRM", kategorie: "crm", envKeys: ["HUBSPOT_ACCESS_TOKEN"],
+    kostenpflichtig: true,
+    gesundheit: async () => bearerCheck("https://api.hubapi.com/crm/v3/objects/contacts?limit=1", envValue(["HUBSPOT_ACCESS_TOKEN"])),
+  },
 ];
 
 const zustaende = new Map<string, ConnectorZustand>();
@@ -92,7 +173,10 @@ export async function pruefeConnector(id: string): Promise<ConnectorZustand | nu
   }
 
   try {
-    if (def.url) {
+    if (def.gesundheit) {
+      const ok = await def.gesundheit();
+      if (!ok) throw new Error("Authentifizierter Check fehlgeschlagen");
+    } else if (def.url) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 5_000);
       await fetch(def.url, { method: "HEAD", signal: controller.signal });
