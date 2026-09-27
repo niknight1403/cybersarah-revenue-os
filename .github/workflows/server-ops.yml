@@ -147,18 +147,15 @@ jobs:
             free -h
             df -h / | tail -1
             echo "== systemd-pm2-Units =="
-            systemctl list-units --all 2>/dev/null | grep -iE "pm2" | head -5'
-
-            echo "== pm2-cybersarah.service Unit =="
-            systemctl cat pm2-cybersarah.service 2>/dev/null | head -25
-            echo "== pm2 Homes aller User =="
-            for h in /root /home/*; do
-              if [ -f "$h/.pm2/dump.pm2" ]; then echo "Dump in $h/.pm2 (cybersarah-Treffer: $(grep -c cybersarah $h/.pm2/dump.pm2 || true))"; else echo "kein Dump in $h"; fi
-            done
-            echo "== Grund des Reboots (vorheriger Boot, letzte 15 Zeilen) =="
+            systemctl list-units --all 2>/dev/null | grep -iE "pm2" | head -5
+            echo "== pm2 systemd Unit-Dateien =="
+            ls /etc/systemd/system/ | grep -i pm2 || echo "keine pm2-Units in /etc/systemd/system"
+            for u in $(ls /etc/systemd/system/ | grep -iE "^pm2.*\.service$"); do echo "--- $u ---"; cat /etc/systemd/system/$u | grep -vE "^#|^$" | head -15; done
+            echo "== Grund des Reboots (SERVER, vorheriger Boot, letzte 15 Zeilen) =="
             journalctl -b -1 -n 15 --no-pager 2>/dev/null | tail -15
-            echo "== fehlgeschlagene pm2-Units =="
-            systemctl --failed --no-legend 2>/dev/null | grep -i pm2
+            echo "== systemd last (SERVER, letzte 15) =="
+            last -x reboot shutdown 2>/dev/null | head -5'
+
 
       - name: Rogue-Prozess- und DB-URL-Diagnose
         env:
