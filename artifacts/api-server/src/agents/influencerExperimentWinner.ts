@@ -8,9 +8,11 @@ export interface WinnerDecision {
 }
 
 export function selectMeasuredWinner(metrics: VariantMetrics[]): WinnerDecision {
+  const platforms = new Set(metrics.map((item) => item.platform));
+  if (platforms.size > 1) return { winnerId: null, confidence: "insufficient", score: 0, reason: "Plattformübergreifende Metriken dürfen nicht direkt verglichen werden." };
   const eligible = metrics.filter((item) => isSufficientSample(item));
-  if (eligible.length === 0) {
-    return { winnerId: null, confidence: "insufficient", score: 0, reason: "Noch keine Variante hat genügend Impressionen." };
+  if (eligible.length < 2) {
+    return { winnerId: null, confidence: "insufficient", score: 0, reason: "Mindestens zwei vergleichbare Varianten mit genügend Impressionen erforderlich." };
   }
 
   const ranked = eligible
@@ -26,7 +28,7 @@ export function selectMeasuredWinner(metrics: VariantMetrics[]): WinnerDecision 
   const margin = second ? top.score - second.score : top.score;
   return {
     winnerId: top.id,
-    confidence: top.impressions >= 2000 && margin >= 3 ? "strong" : "directional",
+    confidence: top.impressions >= 2000 && second!.impressions >= 2000 && margin >= 3 ? "strong" : "directional",
     score: top.score,
     reason: second ? `Messdaten-Vorsprung: ${Math.round(margin * 100) / 100} Punkte.` : "Einzige ausreichend gemessene Variante.",
   };
