@@ -1,0 +1,33 @@
+name: Deployment Changer CI
+
+on:
+  pull_request:
+    paths:
+      - "artifacts/api-server/src/agents/llmRoutingChangerAgent.ts"
+      - "artifacts/api-server/src/lib/deploymentFallback.ts"
+      - "artifacts/api-server/src/lib/deploymentFallback.test.ts"
+      - "render.yaml"
+      - ".github/workflows/deployment-fallback.yml"
+      - ".github/workflows/deployment-changer-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: API typecheck
+        run: pnpm --filter @workspace/api-server run typecheck
+      - name: Deployment fallback tests
+        run: pnpm --filter @workspace/api-server exec vitest run src/lib/deploymentFallback.test.ts
