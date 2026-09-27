@@ -45,6 +45,11 @@ describe("influencerContentEngine", () => {
     expect(buildHashtags("Natürliche Abend Routine")).toContain("#Wellness");
   });
 
+  it("adds an explicit warning for risky medical wording", () => {
+    const pkg = buildContentEnginePackage({ thema: "Heilt garantiert Beschwerden", plattform: "TikTok" });
+    expect(pkg.complianceNotes[0]).toContain("riskante Health-Claims");
+  });
+
   it("scores engagement distribution deterministically", () => {
     expect(scoreEngagementDistribution({ TikTok: 6, Instagram: 3, YouTube: 1 })).toEqual({
       topPlatform: "TikTok",
