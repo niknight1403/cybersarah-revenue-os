@@ -20,10 +20,10 @@ export function updateLearningState(
   const next: LearningState = {
     preferredHooks: [...state.preferredHooks],
     preferredPlatforms: [...state.preferredPlatforms],
-    observations: state.observations + (winner.winnerId ? 1 : 0),
+    observations: state.observations + (winner.winnerId && winner.confidence === "strong" ? 1 : 0),
   };
 
-  if (winner.winnerId && winner.confidence !== "insufficient") {
+  if (winner.winnerId && winner.confidence === "strong") {
     if (context.hook && !next.preferredHooks.includes(context.hook)) {
       next.preferredHooks.unshift(context.hook);
       next.preferredHooks = next.preferredHooks.slice(0, 5);
