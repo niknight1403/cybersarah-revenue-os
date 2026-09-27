@@ -58,12 +58,14 @@ jobs:
           TOKEN_WERT: ${{ secrets.DEPLOY_TOKEN }}
         run: |
           printf '%s' "$TOKEN_WERT" | ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'read -r NEU; [ -n "$NEU" ] || { echo "Token leer — abbruch"; exit 1; }
-            if grep -q "^DEPLOY_TOKEN=" /opt/cybersarah/.env; then
-              sed -i "s#^DEPLOY_TOKEN=.*#DEPLOY_TOKEN=$NEU#" /opt/cybersarah/.env
-            else
-              printf "\nDEPLOY_TOKEN=%s\n" "$NEU" >> /opt/cybersarah/.env
-            fi
-            echo "DEPLOY_TOKEN in /opt/cybersarah/.env aktualisiert (Laenge: ${#NEU})"'
+            for ENVF in /opt/cybersarah/.env /opt/cybersarah/artifacts/api-server/.env; do
+              if grep -q "^DEPLOY_TOKEN=" "$ENVF"; then
+                sed -i "s#^DEPLOY_TOKEN=.*#DEPLOY_TOKEN=$NEU#" "$ENVF"
+              else
+                printf "\nDEPLOY_TOKEN=%s\n" "$NEU" >> "$ENVF"
+              fi
+            done
+            echo "DEPLOY_TOKEN in /opt/cybersarah/.env UND artifacts/api-server/.env aktualisiert (Laenge: ${#NEU})"'
 
       - name: Token-Verifikation (Längen + echter Endpoint-Test)
         env:
