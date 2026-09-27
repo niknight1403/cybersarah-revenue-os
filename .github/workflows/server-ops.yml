@@ -96,14 +96,29 @@ jobs:
             test -f .env && cp .env artifacts/api-server/.env && echo ".env kopiert"
             echo "== Dependencies =="
             pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+            echo "== pnpm-Store bereinigen (Disk ~95%) =="
+            pnpm store prune 2>/dev/null || true
+            echo "== Workspace-Libs bauen (Voraussetzung fuer api-server-Build) =="
+            pnpm run typecheck:libs
             echo "== API-Server bauen =="
-            pnpm --filter @workspace/api-server run build || echo "build fehlgeschlagen — tsx-Start als Fallback"
+            pnpm --filter @workspace/api-server run build
+            echo "== frisches dist =="
+            ls -la artifacts/api-server/dist/ | head -4
+            echo "== pm2-Prozess-Definition =="
+            pm2 describe cybersarah | grep -E "script|exec|interpreter" | head -8
             echo "== pm2 neustarten =="
             pm2 restart cybersarah 2>/dev/null || pm2 start "pnpm --filter @workspace/api-server start" --name cybersarah
             pm2 save
             echo "== 15s warten, dann Health =="
             sleep 15
-            curl -sS -o /dev/null -w "GET /api/health HTTP %{http_code}\n" -m 20 http://127.0.0.1:3000/api/health
+            echo "== /api/health — muss JSON sein, kein HTML =="
+            HEALTH=$(curl -sS -m 20 http://127.0.0.1:3000/api/health || true)
+            echo "$HEALTH" | head -c 400; echo
+            case "$HEALTH" in
+              "{\"*) echo "Health: JSON-Antwort OK" ;;
+              "<"*|*"doctype"*) echo "::error::API antwortet noch mit HTML (alter Build aktiv?)"; exit 1 ;;
+              *) echo "::warning::Health-Antwort unklar" ;;
+            esac
             echo "== pm2 status (Endkontrolle) =="
             pm2 status | head -10
             echo "== Nginx-Upstream korrigieren (3001 -> 3000, nur cybersarah-Vhost) =="
