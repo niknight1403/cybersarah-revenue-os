@@ -192,11 +192,13 @@ jobs:
             systemctl is-enabled cybersarah-peer.service 2>&1 || true
             echo "== Wer reaktiviert peer? =="
             grep -rln "cybersarah-peer" /etc/systemd/system/ /srv/cybersarah-loop-agent/ /opt/cybersarah-automation/ 2>/dev/null | head -6
-            echo "== DB-Passwort an .env-DATABASE_URL angleichen =="
+            echo "== DB-Passwort an .env-DATABASE_URL angleichen (URL-dekodiert) =="
+            echo "SSH-User: $(id -un)"
             DBURL=$(grep "^DATABASE_URL=" /opt/cybersarah/.env | cut -d= -f2- | tr -d "\r\n")
-            DBPW=$(printf "%s" "$DBURL" | sed -nE "s#^postgres(ql)?://[^:]+:([^@]+)@.*#\2#p")
+            DBPW=$(python3 -c "import urllib.parse as u,sys; s=sys.argv[1]; i=s.find('://'); r=s[i+3:]; at=r.rfind('@'); up=r[:at].split(':',1); print(u.unquote(up[1]) if len(up)>1 else '')" "$DBURL" 2>/dev/null || printf "%s" "$DBURL" | sed -nE "s#^postgres(ql)?://[^:]+:([^@]+)@.*#\2#p")
+            echo "Extrahierte PW-Laenge: ${#DBPW}"
             if [ -n "$DBPW" ]; then
-              if sudo -u postgres psql -v pw="$DBPW" -c "ALTER USER cybersarah WITH PASSWORD :'pw';" >/dev/null 2>&1; then echo "PG-Passwort auf .env-Wert gesetzt"; else echo "ALTER USER fehlgeschlagen"; fi
+              sudo -u postgres psql -v pw="$DBPW" -c "ALTER USER cybersarah WITH PASSWORD :'pw';" 2>&1 | head -3
             else
               echo "Kein Passwort in DATABASE_URL extrahierbar"
             fi
