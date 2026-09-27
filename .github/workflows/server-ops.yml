@@ -122,6 +122,33 @@ jobs:
             echo "spawn-env DEPLOY_TOKEN MD5: $(tr "\0" "\n" < /proc/$PPID3000/environ 2>/dev/null | grep "^DEPLOY_TOKEN=" | cut -d= -f2 | tr -d "\n" | md5sum | cut -d\  -f1)"
             echo "cmdline: $(tr "\0" " " < /proc/$PPID3000/cmdline 2>/dev/null | head -c 200)"'
 
+      - name: Reboot- OOM- und pm2-Dump-Forensik
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'echo "== Uptime / letzter Reboot =="
+            uptime -s 2>/dev/null || true
+            who -b 2>/dev/null || true
+            echo "== Boot-Journal (letzte 3) =="
+            journalctl --list-boots 2>/dev/null | tail -3
+            echo "== pm2-Dump-Zustand =="
+            ls -la ~/.pm2/dump.pm2* 2>/dev/null || echo "kein dump.pm2 im HOME des SSH-Users"
+            for d in ~/.pm2/dump.pm2 /root/.pm2/dump.pm2; do
+              if [ -f "$d" ]; then echo "Dump $d:"; grep -c "cybersarah" "$d" || true; fi
+            done
+            echo "== pm2 resurrect Prozesse =="
+            ps aux | grep -E "pm2 (resurrect|God)" | grep -v grep | head -5
+            echo "== OOM-Kernel-Meldungen (letzte 5) =="
+            dmesg -T 2>/dev/null | grep -iE "oom|out of memory|killed process" | tail -5 || true
+            echo "== journalctl OOM (letzte 5) =="
+            journalctl -k --since "24 hours ago" 2>/dev/null | grep -iE "oom|killed process" | tail -5 || true
+            echo "== Speicher / Disk =="
+            free -h
+            df -h / | tail -1
+            echo "== systemd-pm2-Units =="
+            systemctl list-units --all 2>/dev/null | grep -iE "pm2" | head -5
+
       - name: Rogue-Prozess- und DB-URL-Diagnose
         env:
           SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
@@ -161,7 +188,7 @@ jobs:
             echo "== pm2-Prozess (vollstaendig) =="; pm2 describe cybersarah 2>/dev/null | head -45
             echo "== dist des API-Servers =="; ls -la /opt/cybersarah/artifacts/api-server/dist/ 2>/dev/null | head -5 || echo "kein dist"
             echo "== Env-Endpunkt direkt (Port 3000) =="
-            curl -sS -X POST http://127.0.0.1:3000/api/admin/env -H "X-Deploy-Token: $DEPLOY_TOKEN" -H "Content-Type: application/json" -d '{"env":{}}' -m 10 | head -c 300; echo
+            curl -sS -X POST http://127.0.0.1:3000/api/admin/env -H "X-Deploy-Token: $DEPLOY_TOKEN" -H "Content-Type: application/json" -d "{\"env\":{}}" -m 10 | head -c 300; echo
             echo "== Health direkt (Port 3000) =="; curl -sS http://127.0.0.1:3000/api/health -m 10 | head -c 300; echo
             echo "== Build-Fehler reproduzieren =="; cd /opt/cybersarah && NODE_ENV=development pnpm --filter @workspace/api-server run build 2>&1 | tail -15 || true
             echo "== Alle Node/TSX-Prozesse =="; ps aux | grep -E "node|tsx|pnpm" | grep -v grep | head -15
