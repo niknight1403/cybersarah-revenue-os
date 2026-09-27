@@ -124,6 +124,17 @@ jobs:
                 echo "  $k: laenge=${#v}"
               done
             done
+            echo "== App-Prozess-Forensik (cwd + cmdline) =="
+            PM2PID2=$(pm2 pid cybersarah 2>/dev/null | head -1)
+            echo "cwd des App-Prozesses: $(readlink -f /proc/$PM2PID2/cwd 2>/dev/null)"
+            echo "cmdline: $(cat /proc/$PM2PID2/cmdline 2>/dev/null | tr "\0" " ")"
+            echo "== pm2-Boot-Log (letzte 20 Zeilen, Keys maskiert) =="
+            tail -20 ~/.pm2/logs/cybersarah-out.log 2>/dev/null | sed -E "s/(sk-[a-zA-Z0-9]{4})[a-zA-Z0-9_-]+/\1***/g" | head -20
+            echo "== DEPLOY_TOKEN-Lagen (nur Laengen) =="
+            for f in /opt/cybersarah/.env /opt/cybersarah/artifacts/api-server/.env; do
+              T=$(grep "^DEPLOY_TOKEN=" $f 2>/dev/null | cut -d= -f2- | tr -d "\n")
+              echo "  $f: DEPLOY_TOKEN laenge=${#T}"
+            done
             echo'
 
       - name: Port-3000-Prozess forensik
