@@ -65,7 +65,7 @@ jobs:
             echo "== Ressourcen =="; df -h / | tail -1; free -m | head -2
             echo "== Node/PNPM =="; node -v 2>/dev/null; pnpm -v 2>/dev/null || true
             echo "== /opt/cybersarah =="; cd /opt/cybersarah 2>/dev/null && git log --oneline -1 && ls artifacts/api-server/.env >/dev/null 2>&1 && echo ".env vorhanden" || echo "WARNUNG: /opt/cybersarah oder .env fehlt"
-            echo "== pm2-Prozess =="; pm2 describe cybersarah 2>/dev/null | grep -E "script path|exec cwd|node args|status" || true
+            echo "== pm2-Prozess (vollstaendig) =="; pm2 describe cybersarah 2>/dev/null | head -45
             echo "== dist des API-Servers =="; ls -la /opt/cybersarah/artifacts/api-server/dist/ 2>/dev/null | head -5 || echo "kein dist"
             echo "== Env-Endpunkt direkt (Port 3000) =="
             curl -sS -X POST http://127.0.0.1:3000/api/admin/env -H "X-Deploy-Token: $DEPLOY_TOKEN" -H "Content-Type: application/json" -d '{"env":{}}' -m 10 | head -c 300; echo
@@ -117,11 +117,8 @@ jobs:
             echo "== /api/health — muss JSON sein, kein HTML =="
             HEALTH=$(curl -sS -m 20 http://127.0.0.1:3000/api/health || true)
             echo "$HEALTH" | head -c 400; echo
-            case "$HEALTH" in
-              "{\"*) echo "Health: JSON-Antwort OK" ;;
-              "<"*|*"doctype"*) echo "::error::API antwortet noch mit HTML (alter Build aktiv?)"; exit 1 ;;
-              *) echo "::warning::Health-Antwort unklar" ;;
-            esac
+            if echo "$HEALTH" | head -c 20 | grep -q "<!doctype\|<html"; then echo "::error::API antwortet mit HTML statt JSON"; exit 1; fi
+            echo "Health: keine HTML-Antwort — OK"
             echo "== pm2 status (Endkontrolle) =="
             pm2 status | head -10
             echo "== Nginx-Upstream korrigieren (3001 -> 3000, nur cybersarah-Vhost) =="
