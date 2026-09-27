@@ -7,6 +7,10 @@ on:
     types: [completed]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   sync-env:
     name: Sync secrets to server .env

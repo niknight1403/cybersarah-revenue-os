@@ -115,6 +115,7 @@ const ENV_KEYS = [
   "SIMULATION_MODE",
   "NODE_ENV",
   "DEPLOY_TOKEN",
+  "ADMIN_GITHUB_TOKEN",
   "ALLOWED_ORIGINS",
   "PORT",
 ] as const;
