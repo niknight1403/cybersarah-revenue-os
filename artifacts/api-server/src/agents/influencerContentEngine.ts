@@ -41,6 +41,15 @@ export interface AffiliateAssessment {
   reasons: string[];
 }
 
+export interface CampaignVariant {
+  id: string;
+  platform: HealthContentPlatform;
+  angle: HealthContentAngle;
+  hook: string;
+  readinessScore: number;
+  primaryMetric: "retention" | "saves" | "ctr";
+}
+
 export interface ContentEnginePackage {
   scriptBrief: string;
   imagePrompt: string;
@@ -275,6 +284,38 @@ export function buildContentEnginePackage(brief: InfluencerContentBrief): Conten
     affiliateAssessment: evaluateAffiliateFit(brief),
     sanitizedTopic,
   };
+}
+
+export function buildCampaignVariants(
+  brief: Omit<InfluencerContentBrief, "plattform">,
+  platforms: HealthContentPlatform[] = ["TikTok", "Instagram", "YouTube"],
+): CampaignVariant[] {
+  const angles: HealthContentAngle[] = ["problem_loesung", "mythos_fakt", "routine", "checkliste"];
+  const uniquePlatforms = [...new Set(platforms)];
+  return uniquePlatforms.flatMap((platform, platformIndex) =>
+    angles.slice(0, 2).map((angle, angleIndex) => {
+      const variantBrief: InfluencerContentBrief = { ...brief, plattform: platform, angle };
+      const affiliate = evaluateAffiliateFit(variantBrief);
+      const riskPenalty = containsRiskyHealthClaim(brief.thema) ? 25 : 0;
+      const readinessScore = Math.max(
+        0,
+        Math.min(100, 65 + Math.min(affiliate.score, 20) - riskPenalty + angleIndex * 3),
+      );
+      const primaryMetric = platform === "TikTok" ? "retention" : platform === "Instagram" ? "saves" : "ctr";
+      return {
+        id: `${platform.toLowerCase()}-${angle}-${platformIndex + 1}`,
+        platform,
+        angle,
+        hook: buildHook(variantBrief),
+        readinessScore,
+        primaryMetric,
+      };
+    }),
+  );
+}
+
+export function selectBestReadyVariant(variants: CampaignVariant[]): CampaignVariant | null {
+  return [...variants].sort((a, b) => b.readinessScore - a.readinessScore || a.id.localeCompare(b.id))[0] ?? null;
 }
 
 export function scoreEngagementDistribution(counts: Record<string, number>): {
