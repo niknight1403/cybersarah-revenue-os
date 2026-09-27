@@ -97,6 +97,15 @@ jobs:
             curl -sS -o /dev/null -w "GET /api/health HTTP %{http_code}\n" -m 20 http://127.0.0.1:3000/api/health
             echo "== pm2 status (Endkontrolle) =="
             pm2 status | head -10
+            echo "== Nginx-Upstream korrigieren (3001 -> 3000, nur cybersarah-Vhost) =="
+            for f in /etc/nginx/sites-available/cybersarah /etc/nginx/sites-enabled/cybersarah; do
+              [ -f "$f" ] && sed -i "s#127\.0\.0\.1:3001#127.0.0.1:3000#g" "$f" && echo "angepasst: $f"
+            done
+            nginx -t && systemctl reload nginx && echo "Nginx neu geladen"
+            echo "== via Nginx (HTTPS lokal) =="
+            curl -sSk -o /dev/null -w "HTTPS /api/health HTTP %{http_code}\n" -m 15 https://127.0.0.1/api/health
+            echo "== kaputte export-Zeile aus .bashrc entfernen =="
+            sed -i.bak "/AAAAB3NzaC1yc2E/d" ~/.bashrc 2>/dev/null || true
           '
 
       - name: Oeffentliche Verifikation (immer)
