@@ -61,12 +61,12 @@ router.post("/deploy", async (req: Request, res: Response) => {
     // Restart PM2 process in background
     setTimeout(() => {
       try {
-        execSync("pm2 restart cybersarah --update-env", {
+        execSync("pkill -f 'tsx.*api-server/src/index.ts' || true", {
           cwd: path.join(PROJECT_DIR, "artifacts/api-server"),
-          timeout: 30000,
+          timeout: 10000,
           stdio: "pipe",
         });
-        logger.info("✅ Server restarted after deploy");
+        logger.info("✅ Server-Prozess via pkill neu gestartet (pm2 relauncht frisch)");
       } catch (e) {
         logger.error({ err: e }, "Server restart failed after deploy");
       }
@@ -193,12 +193,12 @@ router.post("/env", (req: Request, res: Response) => {
     if (body?.restart !== false) {
       setTimeout(() => {
         try {
-          execSync("pm2 restart cybersarah --update-env", {
+          execSync("pkill -f 'tsx.*api-server/src/index.ts' || true", {
             cwd: path.join(PROJECT_DIR, "artifacts/api-server"),
-            timeout: 30000,
+            timeout: 10000,
             stdio: "pipe",
           });
-          logger.info("Server nach .env-Sync neu gestartet");
+          logger.info("Server nach .env-Sync via pkill neu gestartet (pm2 relauncht frisch)");
         } catch (e) {
           logger.error({ err: e }, "Restart nach .env-Sync fehlgeschlagen");
         }
