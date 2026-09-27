@@ -34,6 +34,13 @@ export const DEPLOYMENT_PROVIDERS: DeploymentProvider[] = [
   { id: "hetzner", free: false, supportsNodeExpress: true, supportsEuRegion: true, supportsHealthChecks: true, supportsPersistentProcess: true, requiresExternalCredentials: true, notes: ["Technisch geeignet, aber nicht als kostenloser Auto-Fallback auswählbar."] },
 ];
 
+const PROVIDER_PREFERENCE: Record<DeploymentProviderId, number> = {
+  render: 4,
+  koyeb: 3,
+  vercel: 2,
+  hetzner: 1,
+};
+
 function scoreProvider(provider: DeploymentProvider): number {
   let score = 0;
   if (provider.free) score += 50;
@@ -56,7 +63,11 @@ export function selectFreeDeploymentFallback(
   const candidates = providers
     .filter((p) => p.id !== signal.provider)
     .filter((p) => p.free && p.supportsNodeExpress && p.supportsHealthChecks)
-    .sort((a, b) => scoreProvider(b) - scoreProvider(a) || a.id.localeCompare(b.id));
+    .sort((a, b) =>
+      scoreProvider(b) - scoreProvider(a) ||
+      PROVIDER_PREFERENCE[b.id] - PROVIDER_PREFERENCE[a.id] ||
+      a.id.localeCompare(b.id)
+    );
 
   const selectedProvider = looksLikeFailure ? candidates[0]?.id ?? null : null;
 
