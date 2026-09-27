@@ -106,6 +106,21 @@ jobs:
             echo "gesamt=$(grep -oE "\"gesamt\":[0-9]+" /tmp/conn.json | head -1) konfiguriert=$(grep -oE "\"konfiguriert\":[0-9]+" /tmp/conn.json | head -1) aktiv=$(grep -oE "\"aktiv\":[0-9]+" /tmp/conn.json | head -1) inaktiv=$(grep -oE "\"inaktiv\":[0-9]+" /tmp/conn.json | head -1)"
             echo "alle konfigurierten Connector (id/aktiv/notiz):"
             grep -oE "\"id\":\"[a-z0-9_]+\",\"name\":\"[^\"]*\",\"kategorie\":\"[^\"]*\",\"konfiguriert\":(true|false),\"aktiv\":(true|false),[^}]*\"notiz\":\"[^\"]*\"" /tmp/conn.json | sed -E "s/.*\"id\":\"([a-z0-9_]+)\".*\"aktiv\":(true|false),.*\"notiz\":\"([^\"]*)\".*/\1 aktiv=\2 notiz=\3/" | head -30
+            echo "== bearerCheck-Nachbau (node, App-env) =="
+            git -C /opt/cybersarah/cybersarah-revenue-os pull --ff-only origin main 2>&1 | head -2 || true
+            cd /opt/cybersarah/cybersarah-revenue-os
+            set -a; . /opt/cybersarah/artifacts/api-server/.env 2>/dev/null; set +a
+            node scripts/connector-bearer-check.mjs 2>&1 | head -12
+            echo "== env des laufenden App-Prozesses =="
+            PM2PID=$(pm2 pid cybersarah 2>/dev/null | head -1)
+            echo "pm2-pid: $PM2PID"
+            for p in $PM2PID $(pgrep -P $PM2PID 2>/dev/null | head -3); do
+              echo "--- PID $p ($(cat /proc/$p/comm 2>/dev/null)) ---"
+              for k in GITHUB_TOKEN ADMIN_GITHUB_TOKEN OPENAI_API_KEY OPENAI_BACKUP_KEY; do
+                v=$(tr "\0" "\n" < /proc/$p/environ 2>/dev/null | grep "^$k=" | head -1 | cut -d= -f2- | tr -d "\n")
+                echo "  $k: laenge=${#v}"
+              done
+            done
             echo'
 
       - name: Port-3000-Prozess forensik
