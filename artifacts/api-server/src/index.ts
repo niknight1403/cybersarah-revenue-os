@@ -129,6 +129,12 @@ async function validiereAlleServices(): Promise<ServiceStatus[]> {
 async function startServer() {
   const hasDb = !!process.env["DATABASE_URL"];
 
+  // Bind before migrations and agent initialization so the platform can detect
+  // the service even when an optional integration is slow or unavailable.
+  app.listen(port, "0.0.0.0", () => {
+    logger.info({ port }, "✅ CyberSarah Revenue OS Server gestartet");
+  });
+
   // ── Service-Validierung beim Start ──────────────────────────────────────────
   logger.info("╔══════════════════════════════════════════════════════╗");
   logger.info("║     🔑 CyberSarah Revenue OS — Start-Validierung   ║");
@@ -213,7 +219,7 @@ async function startServer() {
   }
 
   // ── Sprint 65: Administrator-Konto autonom sicherstellen ─────────────────
-  try {
+  if (hasDb) try {
     const { stelleAdminBereit } = await import("./lib/adminAccount");
     const admin = await stelleAdminBereit();
     if (admin.erstellt) {
@@ -224,7 +230,7 @@ async function startServer() {
   }
 
   // ── Sprint 65: Live-Problem-Löser-Agent starten (alle 5 Minuten) ─────────
-  try {
+  if (hasDb) try {
     const { starteLiveProblemLoeser } = await import("./agents/liveProblemLoeserAgent");
     starteLiveProblemLoeser(5 * 60 * 1000);
     logger.info("🔧 Live-Problem-Löser-Agent aktiv — überwacht und heilt autonom alle 5 Minuten");
@@ -232,9 +238,6 @@ async function startServer() {
     logger.warn("Live-Problem-Löser konnte nicht gestartet werden: " + (e?.message ?? e));
   }
 
-  app.listen(port, () => {
-    logger.info({ port }, "✅ CyberSarah Revenue OS Server gestartet");
-  });
 }
 
 startServer().catch((err) => {
