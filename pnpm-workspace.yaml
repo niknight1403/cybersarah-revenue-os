@@ -4,13 +4,6 @@ packages:
   - "scripts"
   - "apps/*"
 
-onlyBuiltDependencies:
-  - esbuild
-  - "@esbuild/*"
-
-ignoredBuiltDependencies:
-  - better-sqlite3
-
 auto-install-peers: false
 
 catalog:
@@ -19,3 +12,9 @@ catalog:
   drizzle-orm: ^0.38.2
   tsx: ^4.19.2
   zod: ^3.24.1
+
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+  protobufjs: true
+  realm: true
