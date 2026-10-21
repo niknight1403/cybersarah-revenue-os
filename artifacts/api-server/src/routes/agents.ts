@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import { fuehreAgentManuellAus } from "../agents/orchestrator";
 import { hebeSmartPauseAuf } from "../agents/watchdog";
 import { logger } from "../lib/logger";
+import { costGuardrailMiddleware } from "../middleware/costGuardrail";
 
 const router = Router();
 
@@ -45,7 +46,7 @@ router.get("/agents", async (req, res) => {
 });
 
 router.patch("/agents/:id/status", async (req, res) => {
-  const id = parseInt(req.params.id ?? "0");
+  const id = parseInt(String(req.params.id ?? "0"));
   const { status } = req.body as { status: string };
 
   const erlaubteStatus = ["aktiv", "gestoppt", "fehler", "wartend", "pausiert"];
@@ -75,7 +76,7 @@ router.patch("/agents/:id/status", async (req, res) => {
 
 // POST /agents/:id/reset — Circuit Breaker zurücksetzen (nach Key-Reparatur)
 router.post("/agents/:id/reset", async (req, res) => {
-  const id = parseInt(req.params.id ?? "0");
+  const id = parseInt(String(req.params.id ?? "0"));
 
   const [agent] = await db
     .update(agentsTable)
@@ -105,8 +106,10 @@ router.post("/agents/:id/reset", async (req, res) => {
   });
 });
 
-router.post("/agents/:id/run", async (req, res) => {
-  const id = parseInt(req.params.id ?? "0");
+// SPRING 63: Cost-Guardrail schützt jede Agenten-Execution
+// (403 bei gesperrter Subscription, 429 bei erschöpftem Token-Budget)
+router.post("/agents/:id/run", costGuardrailMiddleware, async (req, res) => {
+  const id = parseInt(String(req.params.id ?? "0"));
   try {
     const ergebnis = await fuehreAgentManuellAus(id);
     res.json({ ...ergebnis, logId: null });

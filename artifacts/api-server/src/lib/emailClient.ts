@@ -17,6 +17,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 import { logger } from "./logger";
+import { pruefeBlacklist, baueOptOutFooter, type BlacklistErgebnis } from "./emailCompliance";
 
 // ─── Typen ───────────────────────────────────────────────────────────────────
 
@@ -86,13 +87,78 @@ async function getNodemailerTransporter(): Promise<any> {
   return nodemailerTransporter;
 }
 
+// ─── SPRING 63: Compliance-Prüfung + Footer-Anhang ─────────────────────────────
+
+interface ComplianceErgebnis {
+  blockiert: boolean;
+  ergebnis?: BlacklistErgebnis;
+}
+
+/**
+ * Prüft ALLE Empfänger gegen die Blacklist und hängt an jede ausgehende
+ * B2B-Outreach-E-Mail automatisch den dynamischen Opt-out-Footer an.
+ * Transaktions-Mails (Bestellbestätigungen etc.) erhalten den Footer nicht.
+ */
+async function pruefeUndErweitereEmail(
+  options: EmailOptions,
+  empfaenger: string[],
+): Promise<ComplianceErgebnis> {
+  try {
+    for (const adresse of empfaenger) {
+      const pruefung = await pruefeBlacklist(adresse);
+      if (pruefung.blockiert) {
+        return { blockiert: true, ergebnis: pruefung };
+      }
+    }
+
+    // Opt-out-Footer nur an Outreach-Mails (nicht an Transaktions-Mails)
+    const istOutreach = options.tags?.kategorie !== "transaktional";
+    if (istOutreach) {
+      const hauptEmpfaenger = empfaenger[0] ?? "";
+      const footer = baueOptOutFooter(hauptEmpfaenger, options.tags?.abmeldelink);
+      if (options.html && !options.html.includes("cybersarah-optout-footer")) {
+        options.html = `${options.html}<div class="cybersarah-optout-footer" style="font-size:11px;color:#888;margin-top:24px">${footer.replace(/\n/g, "<br/>")}</div>`;
+      }
+      if (options.text && !options.text.includes("cybersarah-optout-footer")) {
+        options.text = `${options.text}${footer}`;
+      }
+      if (options.html && !options.text) {
+        options.text = footer;
+      }
+    }
+    return { blockiert: false };
+  } catch (err) {
+    // Blacklist-DB offline → Versand NICHT komplett blockieren (Watchdog loggt),
+    // aber Footer trotzdem anfügen (Compliance-Pflicht).
+    logger.warn({ err }, "⚠️ Blacklist-Prüfung fehlgeschlagen — Opt-out-Footer dennoch angehängt");
+    return { blockiert: false };
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SEND: Zentrale Versand-Funktion
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   const from = options.from ?? DEFAULT_FROM;
-  const to = Array.isArray(options.to) ? options.to.join(", ") : options.to;
+  const empfaengerListe = Array.isArray(options.to) ? options.to : [options.to];
+  const to = empfaengerListe.join(", ");
+
+  // ── SPRING 63: DSGVO-Compliance-Guardrails (VOR jedem Versand) ────────────
+  // 1. Blacklist-Prüfung: Empfänger zwingend gegen globale blacklists-Tabelle
+  // 2. Opt-out-Footer: dynamischer Abmeldelink an jede Outreach-Mail
+  const compliance = await pruefeUndErweitereEmail(options, empfaengerListe);
+  if (compliance.blockiert) {
+    logger.info(
+      { to, blockiertDurch: compliance.ergebnis?.wert },
+      `🚫 E-Mail-Versand BLOCKIERT — Empfänger steht auf der Blacklist (${compliance.ergebnis?.typ})`
+    );
+    return {
+      success: false,
+      provider: "compliance-guard",
+      error: `Empfänger auf Blacklist (${compliance.ergebnis?.typ}: ${compliance.ergebnis?.wert})`,
+    };
+  }
 
   try {
     switch (EMAIL_PROVIDER) {

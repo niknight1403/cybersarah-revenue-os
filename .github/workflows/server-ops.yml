@@ -1,0 +1,431 @@
+# CyberSarah Revenue OS — Server-Operationen via SSH
+#
+# Der Hetzner-VPS (167.233.196.20, /opt/cybersarah, pm2-Prozess "cybersarah")
+# laeuft hinter einem Nginx-Reverse-Proxy. Wenn das Backend (Port 3000) down
+# ist, antwortet der Proxy mit 502 — der API-Deploy und Env-Sync koennen dann
+# nichts mehr ausrichten. Dieser Workflow nutzt die HETZNER_SSH_* Secrets und
+# greift direkt per SSH zu:
+#
+#   modus=diagnose  — Nur lesen: pm2-Status, Logs, Ressourcen, Health-Check
+#   modus=reparatur — Diagnose + Fix: git pull, .env-Sync, pnpm install,
+#                     Build, pm2-Restart, Health-Verifikation
+name: Server-Ops (SSH)
+
+on:
+  workflow_dispatch:
+    inputs:
+      modus:
+        description: "diagnose oder reparatur"
+        required: true
+        default: "diagnose"
+        type: choice
+        options: [diagnose, reparatur]
+
+jobs:
+  server-ops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: SSH-Key einrichten
+        env:
+          SSH_KEY_B64: ${{ secrets.HETZNER_SSH_PRIVATE_KEY_B64 }}
+          KNOWN_HOSTS: ${{ secrets.HETZNER_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "$SSH_KEY_B64" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          if [ -n "$KNOWN_HOSTS" ]; then
+            echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          fi
+
+      - name: Modus validieren
+        env:
+          MODUS: ${{ github.event.inputs.modus }}
+        run: |
+          case "$MODUS" in
+            diagnose|reparatur) echo "Modus: $MODUS" ;;
+            *) echo "::error::Unbekannter Modus: $MODUS"; exit 1 ;;
+          esac
+
+      - name: DEPLOY_TOKEN auf Server angleichen (nur Reparatur)
+        if: github.event.inputs.modus == 'reparatur'
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+          TOKEN_WERT: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          printf '%s' "$TOKEN_WERT" | ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'read -r NEU; [ -n "$NEU" ] || { echo "Token leer — abbruch"; exit 1; }
+            for ENVF in /opt/cybersarah/.env /opt/cybersarah/artifacts/api-server/.env; do
+              if grep -q "^DEPLOY_TOKEN=" "$ENVF"; then
+                sed -i "s#^DEPLOY_TOKEN=.*#DEPLOY_TOKEN=$NEU#" "$ENVF"
+              else
+                printf "\nDEPLOY_TOKEN=%s\n" "$NEU" >> "$ENVF"
+              fi
+            done
+            echo "DEPLOY_TOKEN in /opt/cybersarah/.env UND artifacts/api-server/.env aktualisiert (Laenge: ${#NEU})"'
+
+      - name: Token-Verifikation (Längen + echter Endpoint-Test)
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          LOKAL=$(printf '%s' "$DEPLOY_TOKEN" | wc -c)
+          echo "Runner-Secret DEPLOY_TOKEN Laenge: $LOKAL"
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'echo "root .env Token-Laenge: $(grep "^DEPLOY_TOKEN=" /opt/cybersarah/.env | cut -d= -f2 | tr -d "\n" | wc -c)"; echo "api .env Token-Laenge: $(grep "^DEPLOY_TOKEN=" /opt/cybersarah/artifacts/api-server/.env 2>/dev/null | cut -d= -f2 | tr -d "\n" | wc -c)"; echo "pm2-Env DEPLOY_TOKEN: $(pm2 env cybersarah 2>/dev/null | grep -c DEPLOY_TOKEN)"'
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'echo "== .env-Uebersicht =="; ls -la /opt/cybersarah/.env* /opt/cybersarah/artifacts/api-server/.env* 2>/dev/null | head -10; echo "root .env Keys:"; grep -oE "^[A-Z_0-9]+" /opt/cybersarah/.env 2>/dev/null | sort | tr "\n" " "; echo; echo "api .env Keys:"; grep -oE "^[A-Z_0-9]+" /opt/cybersarah/artifacts/api-server/.env 2>/dev/null | sort | tr "\n" " "; echo; echo "== Postgres =="; systemctl is-active postgresql 2>/dev/null; sudo -u postgres psql -lqt 2>/dev/null | cut -d"|" -f1 | tr -s " " | grep -v "^$" | head -8; echo "== DATABASE_URL-Quellen =="; grep -rl "DATABASE_URL" /opt/cybersarah --include="*.env*" --include="*.bak*" --include="*.example" --include="*.env" 2>/dev/null | head -6'
+          echo "Runner-Secret MD5: $(printf '%s' "$DEPLOY_TOKEN" | md5sum | cut -d' ' -f1)"
+          CODE=$(curl -sk -o /tmp/tok_test -w '%{http_code}' -m 15 -H "X-Deploy-Token: $DEPLOY_TOKEN" "https://$SSH_HOST/api/admin/env")
+          echo "Env-Endpoint (GET, mit echtem Token): HTTP $CODE"
+          head -c 250 /tmp/tok_test; echo
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'TOK=$(grep "^DEPLOY_TOKEN=" /opt/cybersarah/artifacts/api-server/.env | cut -d= -f2 | tr -d "\n")
+            echo "api .env Token MD5: $(printf "%s" "$TOK" | md5sum | cut -d\  -f1)"
+            echo "Env-Endpoint lokal mit .env-Token:"
+            curl -s -m 10 -X POST -H "X-Deploy-Token: $TOK" -H "Content-Type: application/json" -d "{}" -w "\nHTTP %{http_code}\n" http://127.0.0.1:3000/api/admin/env | head -c 400' 
+
+      - name: Connector-Verifikation (GitHub live)
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'TOK=$(grep "^ADMIN_GITHUB_TOKEN=" /opt/cybersarah/artifacts/api-server/.env | cut -d= -f2 | tr -d "\n")
+            if [ -z "$TOK" ]; then echo "GitHub-Connector: KEIN TOKEN in api .env"; exit 0; fi
+            echo "GitHub-Connector: Token in api .env (Laenge ${#TOK})"
+            APP_TOK=$(tr "\0" "\n" < /proc/$(ss -tlnp 2>/dev/null | grep ":3000" | grep -oE "pid=[0-9]+" | head -1 | cut -d= -f2)/environ 2>/dev/null | grep "^ADMIN_GITHUB_TOKEN=" | cut -d= -f2)
+            if [ -n "$APP_TOK" ]; then echo "App-Prozess: Token geladen (Laenge ${#APP_TOK})"; else echo "App-Prozess: Token NICHT im Prozess-Env (dotenv laedt zur Laufzeit)"; fi
+            RESP=$(curl -s -m 15 -H "Authorization: Bearer $TOK" -H "Accept: application/vnd.github+json" https://api.github.com/user)
+            LOGIN=$(echo "$RESP" | grep -oE "\"login\": ?\"[^\"]+\"" | head -1)
+            if [ -n "$LOGIN" ]; then echo "api.github.com/user: OK $LOGIN"; else echo "api.github.com/user: FEHLER $(echo "$RESP" | head -c 200)"; fi
+            curl -s -m 15 -o /dev/null -D /tmp/gh_hdr -H "Authorization: Bearer $TOK" https://api.github.com/user
+            grep -iE "^(x-ratelimit-limit|x-oauth-scopes|x-ratelimit-remaining)" /tmp/gh_hdr | tr -d "\r"
+            echo "== Connector-Status-API =="
+            DTOK=$(grep "^DEPLOY_TOKEN=" /opt/cybersarah/artifacts/api-server/.env | cut -d= -f2 | tr -d "\n")
+            curl -s -m 30 -H "X-Deploy-Token: $DTOK" http://127.0.0.1:3000/api/admin/connectors -o /tmp/conn.json -w "HTTP %{http_code}\n"
+            grep -oE "\"success\":(true|false)" /tmp/conn.json | head -1
+            echo "gesamt=$(grep -oE "\"gesamt\":[0-9]+" /tmp/conn.json | head -1) konfiguriert=$(grep -oE "\"konfiguriert\":[0-9]+" /tmp/conn.json | head -1) aktiv=$(grep -oE "\"aktiv\":[0-9]+" /tmp/conn.json | head -1) inaktiv=$(grep -oE "\"inaktiv\":[0-9]+" /tmp/conn.json | head -1)"
+            echo "alle konfigurierten Connector (id/aktiv/notiz):"
+            grep -oE "\"id\":\"[a-z0-9_]+\",\"name\":\"[^\"]*\",\"kategorie\":\"[^\"]*\",\"konfiguriert\":(true|false),\"aktiv\":(true|false),[^}]*\"notiz\":\"[^\"]*\"" /tmp/conn.json | sed -E "s/.*\"id\":\"([a-z0-9_]+)\".*\"aktiv\":(true|false),.*\"notiz\":\"([^\"]*)\".*/\1 aktiv=\2 notiz=\3/" | head -30
+            echo "== bearerCheck-Nachbau (node, App-env) =="
+            git -C /opt/cybersarah/cybersarah-revenue-os fetch origin main 2>&1 | head -2 || true
+            git -C /opt/cybersarah/cybersarah-revenue-os show origin/main:scripts/connector-bearer-check.mjs > /tmp/cbc.mjs 2>/dev/null || true
+            cd /opt/cybersarah/cybersarah-revenue-os
+            set -a; . /opt/cybersarah/artifacts/api-server/.env 2>/dev/null; set +a
+            node /tmp/cbc.mjs 2>&1 | head -12
+            echo "== env des laufenden App-Prozesses =="
+            PM2PID=$(pm2 pid cybersarah 2>/dev/null | head -1)
+            echo "pm2-pid: $PM2PID"
+            for p in $PM2PID $(pgrep -P $PM2PID 2>/dev/null | head -3); do
+              echo "--- PID $p ($(cat /proc/$p/comm 2>/dev/null)) ---"
+              for k in GITHUB_TOKEN ADMIN_GITHUB_TOKEN OPENAI_API_KEY OPENAI_BACKUP_KEY; do
+                v=$(tr "\0" "\n" < /proc/$p/environ 2>/dev/null | grep "^$k=" | head -1 | cut -d= -f2- | tr -d "\n")
+                echo "  $k: laenge=${#v}"
+              done
+            done
+            echo "== App-Prozess-Forensik (cwd + cmdline) =="
+            PM2PID2=$(pm2 pid cybersarah 2>/dev/null | head -1)
+            echo "cwd des App-Prozesses: $(readlink -f /proc/$PM2PID2/cwd 2>/dev/null)"
+            echo "cmdline: $(cat /proc/$PM2PID2/cmdline 2>/dev/null | tr "\0" " ")"
+            echo "== pm2-Boot-Log (letzte 20 Zeilen, Keys maskiert) =="
+            tail -20 ~/.pm2/logs/cybersarah-out.log 2>/dev/null | sed -E "s/(sk-[a-zA-Z0-9]{4})[a-zA-Z0-9_-]+/\1***/g" | head -20
+            echo "== dotenv-Parse-Test (node mit api-.env, wie die App) =="
+            git -C /opt/cybersarah/cybersarah-revenue-os show origin/main:scripts/env-parse-check.cjs > /opt/cybersarah/artifacts/api-server/.diagnose-env-check.cjs 2>/dev/null || true
+            cd /opt/cybersarah/artifacts/api-server
+            node .diagnose-env-check.cjs 2>&1 | head -8
+            rm -f .diagnose-env-check.cjs
+            echo "== pm2-Prozesskonfig (cwd) =="
+            pm2 describe cybersarah 2>/dev/null | grep -i "cwd\|exec cwd\|script path" | head -4
+            echo "== Port-3000-Halter + PM2-Daemon-Env =="
+            ss -tlnp 2>/dev/null | grep ":3000" | head -2
+            DPID=$(pgrep -f "God Daemon" | head -1)
+            echo "PM2-Daemon: pid=$DPID start=$(ps -o lstart= -p "$DPID" 2>/dev/null)"
+            if [ -n "$DPID" ]; then
+              tr "\0" "\n" < /proc/$DPID/environ 2>/dev/null | grep -E "^(GITHUB_TOKEN|ADMIN_GITHUB_TOKEN|STRIPE_SECRET_KEY|DATABASE_URL|DEPLOY_TOKEN|OPENAI_API_KEY)=" | sed -E "s/=.*/=gesetzt/" | sort
+            fi
+            echo "== DB- und Stripe-Test je .env-Datei =="
+            for f in /opt/cybersarah/.env /opt/cybersarah/artifacts/api-server/.env; do
+              echo "--- $f ---"
+              U=$(grep "^DATABASE_URL=" "$f" 2>/dev/null | head -1 | cut -d= -f2-)
+              S=$(grep "^STRIPE_SECRET_KEY=" "$f" 2>/dev/null | head -1 | cut -d= -f2-)
+              if [ -n "$U" ]; then psql "$U" -t -c "select 'DB ok'" 2>&1 | head -1; else echo "DATABASE_URL fehlt"; fi
+              if [ -n "$S" ]; then echo "Stripe HTTP: $(curl -s -o /dev/null -w "%{http_code}" -m 10 https://api.stripe.com/v1/balance -u "$S:")"; else echo "STRIPE_SECRET_KEY fehlt"; fi
+            done
+            echo "== .env-Lagen-Vergleich (laenge + letzte 4 Zeichen) =="
+            for f in /opt/cybersarah/.env /opt/cybersarah/artifacts/api-server/.env; do
+              echo "--- $f ---"
+              for k in DATABASE_URL STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET DEPLOY_TOKEN TELEGRAM_BOT_TOKEN RESEND_API_KEY GEMINI_API_KEY DIGISTORE24_API_KEY OPENAI_API_KEY OPENAI_BACKUP_KEY ADMIN_GITHUB_TOKEN GITHUB_TOKEN; do
+                v=$(grep "^$k=" "$f" 2>/dev/null | head -1 | cut -d= -f2- | tr -d "\n")
+                if [ -n "$v" ]; then echo "  $k: laenge=${#v} endet=...${v: -4}"; else echo "  $k: FEHLT"; fi
+              done
+            done
+            echo'
+
+      - name: Port-3000-Prozess forensik
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'PPID3000=$(ss -tlnp 2>/dev/null | grep ":3000" | grep -oE "pid=[0-9]+" | head -1 | cut -d= -f2)
+            echo "Port-3000-PID: $PPID3000"
+            [ -n "$PPID3000" ] || exit 0
+            echo "cwd: $(readlink /proc/$PPID3000/cwd 2>/dev/null)"
+            ps -o pid,ppid,user,lstart --no-headers -p $PPID3000 2>/dev/null
+            echo "DEPLOY_TOKEN in spawn-env: $(tr "\0" "\n" < /proc/$PPID3000/environ 2>/dev/null | grep -c "^DEPLOY_TOKEN=")"
+            echo "spawn-env DEPLOY_TOKEN MD5: $(tr "\0" "\n" < /proc/$PPID3000/environ 2>/dev/null | grep "^DEPLOY_TOKEN=" | cut -d= -f2 | tr -d "\n" | md5sum | cut -d\  -f1)"
+            echo "cmdline: $(tr "\0" " " < /proc/$PPID3000/cmdline 2>/dev/null | head -c 200)"'
+
+      - name: Reboot- OOM- und pm2-Dump-Forensik
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'echo "== Uptime / letzter Reboot =="
+            uptime -s 2>/dev/null || true
+            who -b 2>/dev/null || true
+            echo "== Boot-Journal (letzte 3) =="
+            journalctl --list-boots 2>/dev/null | tail -3
+            echo "== pm2-Dump-Zustand =="
+            ls -la ~/.pm2/dump.pm2* 2>/dev/null || echo "kein dump.pm2 im HOME des SSH-Users"
+            for d in ~/.pm2/dump.pm2 /root/.pm2/dump.pm2; do
+              if [ -f "$d" ]; then echo "Dump $d:"; grep -c "cybersarah" "$d" || true; fi
+            done
+            echo "== pm2 resurrect Prozesse =="
+            ps aux | grep -E "pm2 (resurrect|God)" | grep -v grep | head -5
+            echo "== OOM-Kernel-Meldungen (letzte 5) =="
+            dmesg -T 2>/dev/null | grep -iE "oom|out of memory|killed process" | tail -5 || true
+            echo "== journalctl OOM (letzte 5) =="
+            journalctl -k --since "24 hours ago" 2>/dev/null | grep -iE "oom|killed process" | tail -5 || true
+            echo "== Speicher / Disk =="
+            free -h
+            df -h / | tail -1
+            echo "== systemd-pm2-Units =="
+            systemctl list-units --all 2>/dev/null | grep -iE "pm2" | head -5
+            echo "== pm2 systemd Unit-Dateien =="
+            ls /etc/systemd/system/ | grep -i pm2 || echo "keine pm2-Units in /etc/systemd/system"
+            for u in $(ls /etc/systemd/system/ | grep -iE "^pm2.*\.service$"); do echo "--- $u ---"; cat /etc/systemd/system/$u | grep -vE "^#|^$" | head -15; done
+            echo "== Grund des Reboots (SERVER, vorheriger Boot, letzte 15 Zeilen) =="
+            journalctl -b -1 -n 15 --no-pager 2>/dev/null | tail -15
+            echo "== systemd last (SERVER, letzte 15) =="
+            last -x reboot shutdown 2>/dev/null | head -5'
+
+
+      - name: Rogue-Prozess- und DB-URL-Diagnose
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" 'echo "== Rogue dist/index.js Prozesse =="
+            for pr in $(pgrep -f "node dist/index[.]js" 2>/dev/null); do echo "PID $pr: cgroup=$(cat /proc/$pr/cgroup 2>/dev/null | head -1) cwd=$(readlink /proc/$pr/cwd 2>/dev/null) ppid=$(ps -o ppid= -p $pr)"; done
+            echo "== Wer referenziert die verschachtelte Kopie? =="
+            grep -l "cybersarah-revenue-os" /srv/cybersarah-loop-agent/*.mjs 2>/dev/null | head -3
+            grep -n "dist/index" /srv/cybersarah-loop-agent/agent.mjs 2>/dev/null | head -5 || true
+            echo "== crontabs =="
+            crontab -l 2>/dev/null | grep -iE "dist|cybersarah-revenue|node" | head -5
+            crontab -l -u cybersarah 2>/dev/null | grep -iE "dist|node" | head -5 || true
+            ls /etc/cron.d/ 2>/dev/null | head -10
+            echo "== systemd timer =="; systemctl list-timers --all --no-pager 2>/dev/null | grep -i cyber | head -5 || true
+            echo "== .env.backup DATABASE_URL =="
+            grep "^DATABASE_URL=" /opt/cybersarah/.env.backup 2>/dev/null | cut -d= -f2 | tr -d "\n" | wc -c
+            DBURL=$(grep "^DATABASE_URL=" /opt/cybersarah/.env.backup 2>/dev/null | cut -d= -f2 | tr -d "\n")
+            [ -n "$DBURL" ] && PGPASSWORD=$(echo "$DBURL" | sed -nE "s#.*:([^@]+)@[^:]+.*#\1#p") psql "host=127.0.0.1 dbname=cybersarah user=cybersarah" -tAc "select 1" 2>&1 | head -2 || true
+            echo "== pm2 status =="; pm2 jlist 2>/dev/null | head -c 600; echo'
+
+      - name: Diagnose (immer)
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" '
+            echo "== pm2 status =="; pm2 status 2>&1 | head -15
+            echo "== pm2 logs cybersarah (letzte 30 Zeilen) =="; pm2 logs cybersarah --lines 30 --nostream 2>&1 | tail -35
+            echo "== lokale Health-Checks =="
+            curl -sS -o /dev/null -w "GET /api/health HTTP %{http_code}\n" -m 10 http://127.0.0.1:3000/api/health || echo "Backend auf 3000 nicht erreichbar"
+            curl -sS -o /dev/null -w "GET / HTTP %{http_code}\n" -m 10 http://127.0.0.1:3000/ || echo "Root nicht erreichbar"
+            echo "== Ressourcen =="; df -h / | tail -1; free -m | head -2
+            echo "== Node/PNPM =="; node -v 2>/dev/null; pnpm -v 2>/dev/null || true
+            echo "== /opt/cybersarah =="; cd /opt/cybersarah 2>/dev/null && git log --oneline -1 && ls artifacts/api-server/.env >/dev/null 2>&1 && echo ".env vorhanden" || echo "WARNUNG: /opt/cybersarah oder .env fehlt"
+            echo "== pm2-Prozess (vollstaendig) =="; pm2 describe cybersarah 2>/dev/null | head -45
+            echo "== dist des API-Servers =="; ls -la /opt/cybersarah/artifacts/api-server/dist/ 2>/dev/null | head -5 || echo "kein dist"
+            echo "== Env-Endpunkt direkt (Port 3000) =="
+            curl -sS -X POST http://127.0.0.1:3000/api/admin/env -H "X-Deploy-Token: $DEPLOY_TOKEN" -H "Content-Type: application/json" -d "{\"env\":{}}" -m 10 | head -c 300; echo
+            echo "== Health direkt (Port 3000) =="; curl -sS http://127.0.0.1:3000/api/health -m 10 | head -c 300; echo
+            echo "== Build-Fehler reproduzieren =="; cd /opt/cybersarah && NODE_ENV=development pnpm --filter @workspace/api-server run build 2>&1 | tail -15 || true
+            echo "== Alle Node/TSX-Prozesse =="; ps aux | grep -E "node|tsx|pnpm" | grep -v grep | head -15
+            echo "== systemd-Einheiten (cyber) =="; systemctl list-units --all 2>/dev/null | grep -i cyber | head -5 || true
+            echo "== Unit cybersarah-automation =="; systemctl cat cybersarah-automation.service 2>/dev/null | head -25 || true
+            echo "== Alle Cyber-Units =="; ls /etc/systemd/system/ | grep -i cyber | head -15 || true
+            echo "== cgroup des dist-Prozesses =="; for pr in $(pgrep -f "node dist/index[.]js" 2>/dev/null); do cat /proc/$pr/cgroup 2>/dev/null | head -2; ps -o pid,ppid,user,lstart -p $pr --no-headers; done || true
+            echo "== cgroup des pnpm-start =="; for pr in $(pgrep -f "node /usr/bin/pnpm start" 2>/dev/null); do cat /proc/$pr/cgroup 2>/dev/null | head -2; done || true
+            echo "== Unit-Status =="; systemctl status cybersarah-automation.service --no-pager 2>/dev/null | head -12 || true
+            echo "== Listener =="; ss -tlnp | grep -E ":(3000|443|80)" || true
+            echo "== Nginx-Vollconfig (gefiltert) =="; nginx -T 2>/dev/null | grep -nE "server_name|listen |proxy_pass|server \{|# configuration file" | head -40
+            echo "== sites-enabled =="; ls -la /etc/nginx/sites-enabled/ 2>/dev/null || true
+            echo "== Nginx-Upstream =="; grep -rE "proxy_pass|listen" /etc/nginx/sites-enabled/ /etc/nginx/conf.d/ 2>/dev/null | head -20
+            echo "== Nginx-Status =="; nginx -t 2>&1 | tail -2; systemctl is-active nginx
+            echo "== via Nginx lokal =="; curl -sSk -o /dev/null -w "HTTPS /api/health HTTP %{http_code}" -m 10 https://127.0.0.1/api/health || true
+          '
+
+      - name: Reparatur (nur bei modus=reparatur)
+        if: ${{ github.event.inputs.modus == 'reparatur' }}
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" '
+            set -e
+            cd /opt/cybersarah
+            echo "== Code auf origin/main hart setzen =="
+            git fetch origin main
+            git reset --hard origin/main
+            git log --oneline -1
+            echo "== .env synchronisieren =="
+            test -f .env && cp .env artifacts/api-server/.env && echo ".env kopiert"
+            echo "== Dependencies (devDeps inklusive — NODE_ENV muss fuer den Build development sein) =="
+            echo "== Disk vorher =="; df -h / | tail -1
+            CI=true NODE_ENV=development pnpm install --frozen-lockfile 2>&1 | tail -4 || CI=true NODE_ENV=development pnpm install 2>&1 | tail -4
+            echo "== Disk nachher =="; df -h / | tail -1
+            echo "== pnpm-Store bereinigen (Disk ~95%) =="
+            pnpm store prune 2>/dev/null || true
+            echo "== Workspace-Libs bauen (Voraussetzung fuer api-server-Build) =="
+            pnpm run typecheck:libs
+            echo "== API-Server bauen =="
+            pnpm --filter @workspace/api-server run build
+            echo "== frisches dist =="
+            ls -la artifacts/api-server/dist/ | head -4
+            echo "== pm2-Prozess-Definition =="
+            pm2 describe cybersarah | grep -E "script|exec|interpreter" | head -8
+            export NODE_ENV=production
+            echo "== systemd cybersarah-peer MASKIEREN (Healthcheck-Timer reaktiviert ihn immer wieder) =="
+            systemctl stop cybersarah-peer.service 2>/dev/null || true
+            systemctl disable cybersarah-peer.service 2>/dev/null || true
+            if [ -f /etc/systemd/system/cybersarah-peer.service ] && [ ! -L /etc/systemd/system/cybersarah-peer.service ]; then
+              mv /etc/systemd/system/cybersarah-peer.service /etc/systemd/system/cybersarah-peer.service.unit-bak-20260927
+              echo "Unit-Datei verschoben (systemctl mask verweigert bei echten Dateien)"
+            fi
+            [ -d /etc/systemd/system/cybersarah-peer.service.d ] && mv /etc/systemd/system/cybersarah-peer.service.d /etc/systemd/system/cybersarah-peer.service.d-bak-20260927
+            systemctl daemon-reload
+            systemctl mask cybersarah-peer.service 2>&1 | head -2 || true
+            echo "is-enabled jetzt: $(systemctl is-enabled cybersarah-peer.service 2>&1 || true)"
+            systemctl start cybersarah-peer.service 2>&1 | head -2 || true
+            echo "== Wer reaktiviert peer? =="
+            grep -rln "cybersarah-peer" /etc/systemd/system/ /srv/cybersarah-loop-agent/ /opt/cybersarah-automation/ 2>/dev/null | head -6
+            echo "== DB-Passwort an .env-DATABASE_URL angleichen (URL-dekodiert) =="
+            echo "SSH-User: $(id -un)"
+            DBURL=$(grep "^DATABASE_URL=" /opt/cybersarah/.env | cut -d= -f2- | tr -d "\r\n")
+            DBPW=$(python3 -c "import urllib.parse as u,sys; s=sys.argv[1]; i=s.find('://'); r=s[i+3:]; at=r.rfind('@'); up=r[:at].split(':',1); print(u.unquote(up[1]) if len(up)>1 else '')" "$DBURL" 2>/dev/null || printf "%s" "$DBURL" | sed -nE "s#^postgres(ql)?://[^:]+:([^@]+)@.*#\2#p")
+            echo "Extrahierte PW-Laenge: ${#DBPW}"
+            if [ -n "$DBPW" ]; then
+              sudo -u postgres psql -c "ALTER USER cybersarah WITH PASSWORD \$\$${DBPW}\$\$;" 2>&1 | head -3
+            else
+              echo "Kein Passwort in DATABASE_URL extrahierbar"
+            fi
+            psql "$DBURL" -tAc "SELECT 1" >/dev/null 2>&1 && echo "DB-URL aus .env funktioniert (select 1 ok)" || echo "WARNUNG: DB-URL aus .env funktioniert NICHT"
+            echo "== Verwaiste Alt-Prozesse auf Port 3000 beenden =="
+            pkill -f "t[s]x artifacts/api-server" 2>/dev/null || true
+            pkill -f "api-server/dist/index[.]mjs" 2>/dev/null || true
+            fuser -k 3000/tcp 2>/dev/null || true
+            sleep 3
+            ss -tlnp | grep ":3000" || echo "Port 3000 frei"
+            echo "== pm2 NEU STARTEN (delete + start) — killt den veralteten Env-Cache mit altem DEPLOY_TOKEN =="
+            pm2 delete cybersarah 2>/dev/null || true
+            cd /opt/cybersarah
+            env -i HOME=$HOME PATH="$PATH" USER=$(id -un) LOGNAME=$(id -un) SHELL=/bin/bash TERM=xterm NODE_ENV=production pm2 start bash --name cybersarah --cwd /opt/cybersarah/artifacts/api-server -- -c "pnpm --filter @workspace/api-server start" || pm2 start "pnpm --filter @workspace/api-server start" --name cybersarah --cwd /opt/cybersarah/artifacts/api-server
+            pm2 save
+            echo "== Boot-Resilienz: pm2 resurrect konsolidieren =="
+            if [ -f /etc/systemd/system/pm2-cybersarah.service ]; then
+              systemctl stop pm2-cybersarah.service 2>/dev/null || true
+              systemctl disable pm2-cybersarah.service 2>&1 | head -2 || true
+              mv /etc/systemd/system/pm2-cybersarah.service /etc/systemd/system/pm2-cybersarah.service.bak-$(date +%Y%m%d%H%M)
+              echo "Legacy-Unit (PM2_HOME=/srv, Rogue-Quelle) deaktiviert und weggesichert"
+            else
+              echo "Legacy-Unit bereits weg"
+            fi
+            PM2BIN=$(command -v pm2 || echo /usr/lib/node_modules/pm2/bin/pm2)
+            PnpmDIR=$(dirname "$(command -v pnpm 2>/dev/null || echo /usr/local/bin/pnpm)")
+            PMU=""
+            for f in /etc/systemd/system/pm2-*.service; do
+              case "$f" in *.bak*) continue;; esac
+              if grep -q "resurrect" "$f" 2>/dev/null; then PMU="$f"; fi
+            done
+            if [ -n "$PMU" ]; then
+              echo "Root-pm2-Unit gefunden: $PMU — als robusten oneshot resurrect neu schreiben"
+              printf "%s\n" "[Unit]" "Description=PM2 resurrect for CyberSarah Revenue OS" "Documentation=https://pm2.keymetrics.io/" "After=network-online.target" "Wants=network-online.target" "" "[Service]" "Type=oneshot" "ExecStart=$PM2BIN resurrect" "RemainAfterExit=yes" "User=$(id -un)" "Environment=HOME=$HOME" "Environment=PM2_HOME=$HOME/.pm2" "Environment=PATH=$HOME/.local/bin:$PnpmDIR:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" "" "[Install]" "WantedBy=multi-user.target" > "$PMU"
+              systemctl daemon-reload
+              systemctl reset-failed "$(basename "$PMU")" 2>/dev/null || true
+              systemctl enable "$(basename "$PMU")" 2>&1 | head -2
+              systemd-analyze verify "$PMU" 2>&1 | head -3 || true
+              echo "Unit-Status: $(systemctl is-enabled "$(basename "$PMU")" 2>&1 || true)"
+            else
+              echo "WARNUNG: keine pm2 resurrect-Unit gefunden"
+            fi
+            echo "== App anhalten, Port freimachen, Dump ohne App speichern =="
+            pm2 delete cybersarah 2>/dev/null || true
+            pm2 delete all 2>/dev/null || true
+            sleep 1
+            echo "App nach delete noch vorhanden: $(pm2 jlist 2>/dev/null | grep -c \"name\":\"cybersarah\") (erwartet 0)"
+            fuser -k -KILL 3000/tcp 2>/dev/null || true
+            sleep 2
+            pm2 save 2>/dev/null || true
+            pm2 kill 2>/dev/null || true
+            sleep 2
+            PMU2=""
+            for f in /etc/systemd/system/pm2-*.service; do
+              case "$f" in *.bak*) continue;; esac
+              PMU2="$f"
+            done
+            if [ -n "$PMU2" ]; then
+              systemctl start "$(basename "$PMU2")" && echo "PM2-Daemon sauber via $(basename "$PMU2") gestartet"
+            else
+              echo "WARNUNG: keine pm2-Unit gefunden — Daemon startet aus Shell (Env-Leak moeglich)"
+            fi
+            sleep 8
+            APPVORHER=$(pm2 jlist 2>/dev/null | grep -c \"name\":\"cybersarah\" || true)
+            echo "App nach resurrect vorhanden: $APPVORHER (erwartet 0)"
+            if [ "$APPVORHER" -gt 0 ]; then pm2 delete cybersarah 2>/dev/null || true; fi
+            echo "== App sauber NEU starten (frisches Env via dotenv aus api-.env) =="
+            cd /opt/cybersarah/artifacts/api-server
+            env -i HOME=$HOME PATH="$PATH" USER=$(id -un) LOGNAME=$(id -un) SHELL=/bin/bash TERM=xterm NODE_ENV=production pm2 start bash --name cybersarah --cwd /opt/cybersarah/artifacts/api-server -- -c "pnpm --filter @workspace/api-server start"
+            ANZAHL=$(pm2 jlist 2>/dev/null | grep -c \"name\":\"cybersarah\" || true)
+            echo "App-Instanzen nach Start: $ANZAHL (erwartet 1)"
+            if [ "$ANZAHL" -gt 1 ]; then
+              echo "mehrere Instanzen — reduzieren"
+              pm2 delete cybersarah 2>/dev/null || true
+              env -i HOME=$HOME PATH="$PATH" USER=$(id -un) LOGNAME=$(id -un) SHELL=/bin/bash TERM=xterm NODE_ENV=production pm2 start bash --name cybersarah --cwd /opt/cybersarah/artifacts/api-server -- -c "pnpm --filter @workspace/api-server start"
+            fi
+            APPPID=$(pm2 pid cybersarah 2>/dev/null | head -1)
+            echo "App-PID: $APPPID | GITHUB_TOKEN im Fork-Env: $(tr "\0" "\n" < /proc/$APPPID/environ 2>/dev/null | grep -c "^GITHUB_TOKEN=") (erwartet 0)"
+            pm2 save
+            echo "Dump mit sauberem Env ueberschrieben"
+            sleep 18
+            echo "== 15s warten, dann Health =="
+            sleep 15
+            echo "== /api/health — muss JSON sein, kein HTML =="
+            HEALTH=$(curl -sS -m 20 http://127.0.0.1:3000/api/health || true)
+            echo "$HEALTH" | head -c 400; echo
+            if echo "$HEALTH" | head -c 20 | grep -q "<!doctype\|<html"; then echo "::error::API antwortet mit HTML statt JSON"; exit 1; fi
+            echo "Health: keine HTML-Antwort — OK"
+            echo "== pm2 status (Endkontrolle) =="
+            pm2 status | head -10
+            echo "== Nginx-Upstream korrigieren (3001 -> 3000, nur cybersarah-Vhost) =="
+            for f in /etc/nginx/sites-available/cybersarah /etc/nginx/sites-enabled/cybersarah; do
+              [ -f "$f" ] && sed -i "s#127\.0\.0\.1:3001#127.0.0.1:3000#g" "$f" && echo "angepasst: $f"
+            done
+            nginx -t && systemctl reload nginx && echo "Nginx neu geladen"
+            echo "== via Nginx (HTTPS lokal) =="
+            curl -sSk -o /dev/null -w "HTTPS /api/health HTTP %{http_code}\n" -m 15 https://127.0.0.1/api/health
+            echo "== kaputte export-Zeile aus .bashrc entfernen =="
+            sed -i.bak "/AAAAB3NzaC1yc2E/d" ~/.bashrc 2>/dev/null || true
+          '
+
+      - name: Oeffentliche Verifikation (immer)
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_SSH_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" '
+            echo "== Lokale Endkontrolle =="
+            curl -sS -o /dev/null -w "HTTP :3000/api/health HTTP %{http_code}\n" -m 10 http://127.0.0.1:3000/api/health || true
+          '

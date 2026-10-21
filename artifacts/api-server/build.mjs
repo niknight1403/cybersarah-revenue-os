@@ -3,14 +3,15 @@
  * Baut TypeScript → ES Module (.mjs)
  */
 import { build } from "esbuild";
+import { fileURLToPath } from "node:url";
 
 const result = await build({
-  entryPoints: ["artifacts/api-server/src/index.ts"],
+  entryPoints: [fileURLToPath(new URL("./src/index.ts", import.meta.url))],
   bundle: true,
   platform: "node",
   target: "node20",
   format: "esm",
-  outfile: "artifacts/api-server/dist/index.mjs",
+  outfile: fileURLToPath(new URL("./dist/index.mjs", import.meta.url)),
   external: [
     "@google-cloud/storage",
     "pg",

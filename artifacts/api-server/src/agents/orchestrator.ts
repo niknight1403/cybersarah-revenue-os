@@ -196,6 +196,8 @@ import { db } from "@workspace/db";
 import { agentsTable, agentLogsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { openai } from "../lib/openaiClient";
+import { sendEmail } from "../lib/emailClient";
 import { sendAgentAlert, sendSystemAlert, sendUmsatzAlert } from "../lib/pushNotifications";
 import { globalQueue } from "./JobQueue";
 import { AgentBase, type Aufgabe, type AufgabeErgebnis } from "./AgentBase";
@@ -204,6 +206,7 @@ import { RevenueAgent } from "./RevenueAgentModule";
 import { MonetizationAgent } from "./MonetizationAgent";
 import { MasterAgent } from "./MasterAgent";
 import { RevenueAnalystAgent } from "./RevenueAnalystAgent";
+import { fuehreRevenueAnalystAutoAus } from "./handler/revenueAnalystAuto";
 import { AffiliateRegistrarAgent } from "./AffiliateRegistrarAgent";
 import { FinanceTeamAgent } from "./FinanceTeamAgent";
 import { HaraAgent } from "./HaraAgent";
@@ -220,6 +223,9 @@ import { LeadNurtureAgent } from "./LeadNurtureAgent";
 import { ConversionOptimizerAgent } from "./ConversionOptimizerAgent";
 import { EmailSequenceAgent } from "./EmailSequenceAgent";
 import { ContentEngineAgent } from "./ContentEngineAgent";
+import { ReachSwarmAgent } from "./reachSwarmAgent";
+import { LlmRoutingChangerAgent } from "./llmRoutingChangerAgent";
+import { LiveProblemLoeserAgent } from "./liveProblemLoeserAgent";
 import { scanneNeueProdukte, synchronisiereVerkaeufe, optimierePreiseUndPausiereFlops } from "./digitalproduktAgent";
 import { generiereSeoArtikel } from "./seoContentAgent";
 import { erstelleFehlendeSequenzen, versendeFaelligeEmails } from "./emailListenAgent";
@@ -300,6 +306,9 @@ const subAgenten: AgentBase[] = [
 new ContentEngineAgent(),
   new ConversionOptimizerAgent(),
   new EmailSequenceAgent(),
+  new ReachSwarmAgent(),
+  new LlmRoutingChangerAgent(),
+  new LiveProblemLoeserAgent(),
 ];
 
 let mainLoopTimer: NodeJS.Timeout | null = null;
@@ -492,6 +501,11 @@ function registriereQueueHandler(): void {
     return agent.fuehreAufgabeAus({ ...aufgabe, payload: { aktion: "ki_chancen_analysieren" } });
   });
 
+  // ── Revenue Analyst: Auto-Optimize-All (Alle-5-Minuten-Loop) ──
+  globalQueue.registriereHandler("revenue_analyst_auto", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    return fuehreRevenueAnalystAutoAus(subAgenten, aufgabe);
+  });
+
 
   // ── Revenue Analyst: Marketing-Kampagnen (generiert Content + Kampagnen) ──
   globalQueue.registriereHandler("marketing_kampagnen_erstellen", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
@@ -588,6 +602,100 @@ function registriereQueueHandler(): void {
       success: true,
       message: `Sales-Optimierung: "${opt.kampagneName}" | Headline: ${opt.optimierteHeadline?.substring(0, 60)}`,
       metadaten: opt as unknown as Record<string, unknown>,
+    };
+  });
+
+  // ── SPRING 63: Metered Upsell Trigger (Sales Agent) ────────────────────────
+  // Wird automatisch bei 80% des monatlichen Token-/Lead-Budgets getriggert
+  // (costGuardrail.pruefeUndTriggerUpsell) und startet eine intern erstellte
+  // E-Mail-Nurturing-Sequenz zur Upgrade-Einladung auf die nächsthöhere Stufe.
+  globalQueue.registriereHandler("sales_upsell_nurture", async (aufgabe: Aufgabe): Promise<AufgabeErgebnis> => {
+    const p = aufgabe.payload as {
+      tenantName?: string;
+      tenantId?: number;
+      aktuellerPlan?: string;
+      naechsteStufe?: string;
+      tokenQuote?: number;
+      leadQuote?: number;
+    };
+
+    const agentId = await holeAgentId("sales");
+
+    // E-Mail-Adresse: Tenant-Name ist bei Auto-Provisioning die E-Mail
+    const empfaenger = p.tenantName && p.tenantName.includes("@") ? p.tenantName : null;
+
+    // 1. Upgrade-E-Mail intern erstellen (Sales-Agent, GPT-4o-mini)
+    let betreff = `Ihr ${p.aktuellerPlan ?? "Starter"}-Plan ist fast ausgeschöpft — Upgrade auf ${p.naechsteStufe ?? "Pro"}`;
+    let inhalt = `Sie haben diese Monat bereits 80% Ihres Budgets im CyberSarah Revenue OS genutzt. Ein Upgrade auf ${p.naechsteStufe ?? "Pro"} sichert Ihnen mehr Agenten-Kapazität, ohne Unterbrechung.`;
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Du bist der Sales Agent eines B2B-SaaS (CyberSarah Revenue OS). Schreibe eine kurze, wertschätzende Upgrade-Einladung (max. 150 Wörter, Deutsch, DU-los = Sie-Form). Erwähne konkret, dass 80% des monatlichen Budgets erreicht sind, und lade zum Upgrade ein. Kein Druck, kein Spam-Ton. Antworte NUR mit validem JSON: {\"betreff\": \"...\", \"inhalt\": \"...\"}",
+          },
+          {
+            role: "user",
+            content: `Aktueller Plan: ${p.aktuellerPlan ?? "lite"}. Nächste Stufe: ${p.naechsteStufe ?? "standard"}. Token-Quote: ${(p.tokenQuote ?? 0.8) * 100}%. Lead-Quote: ${(p.leadQuote ?? 0) * 100}%.`,
+          },
+        ],
+        max_tokens: 400,
+        temperature: 0.5,
+        response_format: { type: "json_object" },
+      });
+      const geparst = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as { betreff?: string; inhalt?: string };
+      if (geparst.betreff) betreff = geparst.betreff;
+      if (geparst.inhalt) inhalt = geparst.inhalt;
+    } catch (err) {
+      logger.warn({ err }, "Upsell-E-Mail KI-Entwurf fehlgeschlagen — Fallback-Text verwendet");
+    }
+
+    // 2. Versand (Blacklist-Prüfung + Opt-out-Footer laufen automatisch über sendEmail)
+    if (empfaenger) {
+      const result = await sendEmail({
+        to: empfaenger,
+        subject: betreff,
+        html: `<div style="font-family:system-ui;max-width:560px"><h2>${betreff}</h2><p>${inhalt.replace(/\n/g, "<br/>")}</p></div>`,
+        text: inhalt,
+        tags: { kategorie: "outreach", typ: "upsell_nurture", tenantId: String(p.tenantId ?? "") },
+      });
+
+      if (agentId) {
+        await db.insert(agentLogsTable).values({
+          agentId,
+          agentName: "Sales Agent",
+          aktion: "Metered Upsell Trigger",
+          status: result.success ? "erfolgreich" : "fehler",
+          nachricht: `80%-Schwelle: Upgrade-Einladung ${p.aktuellerPlan} → ${p.naechsteStufe} ${result.success ? "gesendet" : "fehlgeschlagen"}`,
+          metadaten: JSON.stringify({ tenantId: p.tenantId, versendet: result.success, messageId: result.messageId ?? null }),
+        });
+      }
+
+      return {
+        success: result.success,
+        message: `Upsell-Nurturing: Upgrade-Einladung ${p.aktuellerPlan} → ${p.naechsteStufe} ${result.success ? "an Tenant gesendet" : "fehlgeschlagen"}`,
+        metadaten: { tenantId: p.tenantId, versendet: result.success },
+      };
+    }
+
+    // Keine E-Mail-Adresse verfügbar → Lead im System protokollieren
+    if (agentId) {
+      await db.insert(agentLogsTable).values({
+        agentId,
+        agentName: "Sales Agent",
+        aktion: "Metered Upsell Trigger",
+        status: "erfolgreich",
+        nachricht: `80%-Schwelle erreicht (${p.tenantId ?? "?"}) — Entwurf erstellt, Versand mangels E-Mail-Adresse ausstehend`,
+        metadaten: JSON.stringify({ betreff, tenantId: p.tenantId ?? null }),
+      });
+    }
+    return {
+      success: true,
+      message: `Upsell-Entwurf erstellt (${p.aktuellerPlan} → ${p.naechsteStufe}); keine Versand-E-Mail für Tenant hinterlegt`,
+      metadaten: { betreff },
     };
   });
 
@@ -1158,6 +1266,19 @@ async function mainLoop(): Promise<void> {
       globalQueue.fuegeHinzu("influencer_trend_analyse", { aktion: "trend_analyse" }, { prioritaet: 3 });
       globalQueue.fuegeHinzu("video_skript", {}, { prioritaet: 3 });
       globalQueue.fuegeHinzu("revenue_analyst_stripe", { aktion: "stripe_link_erstellen" }, { prioritaet: 2 });
+    }
+
+    // AI Influencer & Content Engine: alle 4h eine sichere EU-Health/Wellness-Kampagne
+    // für TikTok, Instagram und YouTube erzeugen. Die bestehende Queue serialisiert
+    // Ausführung und AgentBase übernimmt Retry/Circuit-Breaker/Fallback.
+    if (mainLoopZyklus % 240 === 0) {
+      globalQueue.fuegeHinzu("influencer_content", {
+        aktion: "kampagne_generieren",
+        marke: "CyberSarah",
+        thema: "alltagstaugliche Wellness-Routinen für Erwachsene 35-60",
+        plattformen: ["TikTok", "Instagram", "YouTube"],
+        angle: "problem_loesung",
+      }, { prioritaet: 3 });
     }
     // Alle 2 Stunden: KI-Chancen-Analyse (OpenAI — nur wenn Umsatz-Kontext vorhanden)
     if (mainLoopZyklus % 120 === 0) {

@@ -23,6 +23,7 @@ import { db } from "@workspace/db";
 import { emailSequenzenTable, leadsTable, transactionsTable, produkteTable, agentLogsTable } from "@workspace/db";
 import { eq, desc, and, or, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { klassifiziereEingangsAntwort, fuegeZurBlacklistHinzu } from "../lib/emailCompliance";
 
 const router = Router();
 
@@ -388,6 +389,91 @@ router.post("/email/test", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Test-E-Mail fehlgeschlagen");
     res.status(500).json({ error: "Test-E-Mail fehlgeschlagen" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SPRING 63: DSGVO INBOUND CLASSIFICATION & OPT-OUT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── POST /api/email/inbound — Eingehende Antworten verarbeiten ────────────────
+// Webhook-Endpoint für Inbound-Forwarding (Resend/Mailgun/IMAP-Bridge).
+// Erkennt Opt-out-Schlüsselwörter ("Stopp", "Unsubscribe", "Kein Interesse",
+// "Austragen", ...) und fügt die E-Mail/Domain SOFORT ohne menschlichen
+// Zwischenschritt zur Blacklist hinzu + bricht laufende Sequenzen ab.
+router.post("/email/inbound", async (req, res) => {
+  try {
+    const body = req.body as {
+      from?: string;
+      fromEmail?: string;
+      subject?: string;
+      text?: string;
+      messageId?: string;
+    };
+
+    const fromEmail = body.fromEmail ?? body.from ?? "";
+    if (!fromEmail || !fromEmail.includes("@")) {
+      res.status(400).json({ error: "fromEmail (gültige E-Mail) ist erforderlich" });
+      return;
+    }
+
+    const ergebnis = await klassifiziereEingangsAntwort(
+      fromEmail,
+      body.text ?? "",
+      body.subject ?? "",
+      body.messageId,
+    );
+
+    res.json({
+      empfangen: true,
+      klassifiziert: ergebnis.istOptOut ? "opt_out" : "neutral",
+      blacklisted: ergebnis.istOptOut,
+      abgebrocheneSequenzen: ergebnis.betroffeneLeads,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Inbound-Classification fehlgeschlagen");
+    res.status(500).json({ error: "Inbound-Classification fehlgeschlagen" });
+  }
+});
+
+// ── GET /api/email/abmelden — Opt-out-Link aus dem Footer ─────────────────────
+// Ziel des dynamischen Abmeldelinks. Trägt die E-Mail sofort in die
+// Blacklist ein (ohne menschlichen Zwischenschritt) und bestätigt visuell.
+router.get("/email/abmelden", async (req, res) => {
+  try {
+    const email = String(req.query.email ?? "").trim().toLowerCase();
+    if (!email || !email.includes("@")) {
+      res.status(400).send("<h3>Ungültiger Abmeldelink.</h3>");
+      return;
+    }
+
+    await fuegeZurBlacklistHinzu(email, "inbound_reply", "Opt-out über Abmeldelink (DSGVO)");
+
+    res.send(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Abmeldung bestätigt</title></head>
+      <body style="font-family:system-ui;text-align:center;padding:60px 20px;color:#333">
+        <h2>Abmeldung bestätigt ✅</h2>
+        <p>Du wirst keine weiteren Outreach-E-Mails von CyberSarah erhalten.</p>
+      </body></html>`);
+  } catch (err) {
+    req.log.error({ err }, "Abmeldung fehlgeschlagen");
+    res.status(500).send("<h3>Abmeldung derzeit nicht möglich — bitte später erneut versuchen oder mit \"Stopp\" antworten.</h3>");
+  }
+});
+
+// ── POST /api/email/blacklist — Manueller Blacklist-Eintrag (Admin) ───────────
+router.post("/email/blacklist", async (req, res) => {
+  try {
+    const body = req.body as { email?: string; domain?: string; grund?: string };
+    const wert = body.email ?? body.domain;
+    if (!wert) {
+      res.status(400).json({ error: "email oder domain erforderlich" });
+      return;
+    }
+    await fuegeZurBlacklistHinzu(wert, "manuell", body.grund);
+    res.json({ erfolgreich: true, wert: wert.toLowerCase() });
+  } catch (err) {
+    req.log.error({ err }, "Blacklist-Eintrag fehlgeschlagen");
+    res.status(500).json({ error: "Blacklist-Eintrag fehlgeschlagen" });
   }
 });
 

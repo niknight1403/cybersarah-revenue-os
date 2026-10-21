@@ -74,10 +74,133 @@ function setzeRateLimitCooldown(key: string, versuch: number = 0): void {
   );
 }
 
-// Proxy-Objekt damit import { openai } überall den aktuellen Client liefert
+// ─── SPRING 63: Cost-Guardrail + Exponential-Backoff-Retry + Token-Accounting ──
+//
+// Der exportierte `openai`-Client kapselt JEDEN chat.completions.create-Aufruf:
+//   1. PRE-CALL: Budget-Prüfung (usedTokensThisMonth < monthlyTokenBudget).
+//      Bei Überschreitung wird KEIN LLM-Call ausgeführt → BudgetExceededError.
+//   2. RETRY: Exponential Backoff (max. 3 Versuche) bei 429/Timeout/5xx,
+//      inkl. Key-Rotation über handleOpenAIFehler.
+//   3. POST-CALL: Exakte Token-Buchung aus dem usage-Objekt (atomar, sofort).
+//
+// Damit erhalten ALLE 29+ Agenten-Loops Retry-Resilienz und Kostenkontrolle,
+// ohne dass einzelne Agenten angepasst werden müssen. AgentBase fängt den
+// finalen Fehler nach 3 Versuchen und aktiviert den lokalen Fallback-Modus
+// (inkl. agent_logs-Eintrag über das bestehende Fehler-Handling).
+
+import { istBudgetErschoepft, erfasseTokenVerbrauch, holeLLMKontext } from "../middleware/costGuardrail";
+
+export class BudgetExceededError extends Error {
+  constructor() {
+    super("Monthly Token Limit Reached - Upgrade Plan");
+    this.name = "BudgetExceededError";
+  }
+}
+
+const LLM_MAX_VERSUCHE = 3;
+const LLM_BACKOFF_BASIS_MS = 1_000; // 1s → 2s → 4s (Exponential)
+
+function istWiederholbarerFehler(err: unknown): boolean {
+  // 429 (Rate Limit), 5xx (Server), Timeouts & Netzwerk-Fehler → retry-fähig
+  if (err instanceof OpenAI.APIError) {
+    return err.status === 429 || (err.status !== undefined && err.status >= 500) || err.status === undefined;
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  return /timeout|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ENOTFOUND|fetch failed|network/i.test(msg);
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Wird nach endgültigem Scheitern (3 Versuche) aufgerufen */
+function protokolliereEndgueltigenFehlschlag(err: unknown): void {
+  const { agentName } = holeLLMKontext();
+  const msg = err instanceof Error ? err.message : String(err);
+  logger.error(
+    { agentName, fehler: msg },
+    `🚨 LLM-Call nach ${LLM_MAX_VERSUCHE} Versuchen endgültig fehlgeschlagen — Fallback-Modus wird vom Agent übernommen`
+  );
+}
+
+// Proxy-Objekt damit import { openai } überall den aktuellen Client liefert.
+// `chat.completions.create` wird zusätzlich durch Guardrail/Retry/Accounting gewrapt.
 export const openai = new Proxy({} as OpenAI, {
   get(_target, prop) {
-    return (_openaiInstanz as unknown as Record<string | symbol, unknown>)[prop];
+    if (prop !== "chat") {
+      return (_openaiInstanz as unknown as Record<string | symbol, unknown>)[prop];
+    }
+    const rawChat = (_openaiInstanz as unknown as Record<string, unknown>)["chat"] as Record<string, unknown>;
+    if (!rawChat) return rawChat;
+    return new Proxy(rawChat, {
+      get(chatTarget, chatProp) {
+        if (chatProp !== "completions") {
+          return chatTarget[chatProp as string];
+        }
+        const rawCompletions = chatTarget["completions"] as Record<string, unknown>;
+        if (!rawCompletions) return rawCompletions;
+        const originalCreate = rawCompletions["create"] as (body: any, options?: any) => Promise<any>;
+        const gewrappteCreate = async (body: any, options?: any) => {
+          // ── PRE-CALL: Budget-Guardrail (VOR jedem LLM-Call) ─────────────
+          const pruefung = await istBudgetErschoepft();
+          if (!pruefung.erlaubt) {
+            throw new BudgetExceededError();
+          }
+
+          const { agentName } = holeLLMKontext();
+          const startzeit = Date.now();
+
+          // ── RETRY: Exponential Backoff, max. 3 Versuche ──────────────────
+          let letzterFehler: unknown;
+          for (let versuch = 1; versuch <= LLM_MAX_VERSUCHE; versuch++) {
+            try {
+              const ergebnis = await originalCreate(body, options);
+
+              // ── POST-CALL: Exakte Token-Buchung aus dem usage-Objekt ────
+              const usage = ergebnis?.usage;
+              if (usage && typeof usage.prompt_tokens === "number") {
+                void erfasseTokenVerbrauch({
+                  verbrauch: {
+                    promptTokens: usage.prompt_tokens ?? 0,
+                    completionTokens: usage.completion_tokens ?? 0,
+                  },
+                  agentName,
+                  model: ergebnis?.model ?? body?.model ?? "gpt-4o-mini",
+                });
+              }
+              return ergebnis;
+            } catch (err) {
+              letzterFehler = err;
+
+              // Budget-Guardrail niemals retryen — harter Abbruch
+              if (err instanceof BudgetExceededError) throw err;
+
+              const kannWiederholen = istWiederholbarerFehler(err) && versuch < LLM_MAX_VERSUCHE;
+              if (!kannWiederholen) break;
+
+              // Key-Rotation/Cooldown über bestehendes Fehler-Handling
+              handleOpenAIFehler(err, agentName);
+
+              const backoffMs = LLM_BACKOFF_BASIS_MS * Math.pow(2, versuch - 1);
+              logger.warn(
+                { agentName, versuch, von: LLM_MAX_VERSUCHE, backoffMs, fehler: err instanceof Error ? err.message : String(err) },
+                `🔁 LLM-Retry: Versuch ${versuch}/${LLM_MAX_VERSUCHE} fehlgeschlagen — warte ${backoffMs}ms (Exponential Backoff)`
+              );
+              await sleep(backoffMs);
+            }
+          }
+
+          protokolliereEndgueltigenFehlschlag(letzterFehler);
+          throw letzterFehler; // AgentBase übernimmt Fallback-Modus + agent_logs-Eintrag
+        };
+        return new Proxy(rawCompletions, {
+          get(compTarget, compProp) {
+            if (compProp === "create") return gewrappteCreate;
+            return compTarget[compProp as string];
+          },
+        });
+      },
+    });
   },
 });
 

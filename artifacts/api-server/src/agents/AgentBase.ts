@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { agentsTable, agentLogsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { setzeLLMKontext } from "../middleware/costGuardrail";
 
 export type AgentStatus = "aktiv" | "wartend" | "gestoppt" | "fehler" | "pausiert";
 
@@ -100,6 +101,10 @@ export abstract class AgentBase {
 
   async fuehreAufgabeAus(aufgabe: Aufgabe): Promise<AufgabeErgebnis> {
     if (!this.agentId) throw new Error(`Agent ${this.agentName} nicht initialisiert`);
+
+    // SPRING 63: LLM-Kontext setzen → Retry/Token-Accounting läuft mit dem
+    // korrekten agentName in token_logs (zentral im openaiClient gewrappt).
+    setzeLLMKontext(this.agentName);
 
     this.laufend = true;
     const startzeit = Date.now();

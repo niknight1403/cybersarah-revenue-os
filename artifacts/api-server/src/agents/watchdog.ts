@@ -13,8 +13,10 @@ import { eq, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { openai, openaiVerfuegbar } from "../lib/openaiClient";
 
-const WATCHDOG_INTERVALL_MS = 60 * 1000; // 5 Minuten
-const STUCK_TIMEOUT_MS = 10 * 60 * 1000;     // 30 Minuten
+// SPRING 63 (Executive Directive): Prüfung alle 5 Minuten,
+// Stuck-Erkennung bei status "aktiv" ohne Aktivität seit > 10 Minuten.
+const WATCHDOG_INTERVALL_MS = 5 * 60 * 1000; // 5 Minuten
+const STUCK_TIMEOUT_MS = 10 * 60 * 1000;     // 10 Minuten
 const FALLBACK_SCHWELLE = 30; // SPRINT 36: Früher pausieren bei Fehlern                  // Nach 50 Fallbacks → Auto-Pause
 const API_KEY_FEHLER_PATTERN = /401|Incorrect API key|Invalid API key/i;
 
@@ -305,8 +307,8 @@ export function starteWatchdog(): void {
     void fuehreWatchdogZyklusDurch();
   }, WATCHDOG_INTERVALL_MS);
 
-  logger.info({ intervall: "1 Min", timeout: "30 Min Stuck", fallbackSchwelle: FALLBACK_SCHWELLE },
-    "Watchdog Manager gestartet — 401-Erkennung + Fallback-Tracking + Auto-Reset aktiv");
+  logger.info({ intervall: "5 Min", timeout: "10 Min Stuck", fallbackSchwelle: FALLBACK_SCHWELLE },
+    "Watchdog Manager gestartet — 5-Min-Zyklus, 10-Min-Stuck-Reset, 401-Erkennung + Fallback-Tracking aktiv");
 }
 
 export function stoppeWatchdog(): void {

@@ -1,0 +1,158 @@
+name: Sync .env to Hetzner Server
+
+on:
+  # Laeuft automatisch nach dem Auto-Deploy (Code inkl. Env-Endpunkt ist dann frisch)
+  workflow_run:
+    workflows: ["Auto-Deploy to Hetzner Server"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  sync-env:
+    name: Sync secrets to server .env
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Server-Endpunkt ermitteln (3000 oder 443)
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          probe() {
+            local url="$1"; shift
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 \
+              -H "X-Deploy-Token: $DEPLOY_TOKEN" "$@" "$url/api/admin/env" 2>/dev/null)
+            echo "$code"
+          }
+          for kandidat in "http://167.233.196.20:3000" "https://167.233.196.20" "https://cybersarah-ki.de"; do
+            if [ "$kandidat" = "https://167.233.196.20" ] || [ "$kandidat" = "https://cybersarah-ki.de" ]; then
+              extra="-k"
+            else
+              extra=""
+            fi
+            code=$(probe "$kandidat" $extra)
+            echo "Endpunkt $kandidat -> HTTP $code"
+            if [ "$code" != "000" ]; then
+              SERVER_URL="$kandidat"
+              TLS_EXTRA="$extra"
+              echo "SERVER_URL=$kandidat" >> "$GITHUB_ENV"
+              echo "TLS_EXTRA=$extra" >> "$GITHUB_ENV"
+              break
+            fi
+          done
+          if [ -z "$SERVER_URL" ]; then
+            echo "::error::Server unter 167.233.196.20 (Port 3000/443) und cybersarah-ki.de nicht erreichbar. Pruefen: pm2 status cybersarah, ufw/Firewall, nginx-Reverse-Proxy."
+            exit 1
+          fi
+          # Shell-Variable fuer den aktuellen Step setzen (GITHUB_ENV greift erst ab Step 2)
+          export SERVER_URL TLS_EXTRA
+
+      - name: Env-Payload bauen und an /api/admin/env senden
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PAYMENT_LINK: ${{ vars.STRIPE_PAYMENT_LINK }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BACKUP_KEY: ${{ secrets.OPENAI_BACKUP_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_BACKUP_KEY: ${{ secrets.GEMINI_BACKUP_KEY }}
+          DIGISTORE24_API_KEY: ${{ secrets.DIGISTORE24_API_KEY }}
+          DIGISTORE24_USERNAME: ${{ vars.DIGISTORE24_USERNAME }}
+          DIGISTORE24_IPN_SECRET: ${{ secrets.DIGISTORE24_IPN_SECRET }}
+          DIGISTORE24_VENDOR_ID: ${{ vars.DIGISTORE24_VENDOR_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TIKTOK_CLIENT_KEY: ${{ vars.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          SERVER_IP: ${{ vars.SERVER_IP }}
+          LIVE_MODE: ${{ vars.LIVE_MODE }}
+          SIMULATION_MODE: ${{ vars.SIMULATION_MODE }}
+          NODE_ENV: ${{ vars.NODE_ENV }}
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+          API_AUTH_TOKEN: ${{ secrets.API_AUTH_TOKEN }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          ADMIN_GITHUB_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
+        run: |
+          PAYLOAD=$(jq -cn '$ARGS.named | with_entries(select(.value != "")) | { env: . }' \
+            --arg DATABASE_URL "$DATABASE_URL" \
+            --arg STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY" \
+            --arg STRIPE_PUBLISHABLE_KEY "$STRIPE_PUBLISHABLE_KEY" \
+            --arg STRIPE_WEBHOOK_SECRET "$STRIPE_WEBHOOK_SECRET" \
+            --arg STRIPE_PAYMENT_LINK "$STRIPE_PAYMENT_LINK" \
+            --arg OPENAI_API_KEY "$OPENAI_API_KEY" \
+            --arg OPENAI_BACKUP_KEY "$OPENAI_BACKUP_KEY" \
+            --arg GEMINI_API_KEY "$GEMINI_API_KEY" \
+            --arg GEMINI_BACKUP_KEY "$GEMINI_BACKUP_KEY" \
+            --arg DIGISTORE24_API_KEY "$DIGISTORE24_API_KEY" \
+            --arg DIGISTORE24_USERNAME "$DIGISTORE24_USERNAME" \
+            --arg DIGISTORE24_IPN_SECRET "$DIGISTORE24_IPN_SECRET" \
+            --arg DIGISTORE24_VENDOR_ID "$DIGISTORE24_VENDOR_ID" \
+            --arg TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN" \
+            --arg TIKTOK_CLIENT_KEY "$TIKTOK_CLIENT_KEY" \
+            --arg TIKTOK_CLIENT_SECRET "$TIKTOK_CLIENT_SECRET" \
+            --arg SERVER_IP "$SERVER_IP" \
+            --arg LIVE_MODE "$LIVE_MODE" \
+            --arg SIMULATION_MODE "$SIMULATION_MODE" \
+            --arg NODE_ENV "$NODE_ENV" \
+            --arg ALLOWED_ORIGINS "$ALLOWED_ORIGINS" \
+            --arg API_AUTH_TOKEN "$API_AUTH_TOKEN" \
+            --arg ADMIN_EMAIL "$ADMIN_EMAIL" \
+            --arg RESEND_API_KEY "$RESEND_API_KEY" \
+            --arg HUGGINGFACE_API_KEY "$HUGGINGFACE_API_KEY" \
+            --arg HF_TOKEN "$HF_TOKEN" \
+            --arg ADMIN_GITHUB_TOKEN "$ADMIN_GITHUB_TOKEN" \
+            --arg GITLAB_TOKEN "$GITLAB_TOKEN" \
+            --arg HUBSPOT_ACCESS_TOKEN "$HUBSPOT_ACCESS_TOKEN")
+          ANZAHL=$(echo "$PAYLOAD" | jq '.env | length')
+          echo "Sende $ANZAHL Schluessel an $SERVER_URL ..."
+          if [ "$ANZAHL" -eq 0 ]; then
+            echo "::error::Payload leer — keine Secrets/Variablen gesetzt?"
+            exit 1
+          fi
+          HTTP_CODE=$(curl -s -X POST "$SERVER_URL/api/admin/env" \
+            -H "X-Deploy-Token: $DEPLOY_TOKEN" \
+            -H "Content-Type: application/json" \
+            $TLS_EXTRA \
+            -d "$PAYLOAD" --max-time 60 -w "%{http_code}" -o /tmp/env_resp.json) \
+            || true
+          RESP=$(cat /tmp/env_resp.json 2>/dev/null || echo "")
+          echo "HTTP $HTTP_CODE — Antwort: $RESP"
+          case "$HTTP_CODE" in
+            502|503|504)
+              echo "::error::Reverse-Proxy erreichbar, aber Backend (pm2 cybersarah) antwortet nicht (HTTP $HTTP_CODE). SSH: pm2 status cybersarah && pm2 logs cybersarah --lines 30"
+              exit 1 ;;
+          esac
+          echo "Antwort: $RESP"
+          echo "$RESP" | jq -e '.success == true' > /dev/null \
+            && echo "Env-Sync erfolgreich" \
+            || (echo "::error::Env-Sync fehlgeschlagen" && exit 1)
+
+      - name: Reparatur nachziehen (wendet die neue .env per sauberem pm2-Start an)
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Dispatche Server-Ops Reparatur, damit die frische .env wirksam wird ..."
+          curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/niknight1403/cybersarah-revenue-os/actions/workflows/server-ops.yml/dispatches" \
+            -d '{"ref":"main","inputs":{"modus":"reparatur"}}' -w "\ndispatch HTTP %{http_code}\n"
+
+      - name: Verifikation (GET /api/admin/env, maskiert)
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          sleep 10
+          curl -s "$SERVER_URL/api/admin/env" -H "X-Deploy-Token: $DEPLOY_TOKEN" $TLS_EXTRA \
+            --max-time 30 | jq '.' || true
