@@ -27,7 +27,7 @@ const result = await build({
     "google-auth-library",
     "drizzle-orm",
     "zod",
-    "@workspace/*",
+    // Internal @workspace/* packages export TS source. Bundle them or Node 20 crashes on .ts at startup.
     "resend",
     "form-data",
     "mailgun.js",
