@@ -45,5 +45,8 @@ jobs:
       - name: Produktions-Build
         run: pnpm build
 
+      - name: Produktions-Bundle ohne rohe TypeScript-Workspace-Abhaengigkeiten
+        run: node scripts/verify-revenue-bundle.mjs
+
       - name: Stripe-Agenten-Schreibschutz Regression
         run: pnpm --filter @workspace/api-server exec vitest run src/lib/__tests__/stripeAgentSafety.test.ts
