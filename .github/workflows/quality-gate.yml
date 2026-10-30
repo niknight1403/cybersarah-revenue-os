@@ -44,3 +44,6 @@ jobs:
 
       - name: Produktions-Build
         run: pnpm build
+
+      - name: Stripe-Agenten-Schreibschutz Regression
+        run: pnpm --filter @workspace/api-server exec vitest run src/lib/__tests__/stripeAgentSafety.test.ts
