@@ -50,3 +50,6 @@ jobs:
 
       - name: Stripe-Agenten-Schreibschutz Regression
         run: pnpm --filter @workspace/api-server exec vitest run src/lib/__tests__/stripeAgentSafety.test.ts
+
+      - name: Groq Runtime-Konfiguration Regression
+        run: pnpm --filter @workspace/api-server exec vitest run src/config/runtimeEnv.test.ts
