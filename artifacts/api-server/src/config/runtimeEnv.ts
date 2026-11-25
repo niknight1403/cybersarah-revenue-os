@@ -10,6 +10,8 @@ const runtimeEnvSchema = z.object({
   JWT_SECRET: optionalSecret,
   SESSION_SECRET: optionalSecret,
   STRIPE_SECRET_KEY: z.string().trim().min(1).optional(),
+  GROQ_API_KEY: z.string().trim().min(1).optional(),
+  GROQCLOUD_API_KEY: z.string().trim().min(1).optional(),
   OPENAI_API_KEY: z.string().trim().min(1).optional(),
   GEMINI_API_KEY: z.string().trim().min(1).optional(),
   GOOGLE_GEMINI_KEY: z.string().trim().min(1).optional(),
@@ -25,7 +27,7 @@ function productionIssues(env: RuntimeEnv): string[] {
   if (!env.DEPLOY_TOKEN) issues.push("DEPLOY_TOKEN");
   if (!env.JWT_SECRET && !env.SESSION_SECRET) issues.push("JWT_SECRET oder SESSION_SECRET");
   if (!env.STRIPE_SECRET_KEY) issues.push("STRIPE_SECRET_KEY");
-  if (!env.OPENAI_API_KEY && !env.GEMINI_API_KEY && !env.GOOGLE_GEMINI_KEY) issues.push("OPENAI_API_KEY oder GEMINI_API_KEY");
+  if (!env.GROQ_API_KEY && !env.GROQCLOUD_API_KEY && !env.OPENAI_API_KEY && !env.GEMINI_API_KEY && !env.GOOGLE_GEMINI_KEY) issues.push("GROQ_API_KEY, OPENAI_API_KEY oder GEMINI_API_KEY");
   if (env.ENABLE_AUTO_PUBLISHING === "true" && env.PUBLISHING_PROVIDER_MODE === "mock") issues.push("ENABLE_AUTO_PUBLISHING darf nicht mit PUBLISHING_PROVIDER_MODE=mock kombiniert werden");
   return issues;
 }
